@@ -22,7 +22,7 @@ BookYourPTO is a comprehensive PTO (Paid Time Off) management platform designed 
 - Frontend: Nuxt.js with Tailwind CSS
 - Database: PostgreSQL
 - Cache: Redis
-- Storage: MinIO (S3-compatible)
+- Storage: Local filesystem with Docker volumes
 - Container: Docker
 
 ## Getting Started
