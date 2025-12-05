@@ -8,20 +8,19 @@ export default defineNuxtPlugin((nuxtApp) => {
       const element = el as ClickOutsideElement
       
       element.clickOutsideEvent = (event: MouseEvent) => {
-        // Check if the click was outside the element
         if (!(el === event.target || el.contains(event.target as Node))) {
-          // Call the provided method
           binding.value(event)
         }
       }
-      // Add the event listener
-      document.addEventListener('click', element.clickOutsideEvent)
+      
+      setTimeout(() => {
+        document.addEventListener('mousedown', element.clickOutsideEvent!)
+      }, 0)
     },
     unmounted(el: HTMLElement) {
       const element = el as ClickOutsideElement
-      // Clean up the event listener
       if (element.clickOutsideEvent) {
-        document.removeEventListener('click', element.clickOutsideEvent)
+        document.removeEventListener('mousedown', element.clickOutsideEvent)
       }
     }
   })
