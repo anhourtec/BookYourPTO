@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Configure dark mode to use class-based toggling */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   :root {
     --radius: 0.625rem;
@@ -86,7 +89,6 @@
   }
 }
 
-/* Ensure proper color inheritance for Nuxt UI components */
 @layer components {
   .container {
     @apply mx-auto px-4 sm:px-6 lg:px-8;
