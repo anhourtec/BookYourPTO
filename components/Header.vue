@@ -10,11 +10,20 @@
           <NuxtLink to="/" class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">
             Home
           </NuxtLink>
-          <NuxtLink to="/features" class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">
+          <NuxtLink to="#" class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">
             Features
           </NuxtLink>
-          <NuxtLink to="/docs" class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">
+          <NuxtLink to="#" class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">
             Docs
+          </NuxtLink>
+          
+          <!-- Users Link - Only for authorized users -->
+          <NuxtLink 
+            v-if="isAuthenticated && canAccessUsers()"
+            to="/users" 
+            class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
+          >
+            Users
           </NuxtLink>
           
           <template v-if="!isAuthenticated">
@@ -54,6 +63,17 @@
                       <Icon name="lucide:layout-dashboard" class="w-4 h-4" />
                       Dashboard
                     </NuxtLink>
+                    
+                    <!-- Users link in dropdown for mobile/alternative access -->
+                    <NuxtLink 
+                      v-if="canAccessUsers()"
+                      to="/users"
+                      class="flex items-center gap-3 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                    >
+                      <Icon name="lucide:users" class="w-4 h-4" />
+                      Users
+                    </NuxtLink>
+                    
                     <NuxtLink 
                       to="/profile"
                       class="flex items-center gap-3 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -99,6 +119,7 @@
 <script setup lang="ts">
 const colorMode = useColorMode()
 const router = useRouter()
+const { canAccessUsers } = usePermissions()
 
 const user = ref<any>(null)
 const isAuthenticated = ref(false)
