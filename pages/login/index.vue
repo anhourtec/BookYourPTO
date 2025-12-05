@@ -116,7 +116,7 @@ const handleLogin = async () => {
     localStorage.setItem('auth_token', response.token)
     localStorage.setItem('user', JSON.stringify(response.user))
 
-    navigateTo('/dashboard')
+    navigateTo('/users')
   } catch (err: any) {
     error.value = err.data?.message || 'Login failed. Please try again.'
   } finally {
