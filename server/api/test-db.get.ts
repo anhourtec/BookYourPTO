@@ -1,4 +1,4 @@
-import { prisma } from '~/server/utils/prisma'
+import { prisma } from '~/server/utils/db'
 
 export default defineEventHandler(async () => {
   try {
