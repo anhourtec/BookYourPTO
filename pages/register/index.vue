@@ -126,10 +126,15 @@
         </NuxtLink>
       </div>
     </div>
+
+    <!-- Welcome Onboarding Modal -->
+    <Welcome v-model="showWelcomeModal" @completed="handleOnboardingComplete" />
   </div>
 </template>
 
 <script setup lang="ts">
+import Welcome from '~/components/Welcome.vue'
+
 const form = ref({
   firstName: '',
   lastName: '',
@@ -142,6 +147,7 @@ const form = ref({
 const loading = ref(false)
 const error = ref('')
 const showPassword = ref(false)
+const showWelcomeModal = ref(false)
 
 const generateSlug = () => {
   if (form.value.organizationName) {
@@ -162,15 +168,22 @@ const handleRegister = async () => {
       body: form.value,
     })
 
+    // Store auth data
     localStorage.setItem('auth_token', response.token)
     localStorage.setItem('user', JSON.stringify(response.user))
 
-    navigateTo('/dashboard')
+    // Show welcome modal for onboarding
+    showWelcomeModal.value = true
   } catch (err: any) {
     error.value = err.data?.message || 'Registration failed. Please try again.'
   } finally {
     loading.value = false
   }
+}
+
+const handleOnboardingComplete = async (data: any) => {
+  // Onboarding completed, redirect to dashboard
+  navigateTo('/dashboard')
 }
 </script>
 
