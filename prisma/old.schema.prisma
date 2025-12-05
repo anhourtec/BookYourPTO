@@ -1,0 +1,218 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+// ============================================
+// CORE ENTITIES - Phase 1
+// ============================================
+
+// Multi-tenant root - Every organization is isolated
+model Organization {
+  id   String @id @default(cuid())
+  name String
+  slug String @unique // URL-friendly name (acme-corp)
+
+  // White-labeling
+  logoUrl        String? // Path to logo file
+  primaryColor   String  @default("#3b82f6") // Blue
+  secondaryColor String  @default("#8b5cf6") // Purple
+
+  // Settings
+  timezone     String @default("UTC")
+  dateFormat   String @default("YYYY-MM-DD")
+  weekStartDay Int    @default(1) // 1 = Monday
+  country      String @default("US") // For public holidays
+
+  // Billing
+  plan     String @default("free") // free, pro, enterprise
+  maxUsers Int    @default(10)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  users       User[]
+  departments Department[]
+  leaveTypes  LeaveType[]
+
+  @@index([slug])
+}
+
+// Departments within an organization
+model Department {
+  id             String  @id @default(cuid())
+  organizationId String
+  name           String
+  code           String // IT, HR, SALES, etc.
+  description    String?
+  color          String  @default("#3b82f6") // For calendar
+
+  // Department Head
+  headOfDepartmentId String?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  users        User[]       @relation("DepartmentMembers")
+  headOfDept   User?        @relation("DepartmentHead", fields: [headOfDepartmentId], references: [id])
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@index([headOfDepartmentId])
+}
+
+// Employees/Users
+model User {
+  id             String @id @default(cuid())
+  organizationId String
+
+  // Authentication
+  email    String
+  password String // Will be hashed with bcrypt
+
+  // Basic Info
+  firstName     String
+  lastName      String
+  middleName    String?
+  preferredName String?
+  avatar        String? // File path
+
+  // Employment Details
+  employeeId          String? // Company's employee ID
+  jobTitle            String?
+  departmentId        String?
+  reportsToId         String? // Manager's User ID
+  employmentStartDate DateTime?
+  employmentType      EmploymentType @default(FULLTIME)
+
+  // Contact Information
+  phoneMobile   String?
+  phoneLandline String?
+  addressLine1  String?
+  addressLine2  String?
+  city          String?
+  state         String?
+  postalCode    String?
+  country       String?
+
+  // Emergency Contact (stored as JSON)
+  emergencyContact Json? // { name, relationship, phone, address }
+
+  // Payroll
+  payrollId String?
+
+  // Role & Permissions
+  role       UserRole  @default(EMPLOYEE)
+  level      UserLevel @default(STANDARD)
+  isApprover Boolean   @default(false)
+
+  // Work Schedule (stored as JSON)
+  workSchedule Json? // { monday: { start: "09:00", end: "17:00", isWorkday: true }, ... }
+  timezone     String @default("UTC")
+  hoursPerWeek Float  @default(40)
+
+  // Leave Balances (we'll track these in separate table later, but quick access here)
+  annualLeaveBalance Float @default(0)
+  sickLeaveBalance   Float @default(0)
+
+  // Status
+  isActive      Boolean   @default(true)
+  emailVerified Boolean   @default(false)
+  lastLoginAt   DateTime?
+
+  // Files folder path
+  documentsFolderId String? // /documents/{orgId}/{userId}/
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  department        Department?  @relation("DepartmentMembers", fields: [departmentId], references: [id])
+  manager           User?        @relation("ManagerEmployees", fields: [reportsToId], references: [id])
+  employees         User[]       @relation("ManagerEmployees")
+  departmentsHeaded Department[] @relation("DepartmentHead")
+
+  @@unique([organizationId, email])
+  @@unique([organizationId, employeeId])
+  @@index([organizationId])
+  @@index([departmentId])
+  @@index([reportsToId])
+  @@index([email])
+}
+
+// Leave Types (Annual, Sick, etc.)
+model LeaveType {
+  id             String @id @default(cuid())
+  organizationId String
+
+  name        String // "Annual Leave", "Sick Leave - Paid"
+  code        String // ANNUAL, SICK_PAID, SICK_UNPAID, etc.
+  description String?
+  color       String @default("#3b82f6")
+
+  // Configuration
+  requiresApproval Boolean @default(true)
+  allowHalfDays    Boolean @default(true)
+  paidLeave        Boolean @default(true)
+
+  // Allowance Settings
+  annualAllowance  Float? // Days per year
+  hasAccrual       Boolean @default(false) // Does it accrue monthly?
+  accrualRate      Float? // Days per month if accrual
+  carryOverAllowed Boolean @default(false)
+  maxCarryOverDays Float?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum EmploymentType {
+  FULLTIME
+  PARTTIME
+  CONTRACT
+  INTERN
+}
+
+enum UserRole {
+  EMPLOYEE
+  MANAGER
+  DEPARTMENT_HEAD
+  ADMINISTRATOR
+  EXECUTIVE
+}
+
+enum UserLevel {
+  STANDARD
+  DIRECTOR
+  EXECUTIVE
+  ADMINISTRATOR
+}
