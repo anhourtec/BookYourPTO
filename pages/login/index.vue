@@ -30,13 +30,23 @@
             <label class="block text-sm font-medium text-card-foreground mb-2">
               Password
             </label>
-            <input
-              v-model="form.password"
-              type="password"
-              required
-              class="w-full px-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
-              placeholder="••••••••"
-            />
+            <div class="relative">
+              <input
+                v-model="form.password"
+                :type="showPassword ? 'text' : 'password'"
+                required
+                class="w-full px-4 py-3 pr-12 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                @click="showPassword = !showPassword"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition"
+              >
+                <Icon v-if="showPassword" name="lucide:eye-off" class="w-5 h-5" />
+                <Icon v-else name="lucide:eye" class="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           <div class="flex items-center justify-between">
@@ -91,6 +101,7 @@ const form = ref({
 
 const loading = ref(false)
 const error = ref('')
+const showPassword = ref(false)
 
 const handleLogin = async () => {
   loading.value = true

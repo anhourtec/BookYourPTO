@@ -57,14 +57,24 @@
             <label class="block text-sm font-medium text-card-foreground mb-2">
               Password
             </label>
-            <input
-              v-model="form.password"
-              type="password"
-              required
-              minlength="8"
-              class="w-full px-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
-              placeholder="••••••••"
-            />
+            <div class="relative">
+              <input
+                v-model="form.password"
+                :type="showPassword ? 'text' : 'password'"
+                required
+                minlength="8"
+                class="w-full px-4 py-3 pr-12 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                @click="showPassword = !showPassword"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition"
+              >
+                <Icon v-if="showPassword" name="lucide:eye-off" class="w-5 h-5" />
+                <Icon v-else name="lucide:eye" class="w-5 h-5" />
+              </button>
+            </div>
             <p class="text-xs text-muted-foreground mt-1">At least 8 characters</p>
           </div>
 
@@ -80,21 +90,9 @@
               placeholder="Acme Corp"
               @input="generateSlug"
             />
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-card-foreground mb-2">
-              Organization Slug
-            </label>
-            <input
-              v-model="form.organizationSlug"
-              type="text"
-              required
-              pattern="[a-z0-9-]+"
-              class="w-full px-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition font-mono text-sm"
-              placeholder="acme-corp"
-            />
-            <p class="text-xs text-muted-foreground mt-1">Lowercase letters, numbers, and hyphens only</p>
+            <p v-if="form.organizationSlug" class="text-xs text-muted-foreground mt-1">
+              Your URL: <span class="font-mono text-foreground">{{ form.organizationSlug }}</span>
+            </p>
           </div>
 
           <div v-if="error" class="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
@@ -143,9 +141,10 @@ const form = ref({
 
 const loading = ref(false)
 const error = ref('')
+const showPassword = ref(false)
 
 const generateSlug = () => {
-  if (form.value.organizationName && !form.value.organizationSlug) {
+  if (form.value.organizationName) {
     form.value.organizationSlug = form.value.organizationName
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
