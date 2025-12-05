@@ -183,7 +183,7 @@ const handleRegister = async () => {
 
 const handleOnboardingComplete = async (data: any) => {
   // Onboarding completed, redirect to dashboard
-  navigateTo('/dashboard')
+  navigateTo('/users')
 }
 </script>
 
