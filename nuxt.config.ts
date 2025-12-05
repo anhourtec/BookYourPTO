@@ -33,6 +33,10 @@ export default defineNuxtConfig({
     plugins: [
       tailwindcss(),
     ],
+    server: {
+      allowedHosts: ['*']
+    },
   },
+
 
 })
