@@ -8,6 +8,15 @@ export default defineNuxtConfig({
     '@vueuse/motion/nuxt'
   ],
     
+  app: {
+  head: {
+    // title: 'BookYourPTO',
+    link: [
+      { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }
+    ]
+  }
+},
+
   colorMode: {
     preference: 'light', // default value
     fallback: 'light', // fallback value

@@ -4,10 +4,10 @@
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
          <NuxtLink to="/" class="flex items-center gap-2">
-            <Logo class="h-15 w-auto" />
-            <span class="text-2xl font-bold text-gray-900 dark:text-white">
-              BookYourPTO
-            </span>
+            <NuxtLink to="/">
+              <AppLogo />
+            </NuxtLink>
+
           </NuxtLink>
 
         </div>
