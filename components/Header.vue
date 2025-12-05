@@ -3,9 +3,13 @@
     <div class="container mx-auto px-4 py-4">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <NuxtLink to="/" class="text-2xl font-bold text-gray-900 dark:text-white hover:text-gray-700 dark:hover:text-gray-300">
-            BookYourPTO
+         <NuxtLink to="/" class="flex items-center gap-2">
+            <Logo class="h-15 w-auto" />
+            <span class="text-2xl font-bold text-gray-900 dark:text-white">
+              BookYourPTO
+            </span>
           </NuxtLink>
+
         </div>
         
         <nav class="flex items-center gap-6">
