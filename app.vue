@@ -4,8 +4,9 @@
     <main class="flex-1">
       <NuxtPage />
     </main>
-    <Footer />
   </div>
+  <Footer />
+
 </template>
 
 <script setup lang="ts">
