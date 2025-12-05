@@ -2,7 +2,7 @@
   "name": "nuxt-app",
   "type": "module",
   "private": true,
-  "scripts": {
+   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev --host",
     "generate": "nuxt generate",
@@ -18,14 +18,20 @@
     "@nuxt/scripts": "^0.13.0",
     "@nuxt/test-utils": "^3.21.0",
     "@nuxt/ui": "^4.2.1",
+    "@prisma/adapter-neon": "^7.1.0",
+    "@prisma/adapter-pg": "^7.1.0",
+    "@prisma/client": "^7.1.0",
     "@tailwindcss/vite": "^4.1.17",
     "@vueuse/core": "^14.1.0",
     "nuxt": "^4.2.1",
+    "pg": "^8.16.3",
     "tailwindcss": "^4.1.17",
     "vue": "^3.5.25",
     "vue-router": "^4.6.3"
   },
   "devDependencies": {
-    "@vueuse/motion": "^3.0.3"
+    "@types/node": "^24.10.1",
+    "@vueuse/motion": "^3.0.3",
+    "prisma": "^7.1.0"
   }
 }
