@@ -1,6 +1,43 @@
 import { prisma } from '~/server/utils/db'
 import { verifyJWT } from '~/server/utils/jwt'
 
+// Define the API response type from Nager.Date API
+interface NagerHoliday {
+  date: string
+  localName: string
+  name: string
+  countryCode: string
+  fixed: boolean
+  global: boolean
+  counties: string[] | null
+  launchYear: number | null
+  types: string[]
+}
+
+// Fetch holidays from Nager.Date API (only public holidays)
+async function fetchPublicHolidaysFromAPI(countryCode: string, year: number): Promise<NagerHoliday[]> {
+  try {
+    const response = await $fetch<NagerHoliday[]>(
+      `https://date.nager.at/api/v3/PublicHolidays/${year}/${countryCode}`,
+      {
+        headers: {
+          'Accept': 'application/json',
+        },
+      }
+    )
+    
+    // Filter to only include Public holidays
+    const publicHolidays = Array.isArray(response) 
+      ? response.filter(h => h.types && h.types.includes('Public'))
+      : []
+    
+    return publicHolidays
+  } catch (error) {
+    console.error(`Error fetching holidays from Nager.Date API for ${countryCode}:`, error)
+    return []
+  }
+}
+
 export default defineEventHandler(async (event) => {
   try {
     const authHeader = getHeader(event, 'authorization')
@@ -30,27 +67,56 @@ export default defineEventHandler(async (event) => {
       },
     })
 
-    // Group by country and count holidays
+    // Group by country+subdivision combination
     const locationMap = new Map<string, any>()
     
     holidays.forEach(holiday => {
-      if (!locationMap.has(holiday.country)) {
-        locationMap.set(holiday.country, {
+      // Create unique key for country+subdivision combination
+      const locationKey = `${holiday.country}||${holiday.region || ''}`
+      
+      if (!locationMap.has(locationKey)) {
+        locationMap.set(locationKey, {
           id: holiday.id,
           country: holiday.country,
+          subdivision: holiday.region,
           holidayCount: 0,
           createdAt: holiday.createdAt,
         })
       }
       
-      // Increment holiday count for this country
-      const location = locationMap.get(holiday.country)
+      // Increment holiday count for this location
+      const location = locationMap.get(locationKey)
       if (location) {
         location.holidayCount++
       }
     })
 
-    return Array.from(locationMap.values())
+    // Now fetch actual public holidays from API for accurate counts
+    const locationsArray = Array.from(locationMap.values())
+    
+    // Update counts with actual public holiday counts from API
+    await Promise.all(
+      locationsArray.map(async (location) => {
+        try {
+          let publicHolidays = await fetchPublicHolidaysFromAPI(location.country, currentYear)
+          
+          // Filter by subdivision if specified
+          if (location.subdivision) {
+            publicHolidays = publicHolidays.filter(h => 
+              h.global || (h.counties && h.counties.includes(location.subdivision))
+            )
+          }
+          
+          // Update the count with actual public holidays
+          location.holidayCount = publicHolidays.length
+        } catch (error) {
+          console.error(`Error fetching holidays for ${location.country}:`, error)
+          // Keep the database count as fallback
+        }
+      })
+    )
+
+    return locationsArray
   } catch (error: any) {
     if (error.statusCode) throw error
     
