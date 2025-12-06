@@ -1,8 +1,8 @@
+// server/api/organization/onboarding.post.ts
 import { prisma } from '~/server/utils/db'
 import { z } from 'zod'
 
 const onboardingSchema = z.object({
-  // Removed companyName - it's already saved during registration
   leaveYearStart: z.number().min(1).max(12),
   annualLeaveAllowance: z.number().min(0).max(365),
 })
@@ -19,12 +19,10 @@ export default defineEventHandler(async (event) => {
 
     const token = authHeader.replace('Bearer ', '')
     const decoded = verifyJWT(token)
-
     const body = await readBody(event)
     const data = onboardingSchema.parse(body)
 
     // Update organization with onboarding settings
-    // Company name was already set during registration
     const organization = await prisma.organization.update({
       where: { id: decoded.organizationId },
       data: {
@@ -42,39 +40,161 @@ export default defineEventHandler(async (event) => {
       },
     })
 
-    // Create default leave types for the organization
+    // ✅ Create all 8 default leave types with user's selected allowance
     const defaultLeaveTypes = [
       {
         organizationId: organization.id,
         name: 'Annual Leave',
-        code: 'ANNUAL',
+        code: 'ANNUAL' as const, // ✅ Add 'as const'
+        description: 'Annual/Vacation Leave',
         color: '#3b82f6',
+        icon: 'lucide:umbrella-off',
         requiresApproval: true,
         allowHalfDays: true,
         paidLeave: true,
         annualAllowance: data.annualLeaveAllowance,
         carryOverAllowed: true,
-        maxCarryOverDays: 5,
+        maxCarryOverDays: Math.floor(data.annualLeaveAllowance * 0.2),
+        requiresFirstLevelApproval: true,
+        requiresSecondLevelApproval: false,
+        minDaysNotice: 0,
+        allowQuarterDays: false,
+        allowHourly: false,
+        hasAccrual: false,
       },
       {
         organizationId: organization.id,
         name: 'Sick Leave - Paid',
-        code: 'SICK_PAID',
+        code: 'SICK_PAID' as const, // ✅ Add 'as const'
+        description: 'Paid Sick Leave',
         color: '#ef4444',
+        icon: 'lucide:heart-pulse',
         requiresApproval: false,
+        requiresDocumentation: true,
         allowHalfDays: true,
         paidLeave: true,
-        requiresDocumentation: true,
         annualAllowance: 10,
+        requiresFirstLevelApproval: false,
+        requiresSecondLevelApproval: false,
+        minDaysNotice: 0,
+        allowQuarterDays: false,
+        allowHourly: false,
+        hasAccrual: false,
+        carryOverAllowed: false,
       },
       {
         organizationId: organization.id,
-        name: 'Work From Home',
-        code: 'WFH',
+        name: 'Unpaid Leave',
+        code: 'UNPAID' as const, // ✅ Add 'as const'
+        description: 'Unpaid Leave',
         color: '#10b981',
+        icon: 'lucide:calendar',
+        requiresApproval: true,
+        allowHalfDays: true,
+        paidLeave: false,
+        requiresFirstLevelApproval: true,
+        requiresSecondLevelApproval: false,
+        minDaysNotice: 0,
+        allowQuarterDays: false,
+        allowHourly: false,
+        hasAccrual: false,
+        carryOverAllowed: false,
+      },
+      {
+        organizationId: organization.id,
+        name: 'Maternity',
+        code: 'MATERNITY' as const, // ✅ Add 'as const'
+        description: 'Maternity Leave',
+        color: '#ec4899',
+        icon: 'lucide:baby',
+        requiresApproval: true,
+        requiresDocumentation: true,
+        allowHalfDays: false,
+        paidLeave: true,
+        annualAllowance: 90,
+        requiresFirstLevelApproval: true,
+        requiresSecondLevelApproval: false,
+        minDaysNotice: 0,
+        allowQuarterDays: false,
+        allowHourly: false,
+        hasAccrual: false,
+        carryOverAllowed: false,
+      },
+      {
+        organizationId: organization.id,
+        name: 'Paternity',
+        code: 'PATERNITY' as const, // ✅ Add 'as const'
+        description: 'Paternity Leave',
+        color: '#3b82f6',
+        icon: 'lucide:baby',
+        requiresApproval: true,
+        requiresDocumentation: true,
+        allowHalfDays: false,
+        paidLeave: true,
+        annualAllowance: 14,
+        requiresFirstLevelApproval: true,
+        requiresSecondLevelApproval: false,
+        minDaysNotice: 0,
+        allowQuarterDays: false,
+        allowHourly: false,
+        hasAccrual: false,
+        carryOverAllowed: false,
+      },
+      {
+        organizationId: organization.id,
+        name: 'Meeting',
+        code: 'MEETING' as const, // ✅ Add 'as const'
+        description: 'Out for Meeting',
+        color: '#f97316',
+        icon: 'lucide:users',
+        requiresApproval: false,
+        allowHalfDays: true,
+        paidLeave: true,
+        requiresFirstLevelApproval: false,
+        requiresSecondLevelApproval: false,
+        minDaysNotice: 0,
+        allowQuarterDays: false,
+        allowHourly: false,
+        hasAccrual: false,
+        carryOverAllowed: false,
+      },
+      {
+        organizationId: organization.id,
+        name: 'Compassionate',
+        code: 'BEREAVEMENT' as const, // ✅ Add 'as const'
+        description: 'Bereavement/Compassionate Leave',
+        color: '#9333ea',
+        icon: 'lucide:heart',
+        requiresApproval: true,
+        requiresDocumentation: true,
+        allowHalfDays: false,
+        paidLeave: true,
+        annualAllowance: 5,
+        requiresFirstLevelApproval: true,
+        requiresSecondLevelApproval: false,
+        minDaysNotice: 0,
+        allowQuarterDays: false,
+        allowHourly: false,
+        hasAccrual: false,
+        carryOverAllowed: false,
+      },
+      {
+        organizationId: organization.id,
+        name: 'Working from home',
+        code: 'WFH' as const, // ✅ Add 'as const'
+        description: 'Work From Home (tracking)',
+        color: '#3b82f6',
+        icon: 'lucide:home',
         requiresApproval: true,
         allowHalfDays: true,
         paidLeave: true,
+        requiresFirstLevelApproval: true,
+        requiresSecondLevelApproval: false,
+        minDaysNotice: 0,
+        allowQuarterDays: false,
+        allowHourly: false,
+        hasAccrual: false,
+        carryOverAllowed: false,
       },
     ]
 
