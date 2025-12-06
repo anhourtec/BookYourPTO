@@ -27,18 +27,49 @@
         <h3 class="text-sm font-semibold text-[rgb(var(--foreground))] mb-3">Add Holiday Location</h3>
         
         <div class="space-y-3">
-          <!-- Country Selection Row -->
-          <div class="flex gap-3">
-            <select
-              v-model="selectedCountry"
-              @change="onCountryChange"
-              class="flex-1 px-4 py-2.5 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] focus:ring-2 focus:ring-[rgb(var(--primary))] focus:border-transparent outline-none transition"
+          <!-- Country Selection with Search -->
+          <div class="relative">
+            <div class="flex gap-3">
+              <div class="flex-1 relative">
+                <input
+                  ref="countrySearchInput"
+                  v-model="countrySearchQuery"
+                  @focus="showCountryDropdown = true"
+                  @input="onCountrySearch"
+                  type="text"
+                  placeholder="Search for a country..."
+                  class="w-full px-4 py-2.5 pr-10 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] focus:ring-2 focus:ring-[rgb(var(--primary))] focus:border-transparent outline-none transition"
+                />
+                <Icon name="lucide:search" class="w-5 h-5 absolute right-3 top-1/2 -translate-y-1/2 text-[rgb(var(--muted-foreground))]" />
+                
+                <!-- Country Dropdown -->
+                <div 
+                  v-if="showCountryDropdown && filteredCountries.length > 0"
+                  class="absolute z-50 w-full mt-1 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                >
+                  <button
+                    v-for="country in filteredCountries"
+                    :key="country.countryCode"
+                    @click="selectCountry(country)"
+                    class="w-full px-4 py-2.5 text-left hover:bg-[rgb(var(--muted))] transition-colors text-[rgb(var(--foreground))] text-sm"
+                  >
+                    {{ country.name }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Selected Country Display -->
+          <div v-if="selectedCountry" class="flex items-center gap-2 p-3 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg">
+            <Icon name="lucide:map-pin" class="w-4 h-4 text-[rgb(var(--primary))]" />
+            <span class="text-sm font-medium text-[rgb(var(--foreground))]">{{ getCountryName(selectedCountry) }}</span>
+            <button
+              @click="clearCountrySelection"
+              class="ml-auto p-1 hover:bg-[rgb(var(--muted))] rounded transition-colors"
             >
-              <option value="">Select a country...</option>
-              <option v-for="country in availableCountries" :key="country.countryCode" :value="country.countryCode">
-                {{ country.name }}
-              </option>
-            </select>
+              <Icon name="lucide:x" class="w-4 h-4 text-[rgb(var(--muted-foreground))]" />
+            </button>
           </div>
 
           <!-- State/Province Selection (if available) -->
@@ -89,7 +120,7 @@
         <Icon name="lucide:calendar-off" class="w-12 h-12 mx-auto text-[rgb(var(--muted-foreground))] mb-3" />
         <p class="text-[rgb(var(--muted-foreground))] mb-2">You have no public holiday locations set up yet.</p>
         <p class="text-sm text-[rgb(var(--muted-foreground))]">
-          Select a country above to get started.
+          Search and select a country above to get started.
         </p>
       </div>
 
@@ -116,7 +147,7 @@
                   </span>
                 </h4>
                 <p class="text-xs text-[rgb(var(--muted-foreground))]">
-                  {{ location.holidayCount || location.holidays?.length || 0 }} holidays in {{ currentYear }}
+                  {{ location.holidayCount || 0 }} public holidays in {{ currentYear }}
                 </p>
               </div>
             </div>
@@ -176,7 +207,6 @@
                     Regional
                   </span>
                   <span
-                    v-if="holiday.types && holiday.types.includes('Public')"
                     class="px-2 py-1 text-xs font-medium bg-[rgb(var(--primary))]/10 text-[rgb(var(--primary))] rounded"
                   >
                     Public Holiday
@@ -185,7 +215,7 @@
               </div>
             </div>
             <div v-else class="p-8 text-center text-sm text-[rgb(var(--muted-foreground))]">
-              No holidays found for this location.
+              No public holidays found for this location.
             </div>
           </div>
         </div>
@@ -198,11 +228,11 @@
           <div class="text-sm text-[rgb(var(--foreground))]">
             <p class="font-medium mb-1">How public holidays work:</p>
             <ul class="space-y-1 text-[rgb(var(--muted-foreground))]">
+              <li>• Only public holidays are counted and displayed</li>
               <li>• Public holidays are displayed in user calendars automatically</li>
               <li>• They do not count against users' leave allowances</li>
               <li>• Holiday data is updated annually from official sources</li>
               <li>• Select specific states/provinces for region-specific holidays</li>
-              <li>• Users can see which days are public holidays when requesting leave</li>
             </ul>
           </div>
         </div>
@@ -294,6 +324,12 @@ const expandedLocation = ref<string | null>(null)
 const loadingHolidays = ref(false)
 const loadingSubdivisions = ref(false)
 
+// Search functionality
+const countrySearchQuery = ref('')
+const showCountryDropdown = ref(false)
+const filteredCountries = ref<Country[]>([])
+const countrySearchInput = ref<HTMLInputElement | null>(null)
+
 // Delete confirmation
 const showDeleteConfirm = ref(false)
 const locationToDelete = ref<HolidayLocation | null>(null)
@@ -309,6 +345,55 @@ const countryHasSubdivisions = (countryCode: string) => {
   return countriesWithSubdivisions.includes(countryCode)
 }
 
+// Handle country search
+const onCountrySearch = () => {
+  const query = countrySearchQuery.value.toLowerCase().trim()
+  
+  if (!query) {
+    filteredCountries.value = availableCountries.value
+  } else {
+    filteredCountries.value = availableCountries.value.filter(country =>
+      country.name.toLowerCase().includes(query) ||
+      country.countryCode.toLowerCase().includes(query)
+    )
+  }
+  
+  showCountryDropdown.value = true
+}
+
+// Select country from dropdown
+const selectCountry = async (country: Country) => {
+  selectedCountry.value = country.countryCode
+  countrySearchQuery.value = country.name
+  showCountryDropdown.value = false
+  
+  // Reset subdivision
+  selectedSubdivision.value = ''
+  availableSubdivisions.value = []
+  
+  // Fetch subdivisions if available
+  if (countryHasSubdivisions(country.countryCode)) {
+    await fetchSubdivisions(country.countryCode)
+  }
+}
+
+// Clear country selection
+const clearCountrySelection = () => {
+  selectedCountry.value = ''
+  countrySearchQuery.value = ''
+  selectedSubdivision.value = ''
+  availableSubdivisions.value = []
+  filteredCountries.value = availableCountries.value
+}
+
+// Close dropdown when clicking outside
+const handleClickOutside = (event: MouseEvent) => {
+  const target = event.target as HTMLElement
+  if (!target.closest('.relative')) {
+    showCountryDropdown.value = false
+  }
+}
+
 // Fetch available countries from Nager.Date API via our backend
 const fetchAvailableCountries = async () => {
   try {
@@ -317,6 +402,7 @@ const fetchAvailableCountries = async () => {
       headers: { 'Authorization': `Bearer ${token}` },
     })
     availableCountries.value = countries.sort((a, b) => a.name.localeCompare(b.name))
+    filteredCountries.value = availableCountries.value
   } catch (err) {
     console.error('Error fetching countries:', err)
     error.value = 'Failed to load available countries'
@@ -340,21 +426,17 @@ const fetchSubdivisions = async (countryCode: string) => {
   }
 }
 
-// Handle country change
-const onCountryChange = async () => {
-  selectedSubdivision.value = ''
-  availableSubdivisions.value = []
-  
-  if (selectedCountry.value && countryHasSubdivisions(selectedCountry.value)) {
-    await fetchSubdivisions(selectedCountry.value)
-  }
-}
-
-// Fetch holidays for a specific country from Nager.Date API
+// Fetch holidays for a specific country from Nager.Date API (only public holidays)
 const fetchHolidaysForCountry = async (countryCode: string, year: number = currentYear): Promise<Holiday[]> => {
   try {
     const holidays = await $fetch<Holiday[]>(`https://date.nager.at/api/v3/PublicHolidays/${year}/${countryCode}`)
-    return Array.isArray(holidays) ? holidays : []
+    
+    // Filter to only include Public holidays
+    const publicHolidays = Array.isArray(holidays) 
+      ? holidays.filter(h => h.types && h.types.includes('Public'))
+      : []
+    
+    return publicHolidays
   } catch (err) {
     console.error(`Error fetching holidays for ${countryCode}:`, err)
     return []
@@ -401,9 +483,7 @@ const addLocation = async () => {
       },
     })
     
-    selectedCountry.value = ''
-    selectedSubdivision.value = ''
-    availableSubdivisions.value = []
+    clearCountrySelection()
     await fetchLocations()
   } catch (err: any) {
     error.value = err.data?.message || 'Failed to add holiday location'
@@ -435,6 +515,7 @@ const toggleHolidays = async (locationId: string) => {
       }
       
       location.holidays = holidays
+      location.holidayCount = holidays.length
     } catch (err) {
       console.error('Error loading holidays:', err)
     } finally {
@@ -502,5 +583,13 @@ onMounted(async () => {
     fetchAvailableCountries(),
     fetchLocations()
   ])
+  
+  // Add click outside listener
+  document.addEventListener('click', handleClickOutside)
+})
+
+// Cleanup
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
 })
 </script>
