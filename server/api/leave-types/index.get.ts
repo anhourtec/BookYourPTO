@@ -11,51 +11,53 @@ export default defineEventHandler(async (event) => {
     const token = authHeader.replace('Bearer ', '')
     const decoded = verifyJWT(token)
 
-    // Get current year
-    const currentYear = new Date().getFullYear()
-    const yearStart = new Date(currentYear, 0, 1)
-    const yearEnd = new Date(currentYear, 11, 31, 23, 59, 59)
-
-    // Fetch all public holiday locations for the organization
-    const holidays = await prisma.publicHoliday.findMany({
+    // Fetch all leave types for the organization
+    const leaveTypes = await prisma.leaveType.findMany({
       where: {
         organizationId: decoded.organizationId,
-        date: {
-          gte: yearStart,
-          lte: yearEnd,
-        },
       },
-      orderBy: {
-        date: 'asc',
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        description: true,
+        color: true,
+        icon: true,
+        requiresApproval: true,
+        requiresDocumentation: true,
+        maxDaysPerRequest: true,
+        minDaysNotice: true,
+        allowHalfDays: true,
+        allowQuarterDays: true,
+        allowHourly: true,
+        paidLeave: true,
+        annualAllowance: true,
+        hasAccrual: true,
+        accrualRate: true,
+        carryOverAllowed: true,
+        maxCarryOverDays: true,
+        requiresFirstLevelApproval: true,
+        requiresSecondLevelApproval: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
       },
+      orderBy: [
+        { isActive: 'desc' }, // Active ones first
+        { name: 'asc' },
+      ],
     })
 
-    // Group by country and count holidays
-    const locationMap = new Map<string, any>()
-    
-    holidays.forEach(holiday => {
-      if (!locationMap.has(holiday.country)) {
-        locationMap.set(holiday.country, {
-          id: holiday.id,
-          country: holiday.country,
-          holidayCount: 0,
-          createdAt: holiday.createdAt,
-        })
-      }
-      
-      // Increment holiday count for this country
-      const location = locationMap.get(holiday.country)
-      location.holidayCount++
-    })
-
-    return Array.from(locationMap.values())
+    return leaveTypes
   } catch (error: any) {
-    if (error.statusCode) throw error
-    
-    console.error('Error fetching public holidays:', error)
+    if (error.statusCode) {
+      throw error
+    }
+
+    console.error('Error fetching leave types:', error)
     throw createError({
       statusCode: 500,
-      message: 'Failed to fetch public holidays',
+      message: 'Failed to fetch leave types',
     })
   }
 })
