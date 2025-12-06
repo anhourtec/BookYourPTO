@@ -319,7 +319,6 @@ DATABASE_URL="postgresql://user:password@host:5432/dbname"
 JWT_SECRET="production-secret-min-32-chars-use-strong-random-string"
 REFRESH_SECRET="different-production-secret-min-32-chars-use-strong-random-string"
 NODE_ENV="production"
-PORT=3000
 ```
 
 ## Development Guidelines
