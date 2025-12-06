@@ -31,6 +31,10 @@ model Organization {
   accentColor    String  @default("#10b981") // Green
   customCSS      Json? // Custom styling overrides
 
+    // Privacy Settings
+  calendarViewRestricted   Boolean @default(false)
+  departmentViewRestricted Boolean @default(false)
+
   // Regional Settings
   timezone       String @default("UTC")
   dateFormat     String @default("YYYY-MM-DD")
@@ -52,7 +56,13 @@ model Organization {
   smtpPassword     String? // Encrypted
   emailFromName    String  @default("BookYourPTO")
   emailFromAddress String?
-
+  
+  // Carry Forward Settings
+  carryForwardDays      Float   @default(0)    // Max days that can be carried forward
+  carryForwardHours     Float   @default(0)    // Max hours that can be carried forward
+  carryForwardExpires   Boolean @default(false) // Whether carry forward expires
+  carryForwardExpiryMonths Int? @default(12)   // Months until expiry (when enabled)
+  
   // Billing & Subscription
   plan               String   @default("free") // free, pro, enterprise
   maxUsers           Int      @default(10)
