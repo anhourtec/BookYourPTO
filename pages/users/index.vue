@@ -166,7 +166,7 @@
                     {{ user.firstName }} {{ user.lastName }}
                   </p>
                   <p v-if="!user.isActive" class="text-xs text-[rgb(var(--destructive))] mt-0.5">
-                    Left {{ formatDate(user.updatedAt) }}
+                    Inactive {{ formatDate(user.updatedAt) }}
                   </p>
                   <p class="lg:hidden text-xs text-[rgb(var(--muted-foreground))] truncate mt-0.5">
                     {{ user.email }}
