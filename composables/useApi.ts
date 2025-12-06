@@ -1,36 +1,63 @@
+// ============================================
+// API COMPOSABLE (WITH AUTO-AUTH HEADERS)
+// ============================================
+// This version includes a helper that automatically adds auth headers
 
 export const useApi = () => {
+  // ============================================
+  // Helper to get auth headers
+  // ============================================
   const getAuthHeaders = () => {
     const token = localStorage.getItem('auth_token')
-    return {
-      'Authorization': `Bearer ${token}`,
+    return token ? { 'Authorization': `Bearer ${token}` } : {}
+  }
+
+  // ============================================
+  // Helper for authenticated fetch with error handling
+  // ============================================
+  const authenticatedFetch = async (url: string, options: any = {}) => {
+    try {
+      return await $fetch(url, {
+        ...options,
+        headers: {
+          ...getAuthHeaders(),
+          ...options.headers,
+        },
+      })
+    } catch (error: any) {
+      // Handle 401 errors - token expired or invalid
+      if (error?.statusCode === 401 || error?.response?.status === 401) {
+        console.log('401 Unauthorized - Token expired or invalid, logging out...')
+        localStorage.removeItem('auth_token')
+        localStorage.removeItem('user')
+        navigateTo('/login')
+      }
+      throw error
     }
   }
 
+  // ============================================
+  // USER API METHODS
+  // ============================================
+  
   const fetchUsers = async () => {
-    return await $fetch('/api/users', {
-      headers: getAuthHeaders(),
-    })
+    return await authenticatedFetch('/api/users')
   }
 
   const fetchDepartments = async () => {
-    return await $fetch('/api/departments', {
-      headers: getAuthHeaders(),
-    })
+    return await authenticatedFetch('/api/departments')
   }
 
   const updateUser = async (userId: string, data: any) => {
-    return await $fetch(`/api/users/${userId}`, {
+    return await authenticatedFetch(`/api/users/${userId}`, {
       method: 'PATCH',
-      headers: getAuthHeaders(),
       body: data,
     })
   }
 
   const deleteUser = async (userId: string) => {
-    return await $fetch(`/api/users/${userId}`, {
+    return await authenticatedFetch(`/api/users/${userId}`, {
       method: 'DELETE',
-      headers: getAuthHeaders(),
     })
   }
 
@@ -39,9 +66,7 @@ export const useApi = () => {
   // ============================================
 
   const fetchSettings = async () => {
-    return await $fetch('/api/settings', {
-      headers: getAuthHeaders(),
-    })
+    return await authenticatedFetch('/api/settings')
   }
 
   const updateSettings = async (data: {
@@ -57,13 +82,15 @@ export const useApi = () => {
     carryForwardExpires?: boolean
     carryForwardExpiryMonths?: number | null
   }) => {
-    return await $fetch('/api/settings', {
+    return await authenticatedFetch('/api/settings', {
       method: 'PATCH',
-      headers: getAuthHeaders(),
       body: data,
     })
   }
 
+  // ============================================
+  // Return all API methods
+  // ============================================
   return {
     fetchUsers,
     fetchDepartments,
