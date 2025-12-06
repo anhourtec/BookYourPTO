@@ -25,6 +25,14 @@
           >
             Users
           </NuxtLink>
+
+          <NuxtLink 
+            v-if="isAuthenticated && canAccessUsers()"
+            to="/settings" 
+            class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
+          >
+            Settings
+          </NuxtLink>
           
           <template v-if="!isAuthenticated">
             <NuxtLink 
