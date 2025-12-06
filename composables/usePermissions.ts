@@ -12,7 +12,7 @@ export const usePermissions = () => {
   }
 
   const canAccessUsers = () => {
-    return hasRole(['ADMINISTRATOR', 'EXECUTIVE', 'DEPARTMENT_HEAD', 'MANAGER'])
+    return hasRole(['ADMINISTRATOR', 'EXECUTIVE', 'DEPARTMENT_HEAD'])
   }
 
   const canManageUsers = () => {
@@ -23,15 +23,30 @@ export const usePermissions = () => {
     return hasRole(['ADMINISTRATOR', 'EXECUTIVE'])
   }
 
-  // ✅ Add this new method
   const canDeleteDepartments = () => {
+    return hasRole(['ADMINISTRATOR', 'EXECUTIVE'])
+  }
+
+  const canAccessSettings = () => {
+    return hasRole(['ADMINISTRATOR', 'EXECUTIVE'])
+  }
+
+  const canManageOrganization = () => {
+    return hasRole(['ADMINISTRATOR', 'EXECUTIVE'])
+  }
+
+  const canManageLeaveTypes = () => {
+    return hasRole(['ADMINISTRATOR', 'EXECUTIVE'])
+  }
+
+  const canManageCarryForward = () => {
     return hasRole(['ADMINISTRATOR', 'EXECUTIVE'])
   }
 
   const canApproveRequests = () => {
     const user = getUser()
     if (!user) return false
-    return user.isApprover || hasRole(['ADMINISTRATOR', 'EXECUTIVE', 'DEPARTMENT_HEAD', 'MANAGER'])
+    return user.isApprover || hasRole(['ADMINISTRATOR', 'EXECUTIVE', 'DEPARTMENT_HEAD'])
   }
 
   const isAdmin = () => {
@@ -42,10 +57,7 @@ export const usePermissions = () => {
     const user = getUser()
     if (!user) return false
     
-    // Admins can edit anyone
     if (isAdmin()) return true
-    
-    // Users can edit themselves
     if (user.id === targetUserId) return true
     
     return false
@@ -57,7 +69,11 @@ export const usePermissions = () => {
     canAccessUsers,
     canManageUsers,
     canManageDepartments,
-    canDeleteDepartments, // ✅ Export it
+    canDeleteDepartments,
+    canAccessSettings,
+    canManageOrganization,
+    canManageLeaveTypes,
+    canManageCarryForward,
     canApproveRequests,
     isAdmin,
     canEditUser,
