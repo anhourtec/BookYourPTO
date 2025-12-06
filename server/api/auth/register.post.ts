@@ -11,11 +11,30 @@ const registerSchema = z.object({
   organizationSlug: z.string().min(1).regex(/^[a-z0-9-]+$/, 'Slug must be lowercase letters, numbers, and hyphens only'),
 })
 
+// Helper function to generate department code
+function generateDepartmentCode(name: string): string {
+  const words = name
+    .replace(/[^a-zA-Z0-9\s]/g, '')
+    .trim()
+    .split(/\s+/)
+    .filter(word => word.length > 0)
+  
+  if (words.length === 0) return 'EXEC'
+  if (words.length === 1) return words[0].substring(0, 4).toUpperCase()
+  
+  return words
+    .slice(0, 4)
+    .map(word => word[0])
+    .join('')
+    .toUpperCase()
+}
+
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
     const data = registerSchema.parse(body)
 
+    // Check if organization slug already exists
     const existingOrg = await prisma.organization.findUnique({
       where: { slug: data.organizationSlug },
     })
@@ -27,6 +46,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // Check if email already registered
     const existingUser = await prisma.user.findFirst({
       where: { email: data.email },
     })
@@ -40,45 +60,81 @@ export default defineEventHandler(async (event) => {
 
     const hashedPassword = await bcrypt.hash(data.password, 10)
 
-    const organization = await prisma.organization.create({
-      data: {
-        name: data.organizationName,
-        slug: data.organizationSlug,
-      },
+    // ✅ Use transaction to create organization, department, and user together
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Create organization
+      const organization = await tx.organization.create({
+        data: {
+          name: data.organizationName,
+          slug: data.organizationSlug,
+        },
+      })
+
+      // 2. Create default department using organization name
+      const departmentCode = generateDepartmentCode(data.organizationName)
+      const department = await tx.department.create({
+        data: {
+          name: data.organizationName, // Use organization name as department name
+          code: departmentCode,
+          description: 'Default department created during registration',
+          color: '#3b82f6', // Default blue color
+          organizationId: organization.id,
+          isActive: true,
+        },
+      })
+
+      // 3. Create executive user and assign to the department
+      const user = await tx.user.create({
+        data: {
+          email: data.email,
+          password: hashedPassword,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          organizationId: organization.id,
+          departmentId: department.id, // ✅ Assign user to department
+          role: 'EXECUTIVE',
+          level: 'EXECUTIVE',
+          isApprover: true,
+          isActive: true,
+        },
+      })
+
+      // 4. Set the executive user as head of the department
+      await tx.department.update({
+        where: { id: department.id },
+        data: {
+          headOfDepartmentId: user.id, // ✅ Make them the department head
+        },
+      })
+
+      return { organization, department, user }
     })
 
-    const user = await prisma.user.create({
-      data: {
-        email: data.email,
-        password: hashedPassword,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        organizationId: organization.id,
-        role: 'EXECUTIVE',
-        level: 'EXECUTIVE',
-        isApprover: true,
-        isActive: true,
-      },
-    })
-
+    // Generate JWT token
     const token = generateJWT({
-      userId: user.id,
-      organizationId: organization.id,
-      role: user.role,
-      email: user.email,
+      userId: result.user.id,
+      organizationId: result.organization.id,
+      role: result.user.role,
+      email: result.user.email,
     })
 
     return {
       success: true,
       token,
       user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        organizationId: organization.id,
-        organizationSlug: organization.slug,
+        id: result.user.id,
+        email: result.user.email,
+        firstName: result.user.firstName,
+        lastName: result.user.lastName,
+        role: result.user.role,
+        organizationId: result.organization.id,
+        organizationSlug: result.organization.slug,
+        departmentId: result.department.id, // Include department info
+      },
+      department: {
+        id: result.department.id,
+        name: result.department.name,
+        code: result.department.code,
       },
     }
   } catch (error: any) {
@@ -93,6 +149,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    console.error('Registration failed:', error)
     throw createError({
       statusCode: 500,
       message: 'Registration failed',
