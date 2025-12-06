@@ -2,6 +2,16 @@
 // API COMPOSABLE WITH AUTO-REFRESH
 // ============================================
 // SSR-safe: Only accesses localStorage on client-side
+// Fully typed with TypeScript for better IDE support
+
+import type {
+  User,
+  UpdateUserInput,
+  Department,
+  OrganizationSettings,
+  UpdateSettingsInput,
+  RefreshTokenResponse
+} from '~/types/api'
 
 export const useApi = () => {
   let isRefreshing = false
@@ -10,7 +20,7 @@ export const useApi = () => {
   // ============================================
   // SSR-safe helper to get auth headers
   // ============================================
-  const getAuthHeaders = () => {
+  const getAuthHeaders = (): Record<string, string> => {
     // Only access localStorage on client-side
     if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
       return {}
@@ -46,7 +56,7 @@ export const useApi = () => {
 
         console.log('Refreshing access token...')
         
-        const response = await $fetch('/api/auth/refresh', {
+        const response = await $fetch<RefreshTokenResponse>('/api/auth/refresh', {
           method: 'POST',
           body: { refreshToken },
         })
@@ -72,16 +82,17 @@ export const useApi = () => {
   // ============================================
   // Authenticated fetch with auto-retry on 401
   // ============================================
-  const authenticatedFetch = async (url: string, options: any = {}) => {
+  const authenticatedFetch = async <T = any>(url: string, options: any = {}): Promise<T> => {
     try {
       // First attempt with current token
-      return await $fetch(url, {
+      const response = await $fetch(url, {
         ...options,
         headers: {
           ...getAuthHeaders(),
           ...options.headers,
         },
       })
+      return response as T
     } catch (error: any) {
       // If 401 error, try to refresh token and retry
       if (error?.statusCode === 401 || error?.response?.status === 401) {
@@ -93,13 +104,14 @@ export const useApi = () => {
           // Retry the original request with new token
           try {
             console.log('Retrying request with new token...')
-            return await $fetch(url, {
+            const retryResponse = await $fetch(url, {
               ...options,
               headers: {
                 ...getAuthHeaders(),
                 ...options.headers,
               },
             })
+            return retryResponse as T
           } catch (retryError) {
             console.error('Retry failed after token refresh')
             throw retryError
@@ -124,49 +136,68 @@ export const useApi = () => {
   // USER API METHODS
   // ============================================
   
-  const fetchUsers = async () => {
-    return await authenticatedFetch('/api/users')
+  /**
+   * Fetch all users in the organization
+   * @returns Array of users with department and manager info
+   */
+  const fetchUsers = async (): Promise<User[]> => {
+    return await authenticatedFetch<User[]>('/api/users')
   }
 
-  const fetchDepartments = async () => {
-    return await authenticatedFetch('/api/departments')
-  }
-
-  const updateUser = async (userId: string, data: any) => {
-    return await authenticatedFetch(`/api/users/${userId}`, {
+  /**
+   * Update a user's information
+   * @param userId - User ID to update
+   * @param data - Updated user data
+   * @returns Updated user object
+   */
+  const updateUser = async (userId: string, data: UpdateUserInput): Promise<User> => {
+    return await authenticatedFetch<User>(`/api/users/${userId}`, {
       method: 'PATCH',
       body: data,
     })
   }
 
-  const deleteUser = async (userId: string) => {
-    return await authenticatedFetch(`/api/users/${userId}`, {
+  /**
+   * Delete a user
+   * @param userId - User ID to delete
+   */
+  const deleteUser = async (userId: string): Promise<void> => {
+    return await authenticatedFetch<void>(`/api/users/${userId}`, {
       method: 'DELETE',
     })
+  }
+
+  // ============================================
+  // DEPARTMENT API METHODS
+  // ============================================
+  
+  /**
+   * Fetch all departments in the organization
+   * @returns Array of departments with user counts
+   */
+  const fetchDepartments = async (): Promise<Department[]> => {
+    return await authenticatedFetch<Department[]>('/api/departments')
   }
 
   // ============================================
   // SETTINGS API METHODS
   // ============================================
 
-  const fetchSettings = async () => {
-    return await authenticatedFetch('/api/settings')
+  /**
+   * Fetch organization settings
+   * @returns Organization settings object
+   */
+  const fetchSettings = async (): Promise<OrganizationSettings> => {
+    return await authenticatedFetch<OrganizationSettings>('/api/settings')
   }
 
-  const updateSettings = async (data: {
-    name?: string
-    timezone?: string
-    weekStartDay?: number
-    leaveYearStartMonth?: number
-    defaultLeaveAllowance?: number
-    calendarViewRestricted?: boolean
-    departmentViewRestricted?: boolean
-    carryForwardDays?: number
-    carryForwardHours?: number
-    carryForwardExpires?: boolean
-    carryForwardExpiryMonths?: number | null
-  }) => {
-    return await authenticatedFetch('/api/settings', {
+  /**
+   * Update organization settings
+   * @param data - Settings to update
+   * @returns Updated settings object
+   */
+  const updateSettings = async (data: UpdateSettingsInput): Promise<OrganizationSettings> => {
+    return await authenticatedFetch<OrganizationSettings>('/api/settings', {
       method: 'PATCH',
       body: data,
     })
@@ -176,10 +207,15 @@ export const useApi = () => {
   // Return all API methods
   // ============================================
   return {
+    // User methods
     fetchUsers,
-    fetchDepartments,
     updateUser,
     deleteUser,
+    
+    // Department methods
+    fetchDepartments,
+    
+    // Settings methods
     fetchSettings,
     updateSettings,
   }
