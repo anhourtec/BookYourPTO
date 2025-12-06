@@ -26,6 +26,7 @@ export default defineEventHandler(async (event) => {
             id: true,
             firstName: true,
             lastName: true,
+            email: true,  // ← ADD THIS LINE
           },
         },
         _count: {
