@@ -1,0 +1,723 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+// ============================================
+// CORE ENTITIES
+// ============================================
+
+// Multi-tenant root - Every organization is isolated
+model Organization {
+  id     String  @id @default(cuid())
+  name   String
+  slug   String  @unique // URL-friendly name (acme-corp)
+  domain String? // Custom domain for white-labeling
+
+  // White-labeling & Branding
+  logoUrl        String? // Path to logo file
+  faviconUrl     String?
+  primaryColor   String  @default("#3b82f6") // Blue
+  secondaryColor String  @default("#8b5cf6") // Purple
+  accentColor    String  @default("#10b981") // Green
+  customCSS      Json? // Custom styling overrides
+
+    // Privacy Settings
+  calendarViewRestricted   Boolean @default(false)
+  departmentViewRestricted Boolean @default(false)
+
+  // Regional Settings
+  timezone       String @default("UTC")
+  dateFormat     String @default("YYYY-MM-DD")
+  timeFormat     String @default("HH:mm") // 24h or 12h
+  weekStartDay   Int    @default(1) // 1 = Monday, 0 = Sunday
+  currency       String @default("USD")
+  fiscalYearStart Int   @default(1) // Month (1-12)
+  country        String @default("US") // For public holidays
+
+  // Onboarding
+  leaveYearStartMonth    Int     @default(1) // 1-12 (January - December)
+  defaultLeaveAllowance  Float   @default(25) // Default days per year
+  onboardingCompleted    Boolean @default(false)
+
+  // Email Configuration
+  smtpHost         String?
+  smtpPort         Int?
+  smtpUser         String?
+  smtpPassword     String? // Encrypted
+  emailFromName    String  @default("BookYourPTO")
+  emailFromAddress String?
+  
+  // Carry Forward Settings
+  carryForwardDays      Float   @default(0)    // Max days that can be carried forward
+  carryForwardHours     Float   @default(0)    // Max hours that can be carried forward
+  carryForwardExpires   Boolean @default(false) // Whether carry forward expires
+  carryForwardExpiryMonths Int? @default(12)   // Months until expiry (when enabled)
+  
+  // Billing & Subscription
+  plan               String   @default("free") // free, pro, enterprise
+  maxUsers           Int      @default(10)
+  subscriptionStatus String   @default("trial") // trial, active, cancelled, suspended
+  billingEmail       String?
+  subscriptionEndsAt DateTime?
+
+  // Features flags
+  features Json? // { enableDocuments: true, enableReports: true, etc. }
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  users            User[]
+  departments      Department[]
+  leaveTypes       LeaveType[]
+  publicHolidays   PublicHoliday[]
+  leaves           Leave[]
+  leaveBalances    LeaveBalance[]
+  documents        Document[]
+  approvalWorkflows ApprovalWorkflow[]
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+  emailTemplates   EmailTemplate[]
+
+  @@index([slug])
+}
+
+// Departments within an organization
+model Department {
+  id             String  @id @default(cuid())
+  organizationId String
+  name           String
+  code           String // IT, HR, SALES, etc.
+  description    String?
+  color          String  @default("#3b82f6") // For calendar
+  costCenter     String? // For accounting integration
+
+  // Department Head
+  headOfDepartmentId String?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  users        User[]       @relation("DepartmentMembers")
+  headOfDept   User?        @relation("DepartmentHead", fields: [headOfDepartmentId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@index([headOfDepartmentId])
+}
+
+// Employees/Users
+model User {
+  id             String @id @default(cuid())
+  organizationId String
+
+  // Authentication
+  email    String
+  password String // Hashed with bcrypt
+  emailVerificationToken String?
+  emailVerificationExpiry DateTime?
+  passwordResetToken      String?
+  passwordResetExpiry     DateTime?
+
+  // Basic Info
+  firstName     String
+  lastName      String
+  middleName    String?
+  preferredName String?
+  avatar        String? // File path or URL
+  dateOfBirth   DateTime?
+  gender        String? // MALE, FEMALE, OTHER, PREFER_NOT_TO_SAY
+
+  // Employment Details
+  employeeId          String? // Company's employee ID
+  jobTitle            String?
+  departmentId        String?
+  reportsToId         String? // Manager's User ID
+  employmentType      EmploymentType @default(FULLTIME)
+  employmentStartDate DateTime?
+  employmentEndDate   DateTime? // For contract end or termination
+  probationEndDate    DateTime?
+  level               UserLevel      @default(STANDARD)
+
+  // Contact Information
+  phoneMobile   String?
+  phoneLandline String?
+  addressLine1  String?
+  addressLine2  String?
+  city          String?
+  state         String?
+  postalCode    String?
+  country       String?
+
+  // Emergency Contact (stored as JSON)
+  emergencyContact Json? // { name, relationship, phonePrimary, phoneSecondary, address }
+
+  // Payroll & Banking
+  payrollId          String?
+  bankAccountDetails Json? // Encrypted: { accountNumber, routingNumber, bankName }
+  taxId              String?
+
+  // Role & Permissions
+  role                 UserRole  @default(EMPLOYEE)
+  isApprover           Boolean   @default(false)
+  canApproveDepartments String[] // Array of Department IDs
+  permissions          Json? // Granular permissions: { canExportData: true, etc. }
+
+  // Work Schedule (stored as JSON)
+  workSchedule Json? // { monday: { start: "09:00", end: "17:00", isWorkday: true }, ... }
+  timezone     String @default("UTC")
+  hoursPerWeek Float  @default(40)
+
+  // Leave Balances (Quick access - detailed tracking in LeaveBalance table)
+  annualLeaveBalance   Float @default(0)
+  sickLeaveBalance     Float @default(0)
+  carryOverBalance     Float @default(0)
+  customLeaveAllowance Float? // Override organization default
+  customLeaveBalances  Json? // Other leave types: { MATERNITY: 90, etc. }
+
+  // Status & Activity
+  isActive           Boolean   @default(true)
+  emailVerified      Boolean   @default(false)
+  lastLoginAt        DateTime?
+  profileCompleteness Int      @default(0) // 0-100%
+
+  // Files
+  documentsFolderId String? // Docker volume path
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  department        Department?        @relation("DepartmentMembers", fields: [departmentId], references: [id], onDelete: SetNull)
+  manager           User?              @relation("ManagerEmployees", fields: [reportsToId], references: [id], onDelete: SetNull)
+  employees         User[]             @relation("ManagerEmployees")
+  departmentsHeaded Department[]       @relation("DepartmentHead")
+  leaves            Leave[]            @relation("LeaveRequester")
+  leaveBalances     LeaveBalance[]
+  documents         Document[]         @relation("DocumentOwner")
+  uploadedDocuments Document[]         @relation("DocumentUploader")
+  notifications     Notification[]
+  auditLogs         AuditLog[]
+  signedDocuments   Document[]         @relation("DocumentSigner")
+  firstLevelApprovals Leave[]          @relation("FirstLevelApprover")
+  secondLevelApprovals Leave[]         @relation("SecondLevelApprover")
+
+  @@unique([organizationId, email])
+  @@unique([organizationId, employeeId])
+  @@index([organizationId])
+  @@index([departmentId])
+  @@index([reportsToId])
+  @@index([email])
+  @@index([isActive])
+}
+
+// Leave Types (Annual, Sick, Maternity, etc.)
+model LeaveType {
+  id             String @id @default(cuid())
+  organizationId String
+
+  name        String // "Annual Leave", "Sick Leave - Paid", "Maternity Leave"
+  code        LeaveTypeCode // Enum for consistency
+  description String?
+  color       String        @default("#3b82f6")
+  icon        String?       // Icon name for UI
+
+  // Configuration
+  requiresApproval       Boolean @default(true)
+  requiresDocumentation  Boolean @default(false) // Medical certificate, etc.
+  maxDaysPerRequest      Int?    // Max days in single request
+  minDaysNotice          Int     @default(0) // Days in advance required
+  allowHalfDays          Boolean @default(true)
+  allowQuarterDays       Boolean @default(false)
+  allowHourly            Boolean @default(false)
+  paidLeave              Boolean @default(true)
+
+  // Allowance Settings
+  annualAllowance  Float?   // Days per year
+  hasAccrual       Boolean  @default(false) // Does it accrue monthly?
+  accrualRate      Float?   // Days per month if accrual
+  accrualStartDate DateTime? // When accrual starts
+  carryOverAllowed Boolean  @default(false)
+  maxCarryOverDays Float?
+  expiryMonths     Int?     // Months until carried over days expire
+
+  // Approval Workflow
+  requiresFirstLevelApproval  Boolean @default(true) // Manager
+  requiresSecondLevelApproval Boolean @default(false) // Department Head
+  autoApproveAfterDays        Int? // Auto-approve if not responded
+
+  // Visibility & Access
+  isActive               Boolean  @default(true)
+  availableForRoles      String[] // Which roles can use this
+  availableForDepartments String[] // Which departments (empty = all)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leaves        Leave[]
+  leaveBalances LeaveBalance[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@index([isActive])
+}
+
+// Public Holidays
+model PublicHoliday {
+  id             String  @id @default(cuid())
+  organizationId String
+  country        String
+  region         String? // For regional holidays (e.g., "California")
+  name           String
+  date           DateTime
+  isRecurring    Boolean @default(true) // Recurs annually
+  recurringPattern Json? // For complex patterns
+  affectedDepartments String[] // Empty = all departments
+  isHalfDay      Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([date])
+  @@index([country])
+}
+
+// Leave Requests (Time-off requests)
+model Leave {
+  id             String @id @default(cuid())
+  organizationId String
+  userId         String
+  leaveTypeId    String
+
+  // Leave Details
+  startDate  DateTime
+  endDate    DateTime
+  startHalf  DayPortion @default(FULL_DAY) // FULL_DAY, FIRST_HALF, SECOND_HALF
+  endHalf    DayPortion @default(FULL_DAY)
+  totalDays  Float // Calculated: accounting for half days, weekends, holidays
+  totalHours Float? // For hourly leave types
+  reason     String?
+  notes      String?
+
+  // Status & Approval Flow
+  status     LeaveStatus @default(PENDING)
+  submittedAt DateTime   @default(now())
+
+  // First Level Approval (usually direct manager)
+  firstLevelApproverId String?
+  firstLevelApprovedAt DateTime?
+  firstLevelComment    String?
+
+  // Second Level Approval (department head, HR, etc.)
+  secondLevelApproverId String?
+  secondLevelApprovedAt DateTime?
+  secondLevelComment    String?
+
+  // Rejection/Cancellation
+  rejectionReason String?
+  cancelledAt     DateTime?
+  cancelledReason String?
+  cancelledBy     String? // User ID who cancelled
+
+  // Calendar Integration
+  googleEventId   String?
+  outlookEventId  String?
+  syncedToCalendar Boolean @default(false)
+
+  // Attachments (medical certificates, etc.)
+  attachmentUrls String[] // Array of file paths
+
+  // Balance Impact Tracking
+  deductedFrom    String? // Which leave balance (leaveTypeId)
+  balanceSnapshot Json? // { before: 20, after: 18, deducted: 2 }
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user               User         @relation("LeaveRequester", fields: [userId], references: [id], onDelete: Cascade)
+  leaveType          LeaveType    @relation(fields: [leaveTypeId], references: [id], onDelete: Restrict)
+  firstLevelApprover User?        @relation("FirstLevelApprover", fields: [firstLevelApproverId], references: [id], onDelete: SetNull)
+  secondLevelApprover User?       @relation("SecondLevelApprover", fields: [secondLevelApproverId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([leaveTypeId])
+  @@index([status])
+  @@index([startDate, endDate])
+  @@index([userId, status])
+}
+
+// Leave Balance Tracking (Historical & Current)
+model LeaveBalance {
+  id             String @id @default(cuid())
+  organizationId String
+  userId         String
+  leaveTypeId    String
+  year           Int // Fiscal year
+  fiscalPeriodStart DateTime
+  fiscalPeriodEnd   DateTime
+
+  // Balance Tracking
+  openingBalance Float @default(0) // Balance at start of year
+  earned         Float @default(0) // From accrual during year
+  used           Float @default(0) // Days taken
+  adjusted       Float @default(0) // Manual adjustments by admin
+  carriedOver    Float @default(0) // From previous year
+  expired        Float @default(0) // Carried over days that expired
+  currentBalance Float @default(0) // Calculated field
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leaveType    LeaveType    @relation(fields: [leaveTypeId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, leaveTypeId, year])
+  @@index([organizationId])
+  @@index([userId])
+  @@index([year])
+}
+
+// Document Management (Employee files, contracts, certificates)
+model Document {
+  id             String @id @default(cuid())
+  organizationId String
+  userId         String // Owner of the document
+  uploadedById   String // Who uploaded it
+
+  // Document Info
+  title       String
+  description String?
+  category    DocumentCategory
+  type        String // MIME type or extension
+
+  // File Storage (Docker volumes)
+  filePath String // /documents/{orgId}/{userId}/{year}/{filename}
+  fileName String
+  fileSize Int // In bytes
+  mimeType String
+  checksum String // SHA256 for integrity verification
+  version  Int    @default(1) // For document versioning
+
+  // E-Signature Support
+  requiresSignature  Boolean         @default(false)
+  signatureStatus    SignatureStatus @default(NOT_REQUIRED)
+  signatureDeadline  DateTime?
+  signedAt           DateTime?
+  signedByUserId     String?
+  signatureData      String? // Base64 signature image
+  signatureIpAddress String?
+  signatureUserAgent String?
+
+  // Access Control
+  isPrivate        Boolean   @default(false) // Only user + HR can see
+  sharedWithUsers  String[] // User IDs with access
+  sharedWithRoles  String[] // Roles with access (ADMINISTRATOR, HR, etc.)
+  expiryDate       DateTime? // For temporary access
+
+  // Metadata
+  tags         String[]
+  customFields Json? // Flexible additional data
+
+  // Soft Delete
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation("DocumentOwner", fields: [userId], references: [id], onDelete: Cascade)
+  uploadedBy   User         @relation("DocumentUploader", fields: [uploadedById], references: [id])
+  signedBy     User?        @relation("DocumentSigner", fields: [signedByUserId], references: [id])
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([category])
+  @@index([deletedAt])
+}
+
+// Approval Workflows (Configurable approval chains)
+model ApprovalWorkflow {
+  id             String  @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+
+  // Workflow Configuration
+  triggerType WorkflowTrigger // LEAVE_REQUEST, DOCUMENT_APPROVAL, etc.
+  conditions  Json // { leaveTypeIds: [], departmentIds: [], minDays: 5, userLevels: [] }
+
+  // Approval Steps (Sequential)
+  approvalSteps Json // [{ step: 1, approverType: "DIRECT_MANAGER", timeoutDays: 3 }]
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([triggerType])
+}
+
+// Notifications (In-app & Email)
+model Notification {
+  id             String @id @default(cuid())
+  organizationId String
+  userId         String
+  type           NotificationType
+  title          String
+  message        String
+  actionUrl      String?
+  priority       NotificationPriority @default(MEDIUM)
+
+  isRead       Boolean   @default(false)
+  readAt       DateTime?
+  sentViaEmail Boolean   @default(false)
+  sentViaInApp Boolean   @default(true)
+
+  metadata Json? // Additional context data
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+// Audit Logs (Compliance & Security)
+model AuditLog {
+  id             String @id @default(cuid())
+  organizationId String
+  userId         String? // Null for system actions
+  action         AuditAction
+  entityType     String // USER, LEAVE, DOCUMENT, etc.
+  entityId       String
+  changes        Json? // { before: {...}, after: {...} }
+  ipAddress      String?
+  userAgent      String?
+  timestamp      DateTime @default(now())
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([timestamp])
+}
+
+// Email Templates (Customizable)
+model EmailTemplate {
+  id             String @id @default(cuid())
+  organizationId String
+  type           EmailTemplateType
+  subject        String
+  bodyHtml       String @db.Text
+  bodyText       String @db.Text
+  variables      Json // Available placeholders: { userName, leaveType, etc. }
+  isActive       Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, type])
+  @@index([organizationId])
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum EmploymentType {
+  FULLTIME
+  PARTTIME
+  CONTRACT
+  INTERN
+  TEMPORARY
+  SEASONAL
+}
+
+enum UserRole {
+  EMPLOYEE
+  MANAGER
+  DEPARTMENT_HEAD
+  HR
+  ADMINISTRATOR
+  EXECUTIVE
+}
+
+enum UserLevel {
+  STANDARD
+  SENIOR
+  LEAD
+  DIRECTOR
+  EXECUTIVE
+  ADMINISTRATOR
+}
+
+enum LeaveTypeCode {
+  ANNUAL              // Annual/Vacation Leave
+  SICK_PAID           // Paid Sick Leave
+  SICK_UNPAID         // Unpaid Sick Leave
+  MATERNITY           // Maternity Leave
+  PATERNITY           // Paternity Leave
+  PARENTAL            // Parental Leave
+  BEREAVEMENT         // Bereavement/Compassionate Leave
+  JURY_DUTY           // Jury Duty
+  MEDICAL             // Medical Leave
+  SABBATICAL          // Sabbatical Leave
+  STUDY               // Study Leave
+  MILITARY            // Military Leave
+  MARRIAGE            // Marriage Leave
+  MOVING              // Moving/Relocation Leave
+  VOLUNTEER           // Volunteer Leave
+  UNPAID              // Unpaid Leave
+  WFH                 // Work From Home (tracking)
+  MEETING             // Out for Meeting
+  TRAINING            // Training/Conference
+  SPECIAL             // Special Circumstances
+  EMERGENCY           // Emergency Leave
+  QUARANTINE          // Quarantine/Isolation
+  COMPENSATORY        // Compensatory Time Off
+  RELIGIOUS           // Religious Observance
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  WITHDRAWN
+}
+
+enum DayPortion {
+  FULL_DAY
+  FIRST_HALF      // Morning
+  SECOND_HALF     // Afternoon
+  QUARTER_MORNING // First quarter
+  QUARTER_AFTERNOON // Last quarter
+}
+
+enum DocumentCategory {
+  CONTRACT
+  OFFER_LETTER
+  SALARY_INCREMENT
+  PERFORMANCE_REVIEW
+  POLICY_DOCUMENT
+  ID_DOCUMENT
+  CERTIFICATE
+  TRAINING_MATERIAL
+  MEDICAL_CERTIFICATE
+  VISA_DOCUMENT
+  TAX_DOCUMENT
+  INSURANCE
+  OTHER
+}
+
+enum SignatureStatus {
+  NOT_REQUIRED
+  PENDING
+  SIGNED
+  DECLINED
+  EXPIRED
+}
+
+enum WorkflowTrigger {
+  LEAVE_REQUEST
+  DOCUMENT_APPROVAL
+  EXPENSE_APPROVAL
+  TIMESHEET_APPROVAL
+  USER_ONBOARDING
+  USER_OFFBOARDING
+}
+
+enum NotificationType {
+  LEAVE_SUBMITTED
+  LEAVE_APPROVED
+  LEAVE_REJECTED
+  LEAVE_CANCELLED
+  LEAVE_REMINDER
+  DOCUMENT_UPLOADED
+  DOCUMENT_SIGNED
+  DOCUMENT_EXPIRES_SOON
+  APPROVAL_REQUIRED
+  BALANCE_LOW
+  SYSTEM_ANNOUNCEMENT
+  POLICY_UPDATE
+}
+
+enum NotificationPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  APPROVE
+  REJECT
+  CANCEL
+  SIGN
+  DOWNLOAD
+  EXPORT
+  LOGIN
+  LOGOUT
+  PASSWORD_CHANGE
+  SETTINGS_CHANGE
+}
+
+enum EmailTemplateType {
+  WELCOME
+  PASSWORD_RESET
+  EMAIL_VERIFICATION
+  LEAVE_SUBMITTED
+  LEAVE_APPROVED
+  LEAVE_REJECTED
+  LEAVE_CANCELLED
+  LEAVE_REMINDER
+  APPROVAL_REQUIRED
+  DOCUMENT_SIGNED
+  BALANCE_UPDATED
+  POLICY_UPDATE
+}

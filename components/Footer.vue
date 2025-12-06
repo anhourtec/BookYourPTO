@@ -12,9 +12,9 @@
         <div>
           <h4 class="font-semibold text-gray-900 dark:text-white mb-4">Product</h4>
           <ul class="space-y-2 text-sm">
-            <li><NuxtLink to="/features" class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">Features</NuxtLink></li>
-            <li><NuxtLink to="/pricing" class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">Pricing</NuxtLink></li>
-            <li><NuxtLink to="/docs" class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">Documentation</NuxtLink></li>
+            <li><NuxtLink to="#" class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">Features</NuxtLink></li>
+            <li><NuxtLink to="#" class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">Pricing</NuxtLink></li>
+            <li><NuxtLink to="#" class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">Documentation</NuxtLink></li>
           </ul>
         </div>
         
@@ -22,17 +22,17 @@
           <h4 class="font-semibold text-gray-900 dark:text-white mb-4">Resources</h4>
           <ul class="space-y-2 text-sm">
             <li><a href="https://github.com/yourusername/bookyourpto" target="_blank" class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">GitHub</a></li>
-            <li><NuxtLink to="/community" class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">Community</NuxtLink></li>
-            <li><NuxtLink to="/support" class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">Support</NuxtLink></li>
+            <li><NuxtLink to="#" class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">Community</NuxtLink></li>
+            <li><NuxtLink to="#" class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">Support</NuxtLink></li>
           </ul>
         </div>
         
         <div>
           <h4 class="font-semibold text-gray-900 dark:text-white mb-4">Legal</h4>
           <ul class="space-y-2 text-sm">
-            <li><NuxtLink to="/privacy" class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">Privacy</NuxtLink></li>
-            <li><NuxtLink to="/terms" class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">Terms</NuxtLink></li>
-            <li><NuxtLink to="/license" class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">License</NuxtLink></li>
+            <li><NuxtLink to="#" class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">Privacy</NuxtLink></li>
+            <li><NuxtLink to="#" class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">Terms</NuxtLink></li>
+            <li><NuxtLink to="#" class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">License</NuxtLink></li>
           </ul>
         </div>
       </div>
