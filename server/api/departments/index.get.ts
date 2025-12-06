@@ -1,15 +1,19 @@
 import { prisma } from '~/server/utils/db'
-import { verifyJWT } from '~/server/utils/jwt'
 
 export default defineEventHandler(async (event) => {
   try {
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader) {
-      throw createError({ statusCode: 401, message: 'Unauthorized' })
+    // ============================================
+    // FIXED: Get auth from middleware (already verified)
+    // No need to manually verify token!
+    // ============================================
+    const auth = event.context.auth
+    
+    if (!auth) {
+      throw createError({ 
+        statusCode: 401, 
+        message: 'Unauthorized' 
+      })
     }
-
-    const token = authHeader.replace('Bearer ', '')
-    const decoded = verifyJWT(token)
 
     // Get query param to optionally include inactive departments
     const query = getQuery(event)
@@ -17,7 +21,7 @@ export default defineEventHandler(async (event) => {
 
     const departments = await prisma.department.findMany({
       where: {
-        organizationId: decoded.organizationId,
+        organizationId: auth.organizationId,
         ...(includeInactive ? {} : { isActive: true }),
       },
       include: {
@@ -26,7 +30,7 @@ export default defineEventHandler(async (event) => {
             id: true,
             firstName: true,
             lastName: true,
-            email: true,  // ← ADD THIS LINE
+            email: true,
           },
         },
         _count: {

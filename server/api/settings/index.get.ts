@@ -1,19 +1,23 @@
 import { prisma } from '~/server/utils/db'
-import { verifyJWT } from '~/server/utils/jwt'
 
 export default defineEventHandler(async (event) => {
   try {
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader) {
-      throw createError({ statusCode: 401, message: 'Unauthorized' })
+    // ============================================
+    // FIXED: Get auth from middleware (already verified)
+    // No need to manually verify token!
+    // ============================================
+    const auth = event.context.auth
+    
+    if (!auth) {
+      throw createError({ 
+        statusCode: 401, 
+        message: 'Unauthorized' 
+      })
     }
-
-    const token = authHeader.replace('Bearer ', '')
-    const decoded = verifyJWT(token)
 
     // Fetch organization settings
     const organization = await prisma.organization.findUnique({
-      where: { id: decoded.organizationId },
+      where: { id: auth.organizationId },
       select: {
         id: true,
         name: true,
@@ -31,7 +35,10 @@ export default defineEventHandler(async (event) => {
     })
 
     if (!organization) {
-      throw createError({ statusCode: 404, message: 'Organization not found' })
+      throw createError({ 
+        statusCode: 404, 
+        message: 'Organization not found' 
+      })
     }
 
     return organization

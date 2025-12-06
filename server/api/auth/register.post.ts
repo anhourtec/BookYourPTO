@@ -1,6 +1,7 @@
 import { prisma } from '~/server/utils/db'
 import bcrypt from 'bcrypt'
 import { z } from 'zod'
+import { generateAccessToken, generateRefreshToken, generateTokenId } from '~/server/utils/jwt'
 
 const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -11,7 +12,6 @@ const registerSchema = z.object({
   organizationSlug: z.string().min(1).regex(/^[a-z0-9-]+$/, 'Slug must be lowercase letters, numbers, and hyphens only'),
 })
 
-// Helper function to generate department code
 function generateDepartmentCode(name: string): string {
   const words = name
     .replace(/[^a-zA-Z0-9\s]/g, '')
@@ -34,7 +34,6 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
     const data = registerSchema.parse(body)
 
-    // Check if organization slug already exists
     const existingOrg = await prisma.organization.findUnique({
       where: { slug: data.organizationSlug },
     })
@@ -46,7 +45,6 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Check if email already registered
     const existingUser = await prisma.user.findFirst({
       where: { email: data.email },
     })
@@ -60,9 +58,7 @@ export default defineEventHandler(async (event) => {
 
     const hashedPassword = await bcrypt.hash(data.password, 10)
 
-    // ✅ Use transaction to create organization, department, and user together
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Create organization
       const organization = await tx.organization.create({
         data: {
           name: data.organizationName,
@@ -70,20 +66,18 @@ export default defineEventHandler(async (event) => {
         },
       })
 
-      // 2. Create default department using organization name
       const departmentCode = generateDepartmentCode(data.organizationName)
       const department = await tx.department.create({
         data: {
-          name: data.organizationName, // Use organization name as department name
+          name: data.organizationName,
           code: departmentCode,
           description: 'Default department created during registration',
-          color: '#3b82f6', // Default blue color
+          color: '#3b82f6',
           organizationId: organization.id,
           isActive: true,
         },
       })
 
-      // 3. Create executive user and assign to the department
       const user = await tx.user.create({
         data: {
           email: data.email,
@@ -91,7 +85,7 @@ export default defineEventHandler(async (event) => {
           firstName: data.firstName,
           lastName: data.lastName,
           organizationId: organization.id,
-          departmentId: department.id, // ✅ Assign user to department
+          departmentId: department.id,
           role: 'EXECUTIVE',
           level: 'EXECUTIVE',
           isApprover: true,
@@ -99,28 +93,43 @@ export default defineEventHandler(async (event) => {
         },
       })
 
-      // 4. Set the executive user as head of the department
       await tx.department.update({
         where: { id: department.id },
         data: {
-          headOfDepartmentId: user.id, // ✅ Make them the department head
+          headOfDepartmentId: user.id,
         },
       })
 
       return { organization, department, user }
     })
 
-    // Generate JWT token
-    const token = generateJWT({
+    // ============================================
+    // GENERATE TOKENS
+    // ============================================
+    const accessToken = generateAccessToken({
       userId: result.user.id,
       organizationId: result.organization.id,
       role: result.user.role,
       email: result.user.email,
     })
 
+    const tokenId = generateTokenId()
+    const refreshToken = generateRefreshToken(result.user.id, tokenId)
+
+    // Store refresh token
+    await prisma.refreshToken.create({
+      data: {
+        id: tokenId,
+        token: refreshToken,
+        userId: result.user.id,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    })
+
     return {
       success: true,
-      token,
+      accessToken,
+      refreshToken,
       user: {
         id: result.user.id,
         email: result.user.email,
@@ -129,7 +138,7 @@ export default defineEventHandler(async (event) => {
         role: result.user.role,
         organizationId: result.organization.id,
         organizationSlug: result.organization.slug,
-        departmentId: result.department.id, // Include department info
+        departmentId: result.department.id,
       },
       department: {
         id: result.department.id,

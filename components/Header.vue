@@ -35,6 +35,7 @@
           </NuxtLink>
           
           <!-- TOKEN EXPIRY COUNTDOWN (Testing Only) -->
+          <!--
           <div 
             v-if="isAuthenticated && tokenExpiresIn > 0"
             class="px-3 py-1 rounded-full text-xs font-medium"
@@ -42,6 +43,7 @@
           >
             Token expires in: {{ tokenExpiresIn }}s
           </div>
+          -->
           
           <template v-if="!isAuthenticated">
             <NuxtLink 
@@ -193,6 +195,7 @@ const updateTokenExpiry = () => {
 
 const handleLogout = () => {
   localStorage.removeItem('auth_token')
+  localStorage.removeItem('refresh_token') // Also remove refresh token
   localStorage.removeItem('user')
   user.value = null
   isAuthenticated.value = false
@@ -204,24 +207,17 @@ const toggleTheme = () => {
   colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark'
 }
 
-// Update countdown every second and auto-logout on expiry
+// Update countdown every second (removed auto-logout)
 let expiryInterval: NodeJS.Timeout | null = null
 
 onMounted(() => {
   checkAuth()
   
-  // Update token expiry every second and check for expiration
+  // Update token expiry every second
+  // Note: Auto-logout is handled by middleware and useApi composable
   expiryInterval = setInterval(() => {
     if (isAuthenticated.value) {
       updateTokenExpiry()
-      
-      // ============================================
-      // AUTO-LOGOUT: If token has expired, logout immediately
-      // ============================================
-      if (tokenExpiresIn.value <= 0) {
-        console.log('Token expired - auto logging out...')
-        handleLogout()
-      }
     }
   }, 1000)
   

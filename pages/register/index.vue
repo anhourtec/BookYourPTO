@@ -168,8 +168,11 @@ const handleRegister = async () => {
       body: form.value,
     })
 
-    // Store auth data
-    localStorage.setItem('auth_token', response.token)
+    // ============================================
+    // UPDATED: Store both access and refresh tokens
+    // ============================================
+    localStorage.setItem('auth_token', response.accessToken)
+    localStorage.setItem('refresh_token', response.refreshToken)
     localStorage.setItem('user', JSON.stringify(response.user))
 
     // Show welcome modal for onboarding

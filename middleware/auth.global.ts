@@ -1,13 +1,12 @@
 // ============================================
 // CLIENT-SIDE AUTHENTICATION MIDDLEWARE
 // ============================================
-// Changes:
-// 1. Added JWT token expiry validation
-// 2. Auto-logout on expired tokens
-// 3. Preserved role-based route protection
+// CRITICAL: This ONLY runs on client-side!
 
-export default defineNuxtRouteMiddleware((to, from) => {
-  // Skip on server-side rendering
+export default defineNuxtRouteMiddleware(async (to, from) => {
+  // ============================================
+  // MUST BE CLIENT-SIDE ONLY
+  // ============================================
   if (process.server) return
 
   const publicRoutes = ['/', '/login', '/register', '/accept-invitation']
@@ -16,43 +15,68 @@ export default defineNuxtRouteMiddleware((to, from) => {
   // Allow public routes
   if (isPublicRoute) return
 
-  // Check authentication from localStorage (client-side only)
+  // ============================================
+  // SAFE: Only access localStorage on client
+  // ============================================
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    // Still on server somehow - skip
+    return
+  }
+
   const token = localStorage.getItem('auth_token')
+  const refreshToken = localStorage.getItem('refresh_token')
   const userStr = localStorage.getItem('user')
 
-  // If no token or user data, redirect to login
+  // If no tokens at all, redirect to login
   if (!token || !userStr) {
     return navigateTo('/login')
   }
 
   // ============================================
-  // NEW: Validate JWT token expiry
+  // Validate JWT token expiry
   // ============================================
   try {
-    // Decode JWT token (format: header.payload.signature)
     const tokenParts = token.split('.')
     if (tokenParts.length !== 3) {
       throw new Error('Invalid token format')
     }
 
-    // Decode the payload (base64url encoded)
-    // TypeScript: tokenParts[1] is guaranteed to exist due to length check above
-    const payloadBase64 = tokenParts[1]!
-    const payload = JSON.parse(atob(payloadBase64))
-
-    // Check if token has expired (exp is in seconds, Date.now() is in milliseconds)
+    const payload = JSON.parse(atob(tokenParts[1]!))
     const currentTime = Math.floor(Date.now() / 1000)
+    
     if (payload.exp && payload.exp < currentTime) {
-      // Token expired - clear storage and redirect to login
-      console.log('Token expired, logging out...')
-      localStorage.removeItem('auth_token')
-      localStorage.removeItem('user')
-      return navigateTo('/login')
+      console.log('Access token expired - attempting refresh...')
+      
+      if (refreshToken) {
+        try {
+          const response = await $fetch('/api/auth/refresh', {
+            method: 'POST',
+            body: { refreshToken },
+          })
+          
+          localStorage.setItem('auth_token', response.accessToken)
+          localStorage.setItem('refresh_token', response.refreshToken)
+          
+          console.log('✅ Token refreshed successfully in middleware')
+          return
+        } catch (refreshError) {
+          console.error('Token refresh failed:', refreshError)
+          localStorage.removeItem('auth_token')
+          localStorage.removeItem('refresh_token')
+          localStorage.removeItem('user')
+          return navigateTo('/login')
+        }
+      } else {
+        console.log('No refresh token available')
+        localStorage.removeItem('auth_token')
+        localStorage.removeItem('user')
+        return navigateTo('/login')
+      }
     }
   } catch (error) {
-    // If token is malformed or can't be decoded, clear storage
     console.error('Token validation error:', error)
     localStorage.removeItem('auth_token')
+    localStorage.removeItem('refresh_token')
     localStorage.removeItem('user')
     return navigateTo('/login')
   }
@@ -61,7 +85,7 @@ export default defineNuxtRouteMiddleware((to, from) => {
   const user = JSON.parse(userStr)
 
   // ============================================
-  // EXISTING: Role-based route protection
+  // Role-based route protection
   // ============================================
   const protectedRoutes: { [key: string]: string[] } = {
     '/users': ['ADMINISTRATOR', 'EXECUTIVE', 'DEPARTMENT_HEAD', 'MANAGER'],
@@ -69,11 +93,9 @@ export default defineNuxtRouteMiddleware((to, from) => {
     '/departments': ['ADMINISTRATOR', 'EXECUTIVE'],
   }
 
-  // Check if current route requires specific roles
   for (const [route, allowedRoles] of Object.entries(protectedRoutes)) {
     if (to.path.startsWith(route)) {
       if (!allowedRoles.includes(user.role)) {
-        // Return 404 for unauthorized access
         throw createError({
           statusCode: 404,
           statusMessage: 'Page Not Found',

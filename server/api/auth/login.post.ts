@@ -1,24 +1,33 @@
 import { prisma } from '~/server/utils/db'
 import bcrypt from 'bcrypt'
-import { z } from 'zod'
-
-const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(1, 'Password is required'),
-})
+import { generateAccessToken, generateRefreshToken } from '~/server/utils/jwt'
 
 export default defineEventHandler(async (event) => {
   try {
-    const body = await readBody(event)
-    const data = loginSchema.parse(body)
+    const { email, password } = await readBody(event)
 
+    // Validation
+    if (!email || !password) {
+      throw createError({
+        statusCode: 400,
+        message: 'Email and password are required',
+      })
+    }
+
+    // Find user
     const user = await prisma.user.findFirst({
-      where: { 
-        email: data.email,
+      where: {
+        email: email.toLowerCase(),
         isActive: true,
       },
       include: {
-        organization: true,
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
       },
     })
 
@@ -29,8 +38,8 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const isValidPassword = await bcrypt.compare(data.password, user.password)
-
+    // Verify password
+    const isValidPassword = await bcrypt.compare(password, user.password)
     if (!isValidPassword) {
       throw createError({
         statusCode: 401,
@@ -38,21 +47,44 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date() },
+    // ============================================
+    // NEW: Generate refresh token and store in database
+    // ============================================
+    const refreshToken = await prisma.refreshToken.create({
+      data: {
+        token: generateRefreshToken(user.id, ''), // We'll update this after creation
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days (or 2 minutes for testing)
+      },
     })
 
-    const token = generateJWT({
+    // Update the refresh token with its own ID in the JWT payload
+    const refreshTokenJWT = generateRefreshToken(user.id, refreshToken.id)
+    await prisma.refreshToken.update({
+      where: { id: refreshToken.id },
+      data: { token: refreshTokenJWT },
+    })
+
+    // ============================================
+    // Generate access token (short-lived)
+    // ============================================
+    const accessToken = generateAccessToken({
       userId: user.id,
       organizationId: user.organizationId,
       role: user.role,
       email: user.email,
     })
 
+    // Update last login
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
+    })
+
+    // Return both tokens + user info
     return {
-      success: true,
-      token,
+      accessToken,
+      refreshToken: refreshTokenJWT,
       user: {
         id: user.id,
         email: user.email,
@@ -60,19 +92,15 @@ export default defineEventHandler(async (event) => {
         lastName: user.lastName,
         role: user.role,
         organizationId: user.organizationId,
-        organizationSlug: user.organization.slug,
+        organization: user.organization,
+        avatar: user.avatar,
       },
     }
   } catch (error: any) {
+    console.error('Login error:', error)
+    
     if (error.statusCode) {
       throw error
-    }
-
-    if (error.issues) {
-      throw createError({
-        statusCode: 400,
-        message: error.issues[0].message,
-      })
     }
 
     throw createError({
