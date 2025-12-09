@@ -593,17 +593,13 @@ enum EmploymentType {
 
 enum UserRole {
   EMPLOYEE
-  MANAGER
   DEPARTMENT_HEAD
-  HR
   ADMINISTRATOR
   EXECUTIVE
 }
 
 enum UserLevel {
   STANDARD
-  SENIOR
-  LEAD
   DIRECTOR
   EXECUTIVE
   ADMINISTRATOR
