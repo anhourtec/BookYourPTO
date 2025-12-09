@@ -12,6 +12,8 @@ export interface User {
   middleName?: string
   preferredName?: string
   avatar?: string
+  dateOfBirth?: string
+  gender?: string
   
   // Employment
   employeeId?: string
@@ -19,6 +21,7 @@ export interface User {
   departmentId?: string
   reportsToId?: string
   employmentStartDate?: string
+  employmentEndDate?: string
   employmentType?: 'FULLTIME' | 'PARTTIME' | 'CONTRACT' | 'INTERN' | 'TEMPORARY' | 'SEASONAL'
   
   // Role & Permissions - ONLY 4 ROLES
@@ -27,22 +30,51 @@ export interface User {
   level?: 'STANDARD' | 'DIRECTOR' | 'EXECUTIVE' | 'ADMINISTRATOR'
   isApprover?: boolean
   
+  // Contact Information
+  phoneMobile?: string
+  phoneLandline?: string
+  addressLine1?: string
+  addressLine2?: string
+  city?: string
+  state?: string
+  postalCode?: string
+  country?: string
+  
+  // Emergency Contact
+  emergencyContact?: {
+    name?: string
+    relationship?: string
+    phonePrimary?: string
+    phoneSecondary?: string
+    address?: string
+  }
+  
+  // Payroll & Banking
+  payrollId?: string
+  
+  // Leave Balances (Required fields)
+  annualLeaveBalance: number
+  sickLeaveBalance: number
+  carryOverBalance: number
+  customLeaveAllowance?: number
+  
   // Relations (populated)
   department?: {
     id: string
     name: string
-    code: string
+    code?: string
   }
   manager?: {
     id: string
     firstName: string
     lastName: string
-    email: string
+    email?: string
+    jobTitle?: string
   }
   
   // Status
   isActive: boolean
-  emailVerified: boolean
+  emailVerified?: boolean
   lastLoginAt?: string
   
   // Timestamps
@@ -63,8 +95,35 @@ export interface CreateUserInput {
 export interface UpdateUserInput {
   firstName?: string
   lastName?: string
-  jobTitle?: string
-  departmentId?: string
+  middleName?: string | null
+  preferredName?: string | null
+  dateOfBirth?: string | null
+  gender?: string | null
+  jobTitle?: string | null
+  employeeId?: string | null
+  departmentId?: string | null
+  reportsToId?: string | null
+  employmentType?: User['employmentType']
+  employmentStartDate?: string | null
   role?: User['role']
+  payrollId?: string | null
   isActive?: boolean
+  phoneMobile?: string | null
+  phoneLandline?: string | null
+  addressLine1?: string | null
+  addressLine2?: string | null
+  city?: string | null
+  state?: string | null
+  postalCode?: string | null
+  country?: string | null
+  annualLeaveBalance?: number
+  sickLeaveBalance?: number
+  carryOverBalance?: number
+  customLeaveAllowance?: number | null
+  emergencyContact?: {
+    name?: string
+    relationship?: string
+    phonePrimary?: string
+    phoneSecondary?: string
+  } | null
 }
