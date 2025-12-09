@@ -54,41 +54,6 @@
             />
           </div>
 
-          <!-- Password -->
-          <div>
-            <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
-              Password <span class="text-[rgb(var(--destructive))]">*</span>
-            </label>
-            <div class="relative">
-              <input
-                v-model="form.password"
-                :type="showPassword ? 'text' : 'password'"
-                required
-                minlength="8"
-                class="w-full px-3 py-2 pr-10 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--primary))] text-[rgb(var(--foreground))]"
-                placeholder="••••••••"
-              />
-              <button
-                type="button"
-                @click="showPassword = !showPassword"
-                class="absolute right-3 top-1/2 -translate-y-1/2 text-[rgb(var(--muted-foreground))] hover:text-[rgb(var(--foreground))] transition"
-              >
-                <Icon v-if="showPassword" name="lucide:eye-off" class="w-4 h-4" />
-                <Icon v-else name="lucide:eye" class="w-4 h-4" />
-              </button>
-            </div>
-            <div class="flex items-center gap-2 mt-2">
-              <button
-                type="button"
-                @click="generatePassword"
-                class="text-xs text-[rgb(var(--primary))] hover:underline font-medium"
-              >
-                Generate Password
-              </button>
-              <span class="text-xs text-[rgb(var(--muted-foreground))]">• At least 8 characters</span>
-            </div>
-          </div>
-
           <!-- Job Title -->
           <div>
             <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
@@ -194,19 +159,67 @@
             </p>
           </div>
 
+          <!-- Send Welcome Email Toggle -->
+          <div class="pt-4 border-t border-[rgb(var(--border))]">
+            <div class="flex items-center justify-between p-4 bg-[rgb(var(--muted))]/30 rounded-lg">
+              <div class="flex items-start gap-3">
+                <Icon name="lucide:mail" class="w-5 h-5 text-[rgb(var(--primary))] flex-shrink-0 mt-0.5" />
+                <div>
+                  <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-1">
+                    Send Welcome Email
+                  </label>
+                  <p class="text-xs text-[rgb(var(--muted-foreground))]">
+                    Automatically email login credentials to the new user
+                  </p>
+                </div>
+              </div>
+              <SwitchToggle v-model="form.sendWelcomeEmail" />
+            </div>
+          </div>
+
           <!-- Info Notice -->
-          <div class="bg-[rgb(var(--muted))]/50 border border-[rgb(var(--border))] rounded-lg p-3">
+          <div class="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
             <div class="flex gap-2">
-              <Icon name="lucide:info" class="w-4 h-4 text-[rgb(var(--muted-foreground))] flex-shrink-0 mt-0.5" />
-              <p class="text-xs text-[rgb(var(--muted-foreground))]">
-                The user will be able to log in immediately with this password. Make sure to share it securely with them.
-              </p>
+              <Icon name="lucide:info" class="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div class="text-xs text-blue-600">
+                <p v-if="form.sendWelcomeEmail" class="font-medium mb-1">
+                  A secure password will be auto-generated and emailed to the user
+                </p>
+                <p v-else class="font-medium mb-1">
+                  A secure password will be auto-generated (you'll need to share it manually)
+                </p>
+                <p class="opacity-80">
+                  The user should change their password after first login for security.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- SMTP Warning -->
+          <div v-if="form.sendWelcomeEmail && !smtpConfigured" class="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
+            <div class="flex gap-2">
+              <Icon name="lucide:alert-triangle" class="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+              <div class="text-xs text-yellow-600">
+                <p class="font-medium mb-1">SMTP Not Configured</p>
+                <p class="opacity-80">
+                  Email notifications are not configured. The user will be created but won't receive a welcome email.
+                  <NuxtLink to="/settings" class="underline font-medium ml-1">Configure SMTP</NuxtLink>
+                </p>
+              </div>
             </div>
           </div>
 
           <!-- Error Message -->
           <div v-if="error" class="bg-[rgb(var(--destructive))]/10 border border-[rgb(var(--destructive))]/20 rounded-lg p-3">
             <p class="text-sm text-[rgb(var(--destructive))]">{{ error }}</p>
+          </div>
+
+          <!-- Success Message (for email sent confirmation) -->
+          <div v-if="successMessage" class="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
+            <div class="flex items-center gap-2">
+              <Icon name="lucide:check-circle" class="w-4 h-4 text-green-600" />
+              <p class="text-sm text-green-600">{{ successMessage }}</p>
+            </div>
           </div>
 
           <!-- Action Buttons -->
@@ -237,6 +250,16 @@
 interface Department {
   id: string
   name: string
+}
+
+interface UserCreationResponse {
+  id: string
+  email: string
+  firstName: string
+  lastName: string
+  emailSent: boolean
+  emailError: string | null
+  [key: string]: any
 }
 
 const props = defineProps<{
@@ -275,15 +298,16 @@ const form = ref({
   firstName: '',
   lastName: '',
   email: '',
-  password: '',
   jobTitle: '',
   departmentId: '',
   role: 'EMPLOYEE',
+  sendWelcomeEmail: true,
 })
 
 const loading = ref(false)
 const error = ref('')
-const showPassword = ref(false)
+const successMessage = ref('')
+const smtpConfigured = ref(false)
 
 // Quick Add Department
 const showQuickAddDept = ref(false)
@@ -291,6 +315,20 @@ const addingDept = ref(false)
 const quickDept = ref({
   name: '',
   code: ''
+})
+
+// Check if SMTP is configured
+onMounted(async () => {
+  try {
+    const token = localStorage.getItem('auth_token')
+    const settings = await $fetch('/api/settings/email', {
+      headers: { 'Authorization': `Bearer ${token}` },
+    })
+    smtpConfigured.value = !!(settings?.smtpHost && settings?.smtpPort && settings?.smtpUser)
+  } catch (err) {
+    console.log('SMTP not configured')
+    smtpConfigured.value = false
+  }
 })
 
 // Helper function for code generation (same as backend)
@@ -369,33 +407,6 @@ const cancelQuickAddDept = () => {
   showQuickAddDept.value = false
 }
 
-const generatePassword = () => {
-  const length = 12
-  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-  const lowercase = 'abcdefghijklmnopqrstuvwxyz'
-  const numbers = '0123456789'
-  const symbols = '!@#$%^&*'
-  const allChars = uppercase + lowercase + numbers + symbols
-  
-  let password = ''
-  // Ensure at least one of each type
-  password += uppercase[Math.floor(Math.random() * uppercase.length)]
-  password += lowercase[Math.floor(Math.random() * lowercase.length)]
-  password += numbers[Math.floor(Math.random() * numbers.length)]
-  password += symbols[Math.floor(Math.random() * symbols.length)]
-  
-  // Fill the rest randomly
-  for (let i = password.length; i < length; i++) {
-    password += allChars[Math.floor(Math.random() * allChars.length)]
-  }
-  
-  // Shuffle the password
-  password = password.split('').sort(() => Math.random() - 0.5).join('')
-  
-  form.value.password = password
-  showPassword.value = true
-}
-
 const closeModal = () => {
   isOpen.value = false
   resetForm()
@@ -406,13 +417,13 @@ const resetForm = () => {
     firstName: '',
     lastName: '',
     email: '',
-    password: '',
     jobTitle: '',
     departmentId: '',
     role: 'EMPLOYEE',
+    sendWelcomeEmail: true,
   }
   error.value = ''
-  showPassword.value = false
+  successMessage.value = ''
   showQuickAddDept.value = false
   quickDept.value = { name: '', code: '' }
 }
@@ -420,11 +431,14 @@ const resetForm = () => {
 const handleSubmit = async () => {
   loading.value = true
   error.value = ''
+  successMessage.value = ''
 
   try {
     const token = localStorage.getItem('auth_token')
     
-    const response = await $fetch('/api/users', {
+    console.log('📤 Sending user creation request with sendWelcomeEmail:', form.value.sendWelcomeEmail)
+    
+    const response = await $fetch<UserCreationResponse>('/api/users', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -432,10 +446,32 @@ const handleSubmit = async () => {
       body: form.value,
     })
 
+    console.log('📥 Received response:', response)
+    console.log('📧 Email sent:', response.emailSent)
+    console.log('❌ Email error:', response.emailError)
+
+    // Check if email was sent
+    if (form.value.sendWelcomeEmail) {
+      if (response.emailSent) {
+        successMessage.value = `User created successfully! Welcome email with login credentials sent to ${form.value.email}`
+      } else if (response.emailError) {
+        successMessage.value = `User created successfully, but email could not be sent: ${response.emailError}`
+      } else {
+        successMessage.value = 'User created successfully! (Email status unknown)'
+      }
+    } else {
+      successMessage.value = 'User created successfully! Remember to share the auto-generated password with them.'
+    }
+
     emit('userAdded', response)
-    closeModal()
+    
+    // Close modal after a short delay to show success message
+    setTimeout(() => {
+      closeModal()
+    }, 2500)
   } catch (err: any) {
-    error.value = err.data?.message || 'Failed to add user'
+    console.error('❌ User creation error:', err)
+    error.value = err.data?.message || err.message || 'Failed to add user'
   } finally {
     loading.value = false
   }
