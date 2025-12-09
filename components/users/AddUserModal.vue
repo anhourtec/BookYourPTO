@@ -91,7 +91,7 @@
               </div>
               <div>
                 <span class="text-[rgb(var(--muted-foreground))]">Role:</span>
-                <span class="ml-2 text-[rgb(var(--foreground))] font-medium">{{ userRoles.find(r => r.value === form.role)?.label }}</span>
+                <span class="ml-2 text-[rgb(var(--foreground))] font-medium">{{ userRoles.find((r: { value: any }) => r.value === form.role)?.label }}</span>
               </div>
               <div v-if="form.jobTitle">
                 <span class="text-[rgb(var(--muted-foreground))]">Job Title:</span>
@@ -99,7 +99,7 @@
               </div>
               <div v-if="form.departmentId">
                 <span class="text-[rgb(var(--muted-foreground))]">Department:</span>
-                <span class="ml-2 text-[rgb(var(--foreground))] font-medium">{{ sortedDepartments.find(d => d.id === form.departmentId)?.name }}</span>
+                <span class="ml-2 text-[rgb(var(--foreground))] font-medium">{{ sortedDepartments.find((d: { id: any }) => d.id === form.departmentId)?.name }}</span>
               </div>
             </div>
           </div>
@@ -266,7 +266,7 @@
               </option>
             </select>
             <p v-if="form.role" class="text-xs text-[rgb(var(--muted-foreground))] mt-1.5">
-              {{ userRoles.find(r => r.value === form.role)?.description }}
+              {{ userRoles.find((r: { value: any }) => r.value === form.role)?.description }}
             </p>
           </div>
 
