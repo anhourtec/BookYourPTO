@@ -198,11 +198,12 @@ export default defineEventHandler(async (event) => {
     // Remove password from response
     const { password: _, ...userWithoutPassword } = newUser
 
-    // Return response with email status
+    // Return response with email status AND the plain password
     return {
       ...userWithoutPassword,
       emailSent,
       emailError,
+      generatedPassword: plainPassword, // Always return the password so admin can share it
     }
   } catch (error: any) {
     if (error.statusCode) {
