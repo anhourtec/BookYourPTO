@@ -78,6 +78,15 @@ export const useApi = () => {
 
     return refreshPromise
   }
+// Add this with your other USER API METHODS
+/**
+ * Fetch a single user by ID
+ * @param userId - User ID to fetch
+ * @returns User object with department and manager info
+ */
+const fetchUser = async (userId: string): Promise<User> => {
+  return await authenticatedFetch<User>(`/api/users/${userId}`)
+}
 
   // ============================================
   // Authenticated fetch with auto-retry on 401
@@ -211,6 +220,7 @@ export const useApi = () => {
     fetchUsers,
     updateUser,
     deleteUser,
+    fetchUser,
     
     // Department methods
     fetchDepartments,
