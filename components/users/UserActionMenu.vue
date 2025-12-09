@@ -39,19 +39,7 @@
 </template>
 
 <script setup lang="ts">
-interface User {
-  id: string
-  firstName: string
-  lastName: string
-  email: string
-  role: string
-  isActive: boolean
-  department?: {
-    id: string
-    name: string
-  }
-  updatedAt: string
-}
+import type { User } from '~/types/user'
 
 interface Props {
   user: User | null
