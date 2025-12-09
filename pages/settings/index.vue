@@ -44,6 +44,7 @@
           <LeaveTypesSettings v-if="activeSection === 'leavetypes'" />
           <DepartmentsSettings v-if="activeSection === 'departments'" />
           <PublicHolidaysSettings v-if="activeSection === 'holidays'" />
+          <EmailSettings v-if="activeSection === 'email'" />
           <DeleteOrganizationSettings v-if="activeSection === 'dangerzone'" />
         </main>
       </div>
@@ -57,6 +58,7 @@ import CarryForwardSettings from '../../components/settings/CarryForwardSettings
 import LeaveTypesSettings from '../../components/settings/LeaveTypesSettings.vue'
 import DepartmentsSettings from '../../components/settings/DepartmentsSettings.vue'
 import PublicHolidaysSettings from '../../components/settings/PublicHolidaysSettings.vue'
+import EmailSettings from '../../components/settings/EmailSettings.vue'
 import DeleteOrganizationSettings from '../../components/settings/DeleteOrganizationSettings.vue'
 
 const { canAccessSettings, getUser } = usePermissions()
@@ -82,6 +84,7 @@ const navigationItems = [
   { id: 'leavetypes', label: 'Leave types', icon: 'lucide:calendar-days', isDanger: false },
   { id: 'departments', label: 'Departments', icon: 'lucide:building-2', isDanger: false },
   { id: 'holidays', label: 'Public holidays', icon: 'lucide:calendar', isDanger: false },
+  { id: 'email', label: 'Email', icon: 'lucide:mail', isDanger: false },
   { id: 'dangerzone', label: 'Danger zone', icon: 'lucide:alert-triangle', isDanger: true, executiveOnly: true },
 ]
 
