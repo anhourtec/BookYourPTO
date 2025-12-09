@@ -19,10 +19,11 @@ export interface User {
   departmentId?: string
   reportsToId?: string
   employmentStartDate?: string
-  employmentType?: 'FULLTIME' | 'PARTTIME' | 'CONTRACT' | 'INTERN'
+  employmentType?: 'FULLTIME' | 'PARTTIME' | 'CONTRACT' | 'INTERN' | 'TEMPORARY' | 'SEASONAL'
   
-  // Role & Permissions
-  role: 'EMPLOYEE' | 'MANAGER' | 'DEPARTMENT_HEAD' | 'ADMINISTRATOR' | 'EXECUTIVE'
+  // Role & Permissions - ONLY 4 ROLES
+  role: 'EMPLOYEE' | 'DEPARTMENT_HEAD' | 'ADMINISTRATOR' | 'EXECUTIVE'
+  // ONLY 4 LEVELS
   level?: 'STANDARD' | 'DIRECTOR' | 'EXECUTIVE' | 'ADMINISTRATOR'
   isApprover?: boolean
   

@@ -17,7 +17,7 @@
             Docs
           </NuxtLink>
           
-          <!-- Users Link - Only for authorized users -->
+          <!-- Users Link - EMPLOYEE, DEPARTMENT_HEAD, ADMINISTRATOR, EXECUTIVE -->
           <NuxtLink 
             v-if="isAuthenticated && canAccessUsers()"
             to="/users" 
@@ -26,24 +26,14 @@
             Users
           </NuxtLink>
 
+          <!-- Settings Link - ONLY ADMINISTRATOR, EXECUTIVE -->
           <NuxtLink 
-            v-if="isAuthenticated && canAccessUsers()"
+            v-if="isAuthenticated && canAccessSettings()"
             to="/settings" 
             class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
           >
             Settings
           </NuxtLink>
-          
-          <!-- TOKEN EXPIRY COUNTDOWN (Testing Only) -->
-          <!--
-          <div 
-            v-if="isAuthenticated && tokenExpiresIn > 0"
-            class="px-3 py-1 rounded-full text-xs font-medium"
-            :class="tokenExpiresIn < 10 ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-200'"
-          >
-            Token expires in: {{ tokenExpiresIn }}s
-          </div>
-          -->
           
           <template v-if="!isAuthenticated">
             <NuxtLink 
@@ -76,13 +66,14 @@
                 <div class="bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
                   <div class="py-2">
                     <NuxtLink 
-                      to="/dashboard"
+                      to="/#"
                       class="flex items-center gap-3 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                     >
                       <Icon name="lucide:layout-dashboard" class="w-4 h-4" />
                       Dashboard
                     </NuxtLink>
                     
+                    <!-- Users - DEPARTMENT_HEAD, ADMINISTRATOR, EXECUTIVE -->
                     <NuxtLink 
                       v-if="canAccessUsers()"
                       to="/users"
@@ -93,19 +84,23 @@
                     </NuxtLink>
                     
                     <NuxtLink 
-                      to="/profile"
+                      to="/#"
                       class="flex items-center gap-3 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                     >
                       <Icon name="lucide:user" class="w-4 h-4" />
                       Profile
                     </NuxtLink>
+                    
+                    <!-- Settings - ONLY ADMINISTRATOR, EXECUTIVE -->
                     <NuxtLink 
+                      v-if="canAccessSettings()"
                       to="/settings"
                       class="flex items-center gap-3 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                     >
                       <Icon name="lucide:settings" class="w-4 h-4" />
                       Settings
                     </NuxtLink>
+                    
                     <div class="border-t border-gray-200 dark:border-gray-700 my-2"></div>
                     <button 
                       @click="handleLogout"
@@ -137,11 +132,10 @@
 <script setup lang="ts">
 const colorMode = useColorMode()
 const router = useRouter()
-const { canAccessUsers } = usePermissions()
+const { canAccessUsers, canAccessSettings } = usePermissions()
 
 const user = ref<any>(null)
 const isAuthenticated = ref(false)
-const tokenExpiresIn = ref(0)
 
 const userName = computed(() => {
   if (!user.value) return ''
@@ -160,46 +154,18 @@ const checkAuth = () => {
   if (token && userData) {
     user.value = JSON.parse(userData)
     isAuthenticated.value = true
-    updateTokenExpiry()
   } else {
     user.value = null
     isAuthenticated.value = false
-    tokenExpiresIn.value = 0
-  }
-}
-
-const updateTokenExpiry = () => {
-  const token = localStorage.getItem('auth_token')
-  if (!token) {
-    tokenExpiresIn.value = 0
-    return
-  }
-
-  try {
-    // Decode JWT token
-    const parts = token.split('.')
-    if (parts.length !== 3) return
-
-    // TypeScript: parts[1] is guaranteed to exist due to length check
-    const payloadBase64 = parts[1]!
-    const payload = JSON.parse(atob(payloadBase64))
-    const currentTime = Math.floor(Date.now() / 1000)
-    
-    if (payload.exp) {
-      tokenExpiresIn.value = Math.max(0, payload.exp - currentTime)
-    }
-  } catch (error) {
-    tokenExpiresIn.value = 0
   }
 }
 
 const handleLogout = () => {
   localStorage.removeItem('auth_token')
-  localStorage.removeItem('refresh_token') // Also remove refresh token
+  localStorage.removeItem('refresh_token')
   localStorage.removeItem('user')
   user.value = null
   isAuthenticated.value = false
-  tokenExpiresIn.value = 0
   router.push('/')
 }
 
@@ -207,28 +173,11 @@ const toggleTheme = () => {
   colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark'
 }
 
-// Update countdown every second (removed auto-logout)
-let expiryInterval: NodeJS.Timeout | null = null
-
 onMounted(() => {
   checkAuth()
-  
-  // Update token expiry every second
-  // Note: Auto-logout is handled by middleware and useApi composable
-  expiryInterval = setInterval(() => {
-    if (isAuthenticated.value) {
-      updateTokenExpiry()
-    }
-  }, 1000)
   
   router.afterEach(() => {
     checkAuth()
   })
-})
-
-onUnmounted(() => {
-  if (expiryInterval) {
-    clearInterval(expiryInterval)
-  }
 })
 </script>

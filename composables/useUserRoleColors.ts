@@ -1,4 +1,5 @@
 export const useUserRoleColors = () => {
+  // Only 4 roles: EMPLOYEE, DEPARTMENT_HEAD, ADMINISTRATOR, EXECUTIVE
   const roleColors = {
     EMPLOYEE: { 
       bg: 'bg-blue-100 dark:bg-blue-900/30', 
@@ -7,15 +8,6 @@ export const useUserRoleColors = () => {
       avatar: 'bg-blue-100 dark:bg-blue-900/30',
       avatarText: 'text-blue-700 dark:text-blue-300',
       ring: 'ring-2 ring-blue-600 dark:ring-blue-400',
-      hasStarBadge: false
-    },
-    MANAGER: { 
-      bg: 'bg-purple-100 dark:bg-purple-900/30', 
-      text: 'text-purple-700 dark:text-purple-300', 
-      border: 'border-purple-200 dark:border-purple-800',
-      avatar: 'bg-purple-100 dark:bg-purple-900/30',
-      avatarText: 'text-purple-700 dark:text-purple-300',
-      ring: 'ring-2 ring-purple-600 dark:ring-purple-400',
       hasStarBadge: false
     },
     DEPARTMENT_HEAD: { 
@@ -47,6 +39,7 @@ export const useUserRoleColors = () => {
     }
   }
 
+  // Only 4 levels: STANDARD, DIRECTOR, EXECUTIVE, ADMINISTRATOR
   const levelColors = {
     STANDARD: { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-700 dark:text-gray-300' },
     DIRECTOR: { bg: 'bg-teal-100 dark:bg-teal-900/30', text: 'text-teal-700 dark:text-teal-300' },
