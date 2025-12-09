@@ -220,6 +220,16 @@
       @user-added="handleUserAdded"
     />
 
+    <!-- Edit User Modal -->
+    <EditUserModal
+      v-if="canManageUsers()"
+      v-model="showEditUserModal"
+      :user-id="selectedUserId"
+      :departments="departments"
+      :all-users="users"
+      @user-updated="handleUserUpdated"
+    />
+
     <!-- Manage Departments Modal -->
     <ManageDepartmentsModal
       v-if="canManageDepartments()"
@@ -233,30 +243,13 @@
 
 <script setup lang="ts">
 import AddUserModal from '~/components/users/AddUserModal.vue'
+import EditUserModal from '~/components/users/EditUserModal.vue'
 import ManageDepartmentsModal from '~/components/users/ManageDepartmentsModal.vue'
 import Filter from '~/components/users/Filter.vue'
 import UserCard from '~/components/users/UserCard.vue'
 import UserTableRow from '~/components/users/UserTableRow.vue'
 import UserActionMenu from '~/components/users/UserActionMenu.vue'
-
-interface User {
-  id: string
-  firstName: string
-  lastName: string
-  email: string
-  role: string
-  isActive: boolean
-  department?: {
-    id: string
-    name: string
-  }
-  manager?: {
-    id: string
-    firstName: string
-    lastName: string
-  }
-  updatedAt: string
-}
+import type { User } from '~/types/user'
 
 interface Department {
   id: string
@@ -292,8 +285,10 @@ const error = ref('')
 
 // Modals
 const showAddUserModal = ref(false)
+const showEditUserModal = ref(false)
 const showDepartmentModal = ref(false)
 const showFilterModal = ref(false)
+const selectedUserId = ref<string | null>(null)
 
 // UI State
 const openMenuUserId = ref<string | null>(null)
@@ -441,7 +436,7 @@ const filteredAndSortedUsers = computed(() => {
     filtered = filtered.filter((user) => !user.isActive)
   }
 
-  // Account type filter - Updated for 4 roles only
+  // Account type filter
   if (accountTypeFilter.value === 'department_heads') {
     filtered = filtered.filter(
       (user) => user.role === 'DEPARTMENT_HEAD'
@@ -530,7 +525,8 @@ const getCurrentUser = () => {
 }
 
 const handleEdit = (user: User) => {
-  console.log('Edit user:', user)
+  selectedUserId.value = user.id
+  showEditUserModal.value = true
   closeUserMenu()
 }
 
@@ -568,6 +564,17 @@ const handleDelete = async (user: User) => {
 
 const handleUserAdded = async (newUser: User) => {
   users.value.push(newUser)
+  const departmentsData = await api.fetchDepartments()
+  departments.value = departmentsData as Department[]
+}
+
+const handleUserUpdated = async (updatedUser: User) => {
+  const index = users.value.findIndex(u => u.id === updatedUser.id)
+  if (index !== -1) {
+    users.value[index] = updatedUser
+  }
+  
+  // Refresh departments in case counts changed
   const departmentsData = await api.fetchDepartments()
   departments.value = departmentsData as Department[]
 }
