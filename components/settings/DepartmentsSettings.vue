@@ -119,7 +119,7 @@
 
 
   <!-- Add/Edit Department Modal -->
-  <CustomModal v-model="showModal">
+<CustomModal v-model="showModal" maxWidth="2xl">
     <div class="flex flex-col max-h-[90vh]">
       <!-- Header -->
       <div class="flex items-center justify-between px-6 py-4 border-b border-[rgb(var(--border))]">

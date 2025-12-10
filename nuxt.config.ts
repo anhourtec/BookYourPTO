@@ -7,6 +7,16 @@ export default defineNuxtConfig({
     '@nuxt/ui',
     '@vueuse/motion/nuxt'
   ],
+
+    routeRules: {
+    // Disable SSR for the users page
+    '/users': { ssr: false },
+    
+    // Or disable for multiple admin pages
+    '/settings/**': { ssr: false },
+    '/users/**': { ssr: false },
+  },
+
     
   app: {
   head: {

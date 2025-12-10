@@ -1,64 +1,66 @@
 <template>
-  <div class="bg-[rgb(var(--card))] rounded-lg border border-[rgb(var(--border))] shadow-sm p-6">
+  <div class="bg-[rgb(var(--card))] rounded-lg border border-[rgb(var(--border))] shadow-sm p-4 sm:p-6">
     <!-- Loading State -->
     <div v-if="loading" class="flex items-center justify-center py-12">
       <Icon name="lucide:loader-2" class="w-8 h-8 animate-spin text-[rgb(var(--primary))]" />
     </div>
 
     <template v-else>
-      <div class="flex items-center justify-between mb-4">
+      <!-- Header Section -->
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
         <div>
-          <h2 class="text-xl font-bold text-[rgb(var(--foreground))]">Leave types</h2>
-          <p class="text-sm text-[rgb(var(--muted-foreground))]">
+          <h2 class="text-lg sm:text-xl font-bold text-[rgb(var(--foreground))]">Leave types</h2>
+          <p class="text-xs sm:text-sm text-[rgb(var(--muted-foreground))]">
             Create different categories for different days off.
           </p>
         </div>
         <button
           v-if="canEditSettings()"
           @click="openAddModal"
-          class="px-4 py-2 bg-[rgb(var(--primary))] text-[rgb(var(--primary-foreground))] rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2"
+          class="px-3 sm:px-4 py-2 bg-[rgb(var(--primary))] text-[rgb(var(--primary-foreground))] rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2 text-sm sm:text-base whitespace-nowrap"
         >
           <Icon name="lucide:plus" class="w-4 h-4" />
-          Add a new leave type
+          <span class="hidden sm:inline">Add a new leave type</span>
+          <span class="sm:hidden">Add leave type</span>
         </button>
       </div>
 
       <!-- Error Message -->
-      <div v-if="error" class="mb-4 p-4 bg-[rgb(var(--destructive))]/10 border border-[rgb(var(--destructive))]/20 rounded-lg">
+      <div v-if="error" class="mb-4 p-3 sm:p-4 bg-[rgb(var(--destructive))]/10 border border-[rgb(var(--destructive))]/20 rounded-lg">
         <div class="flex items-center gap-2">
-          <Icon name="lucide:alert-circle" class="w-5 h-5 text-[rgb(var(--destructive))]" />
-          <p class="text-sm text-[rgb(var(--destructive))]">{{ error }}</p>
+          <Icon name="lucide:alert-circle" class="w-4 h-4 sm:w-5 sm:h-5 text-[rgb(var(--destructive))] flex-shrink-0" />
+          <p class="text-xs sm:text-sm text-[rgb(var(--destructive))]">{{ error }}</p>
         </div>
       </div>
 
       <!-- Leave Types List -->
-      <div class="space-y-3">
+      <div class="space-y-2 sm:space-y-3">
         <div
           v-for="leaveType in leaveTypes"
           :key="leaveType.id"
-          class="flex items-center justify-between p-4 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg hover:border-[rgb(var(--primary))]/50 transition-colors group"
+          class="flex items-center justify-between p-3 sm:p-4 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg hover:border-[rgb(var(--primary))]/50 transition-colors group"
         >
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
             <div
-              class="w-12 h-12 rounded-full flex items-center justify-center"
+              class="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0"
               :style="{ backgroundColor: leaveType.color + '20' }"
             >
               <Icon
                 v-if="leaveType.icon"
                 :name="leaveType.icon"
-                class="w-6 h-6"
+                class="w-5 h-5 sm:w-6 sm:h-6"
                 :style="{ color: leaveType.color }"
               />
               <Icon
                 v-else
                 name="lucide:calendar"
-                class="w-6 h-6"
+                class="w-5 h-5 sm:w-6 sm:h-6"
                 :style="{ color: leaveType.color }"
               />
             </div>
-            <div>
-              <h3 class="font-semibold text-[rgb(var(--foreground))]">{{ leaveType.name }}</h3>
-              <p class="text-sm text-[rgb(var(--muted-foreground))]">
+            <div class="min-w-0 flex-1">
+              <h3 class="font-semibold text-sm sm:text-base text-[rgb(var(--foreground))] truncate">{{ leaveType.name }}</h3>
+              <p class="text-xs sm:text-sm text-[rgb(var(--muted-foreground))] break-words">
                 {{ getLeaveTypeCodeLabel(leaveType.code) }}
                 <span v-if="leaveType.annualAllowance"> • {{ leaveType.annualAllowance }} days/year</span>
                 <span v-if="!leaveType.isActive" class="text-[rgb(var(--destructive))]"> • Inactive</span>
@@ -66,17 +68,17 @@
             </div>
           </div>
           
-          <div v-if="canEditSettings()" class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div v-if="canEditSettings()" class="flex items-center gap-1 sm:gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
             <button
               @click="openEditModal(leaveType)"
-              class="p-2 text-[rgb(var(--muted-foreground))] hover:text-[rgb(var(--primary))] hover:bg-[rgb(var(--primary))]/10 rounded transition-colors"
+              class="p-1.5 sm:p-2 text-[rgb(var(--muted-foreground))] hover:text-[rgb(var(--primary))] hover:bg-[rgb(var(--primary))]/10 rounded transition-colors"
               title="Edit leave type"
             >
               <Icon name="lucide:pencil" class="w-4 h-4" />
             </button>
             <button
               @click="confirmDelete(leaveType)"
-              class="p-2 text-[rgb(var(--destructive))] hover:bg-[rgb(var(--destructive))]/10 rounded transition-colors"
+              class="p-1.5 sm:p-2 text-[rgb(var(--destructive))] hover:bg-[rgb(var(--destructive))]/10 rounded transition-colors"
               title="Delete leave type"
             >
               <Icon name="lucide:trash-2" class="w-4 h-4" />
@@ -84,33 +86,33 @@
           </div>
         </div>
 
-        <div v-if="leaveTypes.length === 0" class="text-center py-12">
-          <Icon name="lucide:calendar-x" class="w-12 h-12 mx-auto text-[rgb(var(--muted-foreground))] mb-3" />
-          <p class="text-[rgb(var(--muted-foreground))]">No leave types configured yet.</p>
+        <div v-if="leaveTypes.length === 0" class="text-center py-8 sm:py-12">
+          <Icon name="lucide:calendar-x" class="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-[rgb(var(--muted-foreground))] mb-2 sm:mb-3" />
+          <p class="text-sm sm:text-base text-[rgb(var(--muted-foreground))]">No leave types configured yet.</p>
         </div>
       </div>
     </template>
   </div>
 
   <!-- Add/Edit Leave Type Modal -->
-  <CustomModal v-model="showModal">
-    <div class="flex flex-col max-h-[90vh]">
+  <CustomModal v-model="showModal" maxWidth="3xl">
+    <div class="flex flex-col max-h-[90vh] sm:max-h-[85vh]">
       <!-- Header -->
-      <div class="flex items-center justify-between px-6 py-4 border-b border-[rgb(var(--border))]">
-        <h2 class="text-2xl font-bold text-[rgb(var(--foreground))]">
+      <div class="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-[rgb(var(--border))]">
+        <h2 class="text-lg sm:text-2xl font-bold text-[rgb(var(--foreground))]">
           {{ isEditMode ? 'Edit Leave Type' : 'Add Leave Type' }}
         </h2>
         <button @click="closeModal" class="text-[rgb(var(--muted-foreground))] hover:text-[rgb(var(--foreground))]">
-          <Icon name="lucide:x" class="w-6 h-6" />
+          <Icon name="lucide:x" class="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
       </div>
 
       <!-- Scrollable Content -->
-      <div class="overflow-y-auto px-6 py-4">
-        <form @submit.prevent="handleSubmit" class="space-y-6">
+      <div class="overflow-y-auto px-4 sm:px-6 py-3 sm:py-4">
+        <form @submit.prevent="handleSubmit" class="space-y-4 sm:space-y-6">
           <!-- Leave Type Name -->
           <div>
-            <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
+            <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-1.5 sm:mb-2">
               Leave type name <span class="text-[rgb(var(--destructive))]">*</span>
             </label>
             <input
@@ -118,20 +120,20 @@
               type="text"
               required
               placeholder="e.g., Annual Leave"
-              class="w-full px-4 py-2.5 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] focus:ring-2 focus:ring-[rgb(var(--primary))] focus:border-transparent outline-none transition"
+              class="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] text-sm sm:text-base focus:ring-2 focus:ring-[rgb(var(--primary))] focus:border-transparent outline-none transition"
             />
           </div>
 
           <!-- Leave Type Code -->
           <div>
-            <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
+            <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-1.5 sm:mb-2">
               Leave type code <span class="text-[rgb(var(--destructive))]">*</span>
             </label>
             <select
               v-model="form.code"
               required
               :disabled="isEditMode"
-              class="w-full px-4 py-2.5 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] focus:ring-2 focus:ring-[rgb(var(--primary))] focus:border-transparent outline-none transition disabled:opacity-50 disabled:cursor-not-allowed"
+              class="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] text-sm sm:text-base focus:ring-2 focus:ring-[rgb(var(--primary))] focus:border-transparent outline-none transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">Select leave type code</option>
               <option v-for="code in availableLeaveTypeCodes" :key="code.value" :value="code.value">
@@ -145,12 +147,12 @@
 
           <!-- Show in calendar as -->
           <div>
-            <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
+            <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-1.5 sm:mb-2">
               Show in calendar as
             </label>
             <select
               v-model="form.calendarDisplay"
-              class="w-full px-4 py-2.5 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] focus:ring-2 focus:ring-[rgb(var(--primary))] focus:border-transparent outline-none transition"
+              class="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] text-sm sm:text-base focus:ring-2 focus:ring-[rgb(var(--primary))] focus:border-transparent outline-none transition"
             >
               <option value="BUSY">Busy</option>
               <option value="AVAILABLE">Available</option>
@@ -160,12 +162,12 @@
 
           <!-- Visibility -->
           <div>
-            <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
+            <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-1.5 sm:mb-2">
               Visibility
             </label>
             <select
               v-model="form.visibility"
-              class="w-full px-4 py-2.5 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] focus:ring-2 focus:ring-[rgb(var(--primary))] focus:border-transparent outline-none transition"
+              class="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] text-sm sm:text-base focus:ring-2 focus:ring-[rgb(var(--primary))] focus:border-transparent outline-none transition"
             >
               <option value="PUBLIC">Public - Everyone can see</option>
               <option value="PRIVATE">Private - Only user and managers</option>
@@ -175,71 +177,71 @@
 
           <!-- Description -->
           <div>
-            <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
+            <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-1.5 sm:mb-2">
               Description
             </label>
             <textarea
               v-model="form.description"
               rows="3"
               placeholder="Optional description"
-              class="w-full px-4 py-2.5 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] focus:ring-2 focus:ring-[rgb(var(--primary))] focus:border-transparent outline-none transition resize-none"
+              class="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] text-sm sm:text-base focus:ring-2 focus:ring-[rgb(var(--primary))] focus:border-transparent outline-none transition resize-none"
             />
           </div>
 
           <!-- Toggle Switches -->
-          <div class="space-y-4 pt-4 border-t border-[rgb(var(--border))]">
-            <div class="flex items-center justify-between">
-              <div>
-                <label class="text-sm font-medium text-[rgb(var(--foreground))]">
+          <div class="space-y-3 sm:space-y-4 pt-3 sm:pt-4 border-t border-[rgb(var(--border))]">
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex-1 min-w-0">
+                <label class="text-sm font-medium text-[rgb(var(--foreground))] block">
                   Deducts from annual allowance
                 </label>
-                <p class="text-xs text-[rgb(var(--muted-foreground))]">
+                <p class="text-xs text-[rgb(var(--muted-foreground))] pr-2">
                   Should this leave type reduce the user's annual allowance?
                 </p>
               </div>
-              <SwitchToggle v-model="form.deductsFromAllowance" />
+              <SwitchToggle v-model="form.deductsFromAllowance" class="flex-shrink-0" />
             </div>
 
-            <div class="flex items-center justify-between">
-              <div>
-                <label class="text-sm font-medium text-[rgb(var(--foreground))]">
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex-1 min-w-0">
+                <label class="text-sm font-medium text-[rgb(var(--foreground))] block">
                   Needs manager approval
                 </label>
-                <p class="text-xs text-[rgb(var(--muted-foreground))]">
+                <p class="text-xs text-[rgb(var(--muted-foreground))] pr-2">
                   Requires approval before it's confirmed
                 </p>
               </div>
-              <SwitchToggle v-model="form.requiresApproval" />
+              <SwitchToggle v-model="form.requiresApproval" class="flex-shrink-0" />
             </div>
 
-            <div class="flex items-center justify-between">
-              <div>
-                <label class="text-sm font-medium text-[rgb(var(--foreground))]">
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex-1 min-w-0">
+                <label class="text-sm font-medium text-[rgb(var(--foreground))] block">
                   Paid leave
                 </label>
-                <p class="text-xs text-[rgb(var(--muted-foreground))]">
+                <p class="text-xs text-[rgb(var(--muted-foreground))] pr-2">
                   Is this a paid leave type?
                 </p>
               </div>
-              <SwitchToggle v-model="form.paidLeave" />
+              <SwitchToggle v-model="form.paidLeave" class="flex-shrink-0" />
             </div>
 
-            <div class="flex items-center justify-between">
-              <div>
-                <label class="text-sm font-medium text-[rgb(var(--foreground))]">
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex-1 min-w-0">
+                <label class="text-sm font-medium text-[rgb(var(--foreground))] block">
                   Active
                 </label>
-                <p class="text-xs text-[rgb(var(--muted-foreground))]">
+                <p class="text-xs text-[rgb(var(--muted-foreground))] pr-2">
                   Can users request this leave type?
                 </p>
               </div>
-              <SwitchToggle v-model="form.isActive" />
+              <SwitchToggle v-model="form.isActive" class="flex-shrink-0" />
             </div>
           </div>
 
           <!-- Annual Allowance -->
-          <div v-if="form.deductsFromAllowance" class="pt-4 border-t border-[rgb(var(--border))]">
-            <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
+          <div v-if="form.deductsFromAllowance" class="pt-3 sm:pt-4 border-t border-[rgb(var(--border))]">
+            <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-1.5 sm:mb-2">
               Annual allowance (days per year)
             </label>
             <input
@@ -249,39 +251,39 @@
               max="365"
               step="0.5"
               placeholder="e.g., 20"
-              class="w-32 px-4 py-2.5 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] focus:ring-2 focus:ring-[rgb(var(--primary))] focus:border-transparent outline-none transition text-center"
+              class="w-full sm:w-32 px-3 sm:px-4 py-2 sm:py-2.5 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] text-sm sm:text-base focus:ring-2 focus:ring-[rgb(var(--primary))] focus:border-transparent outline-none transition text-center"
             />
           </div>
 
           <!-- Color and Icon -->
-          <div class="pt-4 border-t border-[rgb(var(--border))]">
-            <div class="grid grid-cols-2 gap-4">
+          <div class="pt-3 sm:pt-4 border-t border-[rgb(var(--border))]">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
+                <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-1.5 sm:mb-2">
                   Pick a colour
                 </label>
                 <div class="flex gap-2">
                   <input
                     v-model="form.color"
                     type="color"
-                    class="w-12 h-12 rounded-lg cursor-pointer border-2 border-[rgb(var(--border))]"
+                    class="w-12 h-12 rounded-lg cursor-pointer border-2 border-[rgb(var(--border))] flex-shrink-0"
                   />
                   <input
                     v-model="form.color"
                     type="text"
                     placeholder="#3b82f6"
-                    class="flex-1 px-4 py-2.5 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] focus:ring-2 focus:ring-[rgb(var(--primary))] focus:border-transparent outline-none transition"
+                    class="flex-1 min-w-0 px-3 sm:px-4 py-2 sm:py-2.5 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] text-sm sm:text-base focus:ring-2 focus:ring-[rgb(var(--primary))] focus:border-transparent outline-none transition"
                   />
                 </div>
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
+                <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-1.5 sm:mb-2">
                   Pick an icon
                 </label>
                 <select
                   v-model="form.icon"
-                  class="w-full px-4 py-2.5 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] focus:ring-2 focus:ring-[rgb(var(--primary))] focus:border-transparent outline-none transition"
+                  class="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] text-sm sm:text-base focus:ring-2 focus:ring-[rgb(var(--primary))] focus:border-transparent outline-none transition"
                 >
                   <option value="">Default</option>
                   <option value="lucide:umbrella-off">Umbrella</option>
@@ -303,11 +305,11 @@
           </div>
 
           <!-- Submit Buttons -->
-          <div class="flex gap-3 pt-4">
+          <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-3 sm:pt-4">
             <button
               type="submit"
               :disabled="saving"
-              class="flex-1 px-6 py-2.5 bg-[rgb(var(--primary))] text-[rgb(var(--primary-foreground))] rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              class="flex-1 px-4 sm:px-6 py-2.5 bg-[rgb(var(--primary))] text-[rgb(var(--primary-foreground))] rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm sm:text-base"
             >
               <Icon v-if="saving" name="lucide:loader-2" class="w-4 h-4 animate-spin" />
               <span>{{ saving ? 'Saving...' : 'Save' }}</span>
@@ -315,7 +317,7 @@
             <button
               type="button"
               @click="closeModal"
-              class="px-6 py-2.5 border border-[rgb(var(--border))] rounded-lg hover:bg-[rgb(var(--muted))] transition-colors text-[rgb(var(--foreground))]"
+              class="px-4 sm:px-6 py-2.5 border border-[rgb(var(--border))] rounded-lg hover:bg-[rgb(var(--muted))] transition-colors text-[rgb(var(--foreground))] text-sm sm:text-base"
             >
               Cancel
             </button>
@@ -327,33 +329,33 @@
 
   <!-- Delete Confirmation Modal -->
   <CustomModal v-model="showDeleteConfirm">
-    <div class="p-6">
+    <div class="p-4 sm:p-6">
       <div class="flex items-center gap-3 mb-4">
-        <div class="w-12 h-12 rounded-full bg-[rgb(var(--destructive))]/10 flex items-center justify-center">
-          <Icon name="lucide:alert-triangle" class="w-6 h-6 text-[rgb(var(--destructive))]" />
+        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[rgb(var(--destructive))]/10 flex items-center justify-center flex-shrink-0">
+          <Icon name="lucide:alert-triangle" class="w-5 h-5 sm:w-6 sm:h-6 text-[rgb(var(--destructive))]" />
         </div>
-        <div>
-          <h3 class="text-lg font-semibold text-[rgb(var(--foreground))]">Delete Leave Type</h3>
-          <p class="text-sm text-[rgb(var(--muted-foreground))]">This action cannot be undone</p>
+        <div class="min-w-0">
+          <h3 class="text-base sm:text-lg font-semibold text-[rgb(var(--foreground))]">Delete Leave Type</h3>
+          <p class="text-xs sm:text-sm text-[rgb(var(--muted-foreground))]">This action cannot be undone</p>
         </div>
       </div>
 
-      <p class="text-sm text-[rgb(var(--foreground))] mb-6">
+      <p class="text-sm text-[rgb(var(--foreground))] mb-4 sm:mb-6">
         Are you sure you want to delete <strong>{{ leaveTypeToDelete?.name }}</strong>?
         This will affect all existing leave requests using this type.
       </p>
 
-      <div class="flex gap-3">
+      <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
         <button
           @click="showDeleteConfirm = false"
-          class="flex-1 px-4 py-2 border border-[rgb(var(--border))] rounded-lg hover:bg-[rgb(var(--muted))] transition-colors text-[rgb(var(--foreground))]"
+          class="flex-1 px-4 py-2 border border-[rgb(var(--border))] rounded-lg hover:bg-[rgb(var(--muted))] transition-colors text-[rgb(var(--foreground))] text-sm sm:text-base"
         >
           Cancel
         </button>
         <button
           @click="handleDelete"
           :disabled="deleting"
-          class="flex-1 px-4 py-2 bg-[rgb(var(--destructive))] text-white rounded-lg hover:bg-[rgb(var(--destructive))]/90 disabled:opacity-50 transition-opacity flex items-center justify-center gap-2"
+          class="flex-1 px-4 py-2 bg-[rgb(var(--destructive))] text-white rounded-lg hover:bg-[rgb(var(--destructive))]/90 disabled:opacity-50 transition-opacity flex items-center justify-center gap-2 text-sm sm:text-base"
         >
           <Icon v-if="deleting" name="lucide:loader-2" class="w-4 h-4 animate-spin" />
           <span>{{ deleting ? 'Deleting...' : 'Delete' }}</span>

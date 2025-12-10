@@ -10,11 +10,9 @@ const createUserSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email('Invalid email address'),
-  // Handle empty strings by transforming to undefined
   jobTitle: z.any().transform(val => val && val !== '' ? String(val) : undefined).optional(),
   departmentId: z.any().transform(val => val && val !== '' ? String(val) : undefined).optional(),
   role: z.enum(['EMPLOYEE', 'DEPARTMENT_HEAD', 'ADMINISTRATOR', 'EXECUTIVE']).default('EMPLOYEE'),
-  // Handle boolean for sendWelcomeEmail
   sendWelcomeEmail: z.any().transform(val => val === false ? false : true),
 })
 
@@ -80,6 +78,22 @@ export default defineEventHandler(async (event) => {
       throw createError({
         statusCode: 403,
         message: 'Insufficient permissions to create users',
+      })
+    }
+
+    // ✅ BUSINESS RULE: Only EXECUTIVES can create other EXECUTIVES
+    if (data.role === 'EXECUTIVE' && currentUser.role !== 'EXECUTIVE') {
+      throw createError({
+        statusCode: 403,
+        message: 'Only executives can create executive accounts',
+      })
+    }
+
+    // ✅ BUSINESS RULE: Only EXECUTIVES and ADMINISTRATORS can create ADMINISTRATORS
+    if (data.role === 'ADMINISTRATOR' && !['EXECUTIVE', 'ADMINISTRATOR'].includes(currentUser.role)) {
+      throw createError({
+        statusCode: 403,
+        message: 'Only executives and administrators can create administrator accounts',
       })
     }
 
@@ -198,11 +212,12 @@ export default defineEventHandler(async (event) => {
     // Remove password from response
     const { password: _, ...userWithoutPassword } = newUser
 
-    // Return response with email status
+    // Return response with email status AND the plain password
     return {
       ...userWithoutPassword,
       emailSent,
       emailError,
+      generatedPassword: plainPassword,
     }
   } catch (error: any) {
     if (error.statusCode) {

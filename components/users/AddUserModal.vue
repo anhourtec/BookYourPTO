@@ -11,7 +11,118 @@
 
       <!-- Scrollable Content -->
       <div class="overflow-y-auto px-6 py-4">
-        <form @submit.prevent="handleSubmit" class="space-y-4">
+        <!-- Success State: Show Generated Password -->
+        <div v-if="userCreated && generatedPassword" class="space-y-4">
+          <div class="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+            <div class="flex items-center gap-2 mb-3">
+              <Icon name="lucide:check-circle" class="w-5 h-5 text-green-600" />
+              <p class="text-sm font-semibold text-green-600">User Created Successfully!</p>
+            </div>
+            
+            <p class="text-sm text-[rgb(var(--muted-foreground))] mb-4">
+              {{ form.firstName }} {{ form.lastName }} has been added to your organization.
+            </p>
+
+            <!-- Email Status -->
+            <div v-if="form.sendWelcomeEmail" class="mb-4">
+              <div v-if="emailSent" class="flex items-start gap-2 text-sm text-green-600">
+                <Icon name="lucide:mail-check" class="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <p>Welcome email with login credentials sent to <strong>{{ form.email }}</strong></p>
+              </div>
+              <div v-else-if="emailError" class="flex items-start gap-2 text-sm text-yellow-600">
+                <Icon name="lucide:alert-triangle" class="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <p>Email could not be sent: {{ emailError }}</p>
+              </div>
+            </div>
+
+            <!-- Generated Password Display -->
+            <div class="bg-[rgb(var(--background))] border-2 border-[rgb(var(--primary))] rounded-lg p-4">
+              <div class="flex items-center justify-between mb-2">
+                <label class="text-sm font-semibold text-[rgb(var(--foreground))]">
+                  Generated Password
+                </label>
+                <button
+                  @click="copyPassword"
+                  class="text-xs text-[rgb(var(--primary))] hover:underline font-medium flex items-center gap-1"
+                >
+                  <Icon :name="passwordCopied ? 'lucide:check' : 'lucide:copy'" class="w-3 h-3" />
+                  {{ passwordCopied ? 'Copied!' : 'Copy' }}
+                </button>
+              </div>
+              
+              <div class="flex items-center gap-2 mb-3">
+                <code class="flex-1 text-lg font-mono bg-[rgb(var(--muted))] px-3 py-2 rounded border border-[rgb(var(--border))] text-[rgb(var(--foreground))] select-all">
+                  {{ showPassword ? generatedPassword : '••••••••••••' }}
+                </code>
+                <button
+                  @click="showPassword = !showPassword"
+                  class="p-2 hover:bg-[rgb(var(--muted))] rounded transition"
+                  :title="showPassword ? 'Hide password' : 'Show password'"
+                >
+                  <Icon :name="showPassword ? 'lucide:eye-off' : 'lucide:eye'" class="w-4 h-4 text-[rgb(var(--muted-foreground))]" />
+                </button>
+              </div>
+
+              <div class="bg-amber-500/10 border border-amber-500/20 rounded p-3">
+                <div class="flex gap-2">
+                  <Icon name="lucide:shield-alert" class="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div class="text-xs text-amber-600">
+                    <p class="font-semibold mb-1">Important: Save this password securely</p>
+                    <p v-if="!emailSent">
+                      Since the welcome email wasn't sent, you'll need to share this password with {{ form.firstName }} manually.
+                    </p>
+                    <p v-else>
+                      This password has been emailed to the user, but keep a copy for your records.
+                    </p>
+                    <p class="mt-1">The user should change it after their first login.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- User Details Summary -->
+          <div class="bg-[rgb(var(--muted))]/30 rounded-lg p-4 space-y-2">
+            <p class="text-sm font-semibold text-[rgb(var(--foreground))] mb-2">User Details:</p>
+            <div class="grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <span class="text-[rgb(var(--muted-foreground))]">Email:</span>
+                <span class="ml-2 text-[rgb(var(--foreground))] font-medium">{{ form.email }}</span>
+              </div>
+              <div>
+                <span class="text-[rgb(var(--muted-foreground))]">Role:</span>
+                <span class="ml-2 text-[rgb(var(--foreground))] font-medium">{{ userRoles.find((r: { value: any }) => r.value === form.role)?.label }}</span>
+              </div>
+              <div v-if="form.jobTitle">
+                <span class="text-[rgb(var(--muted-foreground))]">Job Title:</span>
+                <span class="ml-2 text-[rgb(var(--foreground))] font-medium">{{ form.jobTitle }}</span>
+              </div>
+              <div v-if="form.departmentId">
+                <span class="text-[rgb(var(--muted-foreground))]">Department:</span>
+                <span class="ml-2 text-[rgb(var(--foreground))] font-medium">{{ sortedDepartments.find((d: { id: any }) => d.id === form.departmentId)?.name }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex gap-3">
+            <button
+              @click="addAnother"
+              class="flex-1 px-4 py-2 border border-[rgb(var(--border))] rounded-lg hover:bg-[rgb(var(--muted))] transition text-[rgb(var(--foreground))] font-medium"
+            >
+              Add Another User
+            </button>
+            <button
+              @click="closeModal"
+              class="flex-1 bg-[rgb(var(--primary))] text-[rgb(var(--primary-foreground))] px-4 py-2 rounded-lg hover:bg-[rgb(var(--primary))]/90 transition font-medium"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+
+        <!-- Form State: User Creation Form -->
+        <form v-else @submit.prevent="handleSubmit" class="space-y-4">
           <!-- Name Fields -->
           <div class="grid grid-cols-2 gap-4">
             <div>
@@ -155,7 +266,7 @@
               </option>
             </select>
             <p v-if="form.role" class="text-xs text-[rgb(var(--muted-foreground))] mt-1.5">
-              {{ userRoles.find(r => r.value === form.role)?.description }}
+              {{ userRoles.find((r: { value: any }) => r.value === form.role)?.description }}
             </p>
           </div>
 
@@ -182,14 +293,11 @@
             <div class="flex gap-2">
               <Icon name="lucide:info" class="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
               <div class="text-xs text-blue-600">
-                <p v-if="form.sendWelcomeEmail" class="font-medium mb-1">
-                  A secure password will be auto-generated and emailed to the user
-                </p>
-                <p v-else class="font-medium mb-1">
-                  A secure password will be auto-generated (you'll need to share it manually)
+                <p class="font-medium mb-1">
+                  A secure password will be auto-generated
                 </p>
                 <p class="opacity-80">
-                  The user should change their password after first login for security.
+                  You'll be able to view and copy the password after creating the user. {{ form.sendWelcomeEmail ? 'It will also be emailed to them.' : 'You can share it manually with the user.' }}
                 </p>
               </div>
             </div>
@@ -202,7 +310,7 @@
               <div class="text-xs text-yellow-600">
                 <p class="font-medium mb-1">SMTP Not Configured</p>
                 <p class="opacity-80">
-                  Email notifications are not configured. The user will be created but won't receive a welcome email.
+                  Email won't be sent automatically, but you'll still be able to see and copy the generated password.
                   <NuxtLink to="/settings" class="underline font-medium ml-1">Configure SMTP</NuxtLink>
                 </p>
               </div>
@@ -212,14 +320,6 @@
           <!-- Error Message -->
           <div v-if="error" class="bg-[rgb(var(--destructive))]/10 border border-[rgb(var(--destructive))]/20 rounded-lg p-3">
             <p class="text-sm text-[rgb(var(--destructive))]">{{ error }}</p>
-          </div>
-
-          <!-- Success Message (for email sent confirmation) -->
-          <div v-if="successMessage" class="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
-            <div class="flex items-center gap-2">
-              <Icon name="lucide:check-circle" class="w-4 h-4 text-green-600" />
-              <p class="text-sm text-green-600">{{ successMessage }}</p>
-            </div>
           </div>
 
           <!-- Action Buttons -->
@@ -237,7 +337,7 @@
               class="flex-1 bg-[rgb(var(--primary))] text-[rgb(var(--primary-foreground))] px-4 py-2 rounded-lg hover:bg-[rgb(var(--primary))]/90 disabled:opacity-50 flex items-center justify-center gap-2 transition"
             >
               <Icon v-if="loading" name="lucide:loader-2" class="w-4 h-4 animate-spin" />
-              <span>{{ loading ? 'Adding...' : 'Add User' }}</span>
+              <span>{{ loading ? 'Creating...' : 'Create User' }}</span>
             </button>
           </div>
         </form>
@@ -259,6 +359,7 @@ interface UserCreationResponse {
   lastName: string
   emailSent: boolean
   emailError: string | null
+  generatedPassword: string
   [key: string]: any
 }
 
@@ -306,8 +407,15 @@ const form = ref({
 
 const loading = ref(false)
 const error = ref('')
-const successMessage = ref('')
 const smtpConfigured = ref(false)
+
+// Success state
+const userCreated = ref(false)
+const generatedPassword = ref('')
+const emailSent = ref(false)
+const emailError = ref<string | null>(null)
+const showPassword = ref(false)
+const passwordCopied = ref(false)
 
 // Quick Add Department
 const showQuickAddDept = ref(false)
@@ -407,9 +515,30 @@ const cancelQuickAddDept = () => {
   showQuickAddDept.value = false
 }
 
+const copyPassword = async () => {
+  try {
+    await navigator.clipboard.writeText(generatedPassword.value)
+    passwordCopied.value = true
+    setTimeout(() => {
+      passwordCopied.value = false
+    }, 2000)
+  } catch (err) {
+    console.error('Failed to copy password:', err)
+  }
+}
+
+const addAnother = () => {
+  resetForm()
+  userCreated.value = false
+}
+
 const closeModal = () => {
   isOpen.value = false
-  resetForm()
+  // Small delay before reset to allow modal close animation
+  setTimeout(() => {
+    resetForm()
+    userCreated.value = false
+  }, 300)
 }
 
 const resetForm = () => {
@@ -423,7 +552,11 @@ const resetForm = () => {
     sendWelcomeEmail: true,
   }
   error.value = ''
-  successMessage.value = ''
+  generatedPassword.value = ''
+  emailSent.value = false
+  emailError.value = null
+  showPassword.value = false
+  passwordCopied.value = false
   showQuickAddDept.value = false
   quickDept.value = { name: '', code: '' }
 }
@@ -431,12 +564,9 @@ const resetForm = () => {
 const handleSubmit = async () => {
   loading.value = true
   error.value = ''
-  successMessage.value = ''
 
   try {
     const token = localStorage.getItem('auth_token')
-    
-    console.log('📤 Sending user creation request with sendWelcomeEmail:', form.value.sendWelcomeEmail)
     
     const response = await $fetch<UserCreationResponse>('/api/users', {
       method: 'POST',
@@ -446,29 +576,14 @@ const handleSubmit = async () => {
       body: form.value,
     })
 
-    console.log('📥 Received response:', response)
-    console.log('📧 Email sent:', response.emailSent)
-    console.log('❌ Email error:', response.emailError)
+    // Store the response data
+    generatedPassword.value = response.generatedPassword
+    emailSent.value = response.emailSent
+    emailError.value = response.emailError
+    userCreated.value = true
 
-    // Check if email was sent
-    if (form.value.sendWelcomeEmail) {
-      if (response.emailSent) {
-        successMessage.value = `User created successfully! Welcome email with login credentials sent to ${form.value.email}`
-      } else if (response.emailError) {
-        successMessage.value = `User created successfully, but email could not be sent: ${response.emailError}`
-      } else {
-        successMessage.value = 'User created successfully! (Email status unknown)'
-      }
-    } else {
-      successMessage.value = 'User created successfully! Remember to share the auto-generated password with them.'
-    }
-
+    // Emit event so parent can refresh
     emit('userAdded', response)
-    
-    // Close modal after a short delay to show success message
-    setTimeout(() => {
-      closeModal()
-    }, 2500)
   } catch (err: any) {
     console.error('❌ User creation error:', err)
     error.value = err.data?.message || err.message || 'Failed to add user'
