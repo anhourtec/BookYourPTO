@@ -1,27 +1,35 @@
 // ============================================
 // API COMPOSABLE WITH AUTO-REFRESH
 // ============================================
-// SSR-safe: Only accesses localStorage on client-side
-// Fully typed with TypeScript for better IDE support
-
 import type {
   User,
   UpdateUserInput,
   Department,
   OrganizationSettings,
   UpdateSettingsInput,
-  RefreshTokenResponse
+  RefreshTokenResponse,
+  Leave,
+  LeaveBalance,
+  LeaveBalanceSummary,
+  LeaveType,
+  PublicHoliday,
+  CreateLeaveInput,
+  UpdateLeaveInput
 } from '~/types/api'
 
+// ============================================
+// SHARED STATE - Prevent duplicate refresh calls
+// ============================================
+let isRefreshing = false
+let refreshPromise: Promise<boolean> | null = null
+
 export const useApi = () => {
-  let isRefreshing = false
-  let refreshPromise: Promise<boolean> | null = null
+  const router = useRouter()
 
   // ============================================
   // SSR-safe helper to get auth headers
   // ============================================
   const getAuthHeaders = (): Record<string, string> => {
-    // Only access localStorage on client-side
     if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
       return {}
     }
@@ -34,13 +42,13 @@ export const useApi = () => {
   // Refresh access token using refresh token
   // ============================================
   const refreshAccessToken = async (): Promise<boolean> => {
-    // Can't refresh on server
     if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
       return false
     }
 
-    // If already refreshing, return the existing promise
+    // If already refreshing, wait for the existing promise
     if (isRefreshing && refreshPromise) {
+      console.log('⏳ Already refreshing token, waiting...')
       return refreshPromise
     }
 
@@ -50,48 +58,44 @@ export const useApi = () => {
         const refreshToken = localStorage.getItem('refresh_token')
         
         if (!refreshToken) {
-          console.log('No refresh token found')
+          console.log('❌ No refresh token found')
+          isRefreshing = false
           return false
         }
 
-        console.log('Refreshing access token...')
+        console.log('🔄 Refreshing access token...')
         
         const response = await $fetch<RefreshTokenResponse>('/api/auth/refresh', {
           method: 'POST',
           body: { refreshToken },
         })
 
-        // Store new tokens
+        // IMPORTANT: Update BOTH tokens (for token rotation)
         localStorage.setItem('auth_token', response.accessToken)
         localStorage.setItem('refresh_token', response.refreshToken)
         
         console.log('✅ Access token refreshed successfully')
+        isRefreshing = false
         return true
       } catch (error) {
         console.error('❌ Failed to refresh token:', error)
-        return false
-      } finally {
         isRefreshing = false
-        refreshPromise = null
+        return false
       }
     })()
 
     return refreshPromise
   }
-// Add this with your other USER API METHODS
-/**
- * Fetch a single user by ID
- * @param userId - User ID to fetch
- * @returns User object with department and manager info
- */
-const fetchUser = async (userId: string): Promise<User> => {
-  return await authenticatedFetch<User>(`/api/users/${userId}`)
-}
 
   // ============================================
   // Authenticated fetch with auto-retry on 401
   // ============================================
   const authenticatedFetch = async <T = any>(url: string, options: any = {}): Promise<T> => {
+    // Skip refresh endpoint to avoid infinite loops
+    if (url.includes('/api/auth/refresh')) {
+      return await $fetch(url, options) as T
+    }
+
     try {
       // First attempt with current token
       const response = await $fetch(url, {
@@ -105,14 +109,14 @@ const fetchUser = async (userId: string): Promise<User> => {
     } catch (error: any) {
       // If 401 error, try to refresh token and retry
       if (error?.statusCode === 401 || error?.response?.status === 401) {
-        console.log('401 error - attempting to refresh token...')
+        console.log('❌ 401 error - attempting to refresh token...')
         
         const refreshed = await refreshAccessToken()
         
         if (refreshed) {
           // Retry the original request with new token
           try {
-            console.log('Retrying request with new token...')
+            console.log('🔄 Retrying request with new token...')
             const retryResponse = await $fetch(url, {
               ...options,
               headers: {
@@ -122,17 +126,17 @@ const fetchUser = async (userId: string): Promise<User> => {
             })
             return retryResponse as T
           } catch (retryError) {
-            console.error('Retry failed after token refresh')
+            console.error('❌ Retry failed after token refresh')
             throw retryError
           }
         } else {
-          // Refresh failed - logout user (only on client)
+          // Refresh failed - logout user
           if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
-            console.log('Token refresh failed - logging out...')
+            console.log('🚪 Token refresh failed - logging out...')
             localStorage.removeItem('auth_token')
             localStorage.removeItem('refresh_token')
             localStorage.removeItem('user')
-            navigateTo('/login')
+            router.push('/login')
           }
         }
       }
@@ -145,20 +149,14 @@ const fetchUser = async (userId: string): Promise<User> => {
   // USER API METHODS
   // ============================================
   
-  /**
-   * Fetch all users in the organization
-   * @returns Array of users with department and manager info
-   */
   const fetchUsers = async (): Promise<User[]> => {
     return await authenticatedFetch<User[]>('/api/users')
   }
 
-  /**
-   * Update a user's information
-   * @param userId - User ID to update
-   * @param data - Updated user data
-   * @returns Updated user object
-   */
+  const fetchUser = async (userId: string): Promise<User> => {
+    return await authenticatedFetch<User>(`/api/users/${userId}`)
+  }
+
   const updateUser = async (userId: string, data: UpdateUserInput): Promise<User> => {
     return await authenticatedFetch<User>(`/api/users/${userId}`, {
       method: 'PATCH',
@@ -166,10 +164,6 @@ const fetchUser = async (userId: string): Promise<User> => {
     })
   }
 
-  /**
-   * Delete a user
-   * @param userId - User ID to delete
-   */
   const deleteUser = async (userId: string): Promise<void> => {
     return await authenticatedFetch<void>(`/api/users/${userId}`, {
       method: 'DELETE',
@@ -180,10 +174,6 @@ const fetchUser = async (userId: string): Promise<User> => {
   // DEPARTMENT API METHODS
   // ============================================
   
-  /**
-   * Fetch all departments in the organization
-   * @returns Array of departments with user counts
-   */
   const fetchDepartments = async (): Promise<Department[]> => {
     return await authenticatedFetch<Department[]>('/api/departments')
   }
@@ -192,19 +182,10 @@ const fetchUser = async (userId: string): Promise<User> => {
   // SETTINGS API METHODS
   // ============================================
 
-  /**
-   * Fetch organization settings
-   * @returns Organization settings object
-   */
   const fetchSettings = async (): Promise<OrganizationSettings> => {
     return await authenticatedFetch<OrganizationSettings>('/api/settings')
   }
 
-  /**
-   * Update organization settings
-   * @param data - Settings to update
-   * @returns Updated settings object
-   */
   const updateSettings = async (data: UpdateSettingsInput): Promise<OrganizationSettings> => {
     return await authenticatedFetch<OrganizationSettings>('/api/settings', {
       method: 'PATCH',
@@ -213,14 +194,68 @@ const fetchUser = async (userId: string): Promise<User> => {
   }
 
   // ============================================
+  // LEAVE MANAGEMENT API METHODS
+  // ============================================
+
+  const fetchLeaves = async (userId: string, year: number, status?: string): Promise<Leave[]> => {
+    const params = new URLSearchParams({
+      userId,
+      year: year.toString()
+    })
+    
+    if (status) {
+      params.append('status', status)
+    }
+    
+    return await authenticatedFetch<Leave[]>(`/api/leaves?${params.toString()}`)
+  }
+
+  const fetchLeaveBalance = async (userId: string, year: number): Promise<LeaveBalanceSummary> => {
+    const params = new URLSearchParams({
+      userId,
+      year: year.toString()
+    })
+    
+    return await authenticatedFetch<LeaveBalanceSummary>(`/api/leaves/balance?${params.toString()}`)
+  }
+
+  const createLeaveRequest = async (data: CreateLeaveInput): Promise<Leave> => {
+    return await authenticatedFetch<Leave>('/api/leaves', {
+      method: 'POST',
+      body: data
+    })
+  }
+
+  const updateLeaveStatus = async (leaveId: string, data: UpdateLeaveInput): Promise<Leave> => {
+    return await authenticatedFetch<Leave>(`/api/leaves/${leaveId}`, {
+      method: 'PATCH',
+      body: data
+    })
+  }
+
+  const cancelLeaveRequest = async (leaveId: string): Promise<{ success: boolean; message: string }> => {
+    return await authenticatedFetch(`/api/leaves/${leaveId}`, {
+      method: 'DELETE'
+    })
+  }
+
+  const fetchLeaveTypes = async (): Promise<LeaveType[]> => {
+    return await authenticatedFetch<LeaveType[]>('/api/leave-types')
+  }
+
+  const fetchPublicHolidays = async (year: number): Promise<PublicHoliday[]> => {
+    return await authenticatedFetch<PublicHoliday[]>(`/api/public-holidays?year=${year}`)
+  }
+
+  // ============================================
   // Return all API methods
   // ============================================
   return {
     // User methods
     fetchUsers,
+    fetchUser,
     updateUser,
     deleteUser,
-    fetchUser,
     
     // Department methods
     fetchDepartments,
@@ -228,5 +263,14 @@ const fetchUser = async (userId: string): Promise<User> => {
     // Settings methods
     fetchSettings,
     updateSettings,
+
+    // Leave methods
+    fetchLeaves,
+    fetchLeaveBalance,
+    createLeaveRequest,
+    updateLeaveStatus,
+    cancelLeaveRequest,
+    fetchLeaveTypes,
+    fetchPublicHolidays,
   }
 }
