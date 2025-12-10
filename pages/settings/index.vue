@@ -1,34 +1,8 @@
 <template>
   <div class="min-h-screen bg-[rgb(var(--background))]">
-    <!-- Header -->
-    <div class="border-b border-[rgb(var(--border))] bg-[rgb(var(--card))] sticky top-0 z-30">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-        <div class="flex items-center justify-between gap-4">
-          <div class="flex-1 min-w-0">
-            <h1 class="text-2xl sm:text-3xl font-bold text-[rgb(var(--foreground))] mb-1 truncate">Settings</h1>
-            <p class="text-xs sm:text-sm text-[rgb(var(--muted-foreground))] truncate">
-              Manage your organization's configuration
-            </p>
-          </div>
-          
-          <!-- Mobile Settings Menu Toggle -->
-          <button
-            @click="showMobileMenu = !showMobileMenu"
-            class="lg:hidden p-2 hover:bg-[rgb(var(--muted))] rounded-lg transition-colors flex-shrink-0"
-            :aria-label="showMobileMenu ? 'Close menu' : 'Open settings menu'"
-          >
-            <Icon 
-              :name="showMobileMenu ? 'lucide:x' : 'lucide:panel-left'" 
-              class="w-6 h-6 text-[rgb(var(--foreground))]" 
-            />
-          </button>
-        </div>
-      </div>
-    </div>
-    
     <!-- Main Content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex min-h-[calc(100vh-9rem)] sm:min-h-[calc(100vh-11rem)]">
+      <div class="flex min-h-[calc(100vh-5rem)]">
         <!-- Mobile Overlay -->
         <Transition
           enter-active-class="transition-opacity duration-300"
@@ -42,7 +16,6 @@
             v-if="showMobileMenu"
             @click="showMobileMenu = false"
             class="fixed inset-0 bg-black/50 z-40 lg:hidden"
-            style="top: 0;"
           ></div>
         </Transition>
         
@@ -57,7 +30,8 @@
         >
           <aside
             v-show="showMobileMenu || isLargeScreen"
-            class="fixed lg:static left-0 w-64 sm:w-72 lg:w-64 flex-shrink-0 bg-[rgb(var(--card))] lg:bg-transparent border-r border-[rgb(var(--border))] py-4 sm:py-6 lg:py-8 px-4 sm:px-6 lg:pr-6 lg:pl-0 z-50 overflow-y-auto shadow-xl lg:shadow-none"
+            class="fixed lg:static left-0 w-64 sm:w-72 lg:w-64 flex-shrink-0 bg-[rgb(var(--card))] lg:bg-transparent border-r border-[rgb(var(--border))] py-4 sm:py-6 lg:py-8 px-4 sm:px-6 lg:pr-6 lg:pl-0 overflow-y-auto shadow-xl lg:shadow-none"
+            :class="showMobileMenu ? 'z-50' : 'lg:z-auto'"
             :style="{ top: headerHeight + 'px', bottom: 0, height: `calc(100vh - ${headerHeight}px)` }"
           >
             <!-- Mobile Header in Sidebar -->
@@ -95,6 +69,21 @@
         
         <!-- Right Content Area -->
         <main class="flex-1 py-4 sm:py-6 lg:py-8 lg:pl-6 xl:pl-8 min-w-0">
+          <!-- Mobile menu toggle button (visible only on mobile when sidebar is hidden) -->
+          <div class="lg:hidden mb-4 flex items-center justify-between">
+            <h1 class="text-2xl font-bold text-[rgb(var(--foreground))]">Settings</h1>
+            <button
+              @click="showMobileMenu = !showMobileMenu"
+              class="p-2 hover:bg-[rgb(var(--muted))] rounded-lg transition-colors"
+              :aria-label="showMobileMenu ? 'Close menu' : 'Open settings menu'"
+            >
+              <Icon 
+                name="lucide:panel-left" 
+                class="w-6 h-6 text-[rgb(var(--foreground))]" 
+              />
+            </button>
+          </div>
+
           <!-- Use v-if instead of v-show for lazy loading -->
           <GeneralSettings v-if="activeSection === 'general'" />
           <CarryForwardSettings v-if="activeSection === 'carryforward'" />
@@ -133,17 +122,13 @@ const updateScreenSize = () => {
 }
 
 const updateHeaderHeight = () => {
-  // Calculate header height dynamically
-  const header = document.querySelector('header')
+  // Calculate header height dynamically from the app's main header
+  const header = document.querySelector('header') || document.querySelector('nav')
   if (header) {
     headerHeight.value = header.offsetHeight
   } else {
     // Fallback heights based on breakpoints
-    if (window.innerWidth >= 640) {
-      headerHeight.value = 108 // sm and above
-    } else {
-      headerHeight.value = 92 // mobile
-    }
+    headerHeight.value = window.innerWidth >= 640 ? 80 : 72
   }
 }
 
@@ -157,10 +142,16 @@ onMounted(() => {
   }
   updateScreenSize()
   updateHeaderHeight()
-  window.addEventListener('resize', () => {
+  
+  const resizeHandler = () => {
     updateScreenSize()
     updateHeaderHeight()
-  })
+  }
+  
+  window.addEventListener('resize', resizeHandler)
+  
+  // Also update header height when DOM changes (in case header renders late)
+  setTimeout(updateHeaderHeight, 100)
 })
 
 onUnmounted(() => {
