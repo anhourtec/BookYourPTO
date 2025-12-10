@@ -531,6 +531,20 @@ const handleEdit = (user: User) => {
 }
 
 const handleToggleStatus = async (user: User) => {
+  // Prevent self-deactivation
+  if (user.id === currentUser.value?.id && user.isActive) {
+    alert('You cannot deactivate your own account')
+    closeUserMenu()
+    return
+  }
+
+  // Prevent executive deactivation
+  if (user.role === 'EXECUTIVE' && user.isActive) {
+    alert('Executive accounts cannot be deactivated')
+    closeUserMenu()
+    return
+  }
+
   try {
     const updatedUser = await api.updateUser(user.id, { 
       isActive: !user.isActive 
@@ -544,7 +558,8 @@ const handleToggleStatus = async (user: User) => {
     closeUserMenu()
   } catch (err: any) {
     console.error('Error toggling user status:', err)
-    alert('Failed to update user status')
+    alert(err.data?.message || 'Failed to update user status')
+    closeUserMenu()
   }
 }
 
