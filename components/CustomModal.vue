@@ -1,52 +1,92 @@
 <template>
   <Teleport to="body">
-    <Transition name="modal-fade">
+    <Transition name="modal">
       <div
         v-if="modelValue"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-        @click.self="emit('update:modelValue', false)"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        @click.self="closeModal"
       >
-        <Transition name="modal-slide">
-          <div
-            v-if="modelValue"
-            class="bg-[rgb(var(--card))] text-[rgb(var(--card-foreground))] border border-[rgb(var(--border))] rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden mx-4"
-          >
-            <slot />
-          </div>
-        </Transition>
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+
+        <!-- Modal Content -->
+        <div
+          :class="[
+            'relative bg-[rgb(var(--card))] rounded-lg shadow-2xl border border-[rgb(var(--border))] w-full',
+            maxWidthClass
+          ]"
+          @click.stop
+        >
+          <slot></slot>
+        </div>
       </div>
     </Transition>
   </Teleport>
 </template>
 
 <script setup lang="ts">
-defineProps<{
+const props = defineProps<{
   modelValue: boolean
+  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl'
 }>()
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
 }>()
+
+const maxWidthClass = computed(() => {
+  const widthMap = {
+    sm: 'max-w-sm',
+    md: 'max-w-md',
+    lg: 'max-w-lg',
+    xl: 'max-w-xl',
+    '2xl': 'max-w-2xl',
+    '3xl': 'max-w-3xl',
+    '4xl': 'max-w-4xl',
+    '5xl': 'max-w-5xl',
+    '6xl': 'max-w-6xl',
+    '7xl': 'max-w-7xl',
+  }
+  return widthMap[props.maxWidth || 'lg']
+})
+
+const closeModal = () => {
+  emit('update:modelValue', false)
+}
+
+// Close on ESC key
+onMounted(() => {
+  const handleEscape = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && props.modelValue) {
+      closeModal()
+    }
+  }
+  window.addEventListener('keydown', handleEscape)
+  
+  onUnmounted(() => {
+    window.removeEventListener('keydown', handleEscape)
+  })
+})
 </script>
 
 <style scoped>
-.modal-fade-enter-active,
-.modal-fade-leave-active {
-  transition: opacity 0.3s ease;
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.2s ease;
 }
 
-.modal-fade-enter-from,
-.modal-fade-leave-to {
+.modal-enter-from,
+.modal-leave-to {
   opacity: 0;
 }
 
-.modal-slide-enter-active,
-.modal-slide-leave-active {
-  transition: transform 0.3s ease;
+.modal-enter-active .relative,
+.modal-leave-active .relative {
+  transition: transform 0.2s ease;
 }
 
-.modal-slide-enter-from,
-.modal-slide-leave-to {
-  transform: scale(0.9) translateY(-20px);
+.modal-enter-from .relative,
+.modal-leave-to .relative {
+  transform: scale(0.95);
 }
 </style>
