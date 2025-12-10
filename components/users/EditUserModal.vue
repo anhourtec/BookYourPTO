@@ -449,10 +449,17 @@
                     <p class="text-xs text-[rgb(var(--muted-foreground))]">
                       {{ form.isActive ? 'User can log in and access the system' : 'User is deactivated and cannot log in' }}
                     </p>
+                    <p v-if="cannotDeactivate && form.isActive" class="text-xs text-amber-600 mt-1">
+                        {{ cannotDeactivateReason }}
+                      </p>
                   </div>
                 </div>
-                <SwitchToggle v-model="form.isActive" />
-              </div>
+              <SwitchToggle 
+                v-model="form.isActive" 
+                :disabled="cannotDeactivate && form.isActive"
+                :class="{ 'opacity-50 cursor-not-allowed': cannotDeactivate && form.isActive }"
+              />             
+             </div>
             </div>
           </div>
 
@@ -586,10 +593,35 @@ const emit = defineEmits<{
 
 // Use the composable
 const { roles: userRoles } = useUserRoles()
+const { getUser } = usePermissions()
+const currentUser = computed(() => getUser())
 
 const isOpen = computed({
   get: () => props.modelValue,
   set: (value) => emit('update:modelValue', value),
+})
+
+// Computed to check if user can be deactivated
+const cannotDeactivate = computed(() => {
+  // Can't deactivate yourself
+  if (props.userId === currentUser.value?.id) {
+    return true
+  }
+  // Can't deactivate executives
+  if (form.value.role === 'EXECUTIVE') {
+    return true
+  }
+  return false
+})
+
+const cannotDeactivateReason = computed(() => {
+  if (props.userId === currentUser.value?.id) {
+    return 'You cannot deactivate your own account'
+  }
+  if (form.value.role === 'EXECUTIVE') {
+    return 'Executive accounts cannot be deactivated'
+  }
+  return ''
 })
 
 // Tabs
@@ -655,9 +687,11 @@ const loadingUser = ref(false)
 const error = ref('')
 const successMessage = ref('')
 
-// Fetch user data when modal opens
-watch(() => props.userId, async (newUserId) => {
-  if (newUserId && props.modelValue) {
+// Fetch user data when modal opens OR when userId changes
+watch([() => props.userId, () => props.modelValue], async ([newUserId, isOpen]) => {
+  if (newUserId && isOpen) {
+    // Reset form first to show loading state
+    resetForm()
     await fetchUserData(newUserId)
   }
 }, { immediate: true })
@@ -748,7 +782,7 @@ const handleSubmit = async () => {
       lastName: form.value.lastName,
       middleName: form.value.middleName || null,
       preferredName: form.value.preferredName || null,
-      dateOfBirth: form.value.dateOfBirth || null,
+  dateOfBirth: form.value.dateOfBirth || undefined, // Changed from null
       gender: form.value.gender || null,
       jobTitle: form.value.jobTitle || null,
       employeeId: form.value.employeeId || null,
@@ -843,4 +877,3 @@ const resetForm = () => {
   }
 }
 </script>
-
