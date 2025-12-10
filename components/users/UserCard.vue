@@ -51,7 +51,7 @@
           <button
             v-if="canManageUsers"
             ref="actionButton"
-            @click="$emit('toggle-menu', user.id)"
+            @click="handleMenuClick"
             class="p-2 hover:bg-[rgb(var(--muted))] rounded-lg transition-colors flex-shrink-0"
           >
             <Icon name="lucide:more-vertical" class="w-5 h-5 text-[rgb(var(--muted-foreground))]" />
@@ -120,8 +120,8 @@ interface Props {
 
 const props = defineProps<Props>()
 
-defineEmits<{
-  'toggle-menu': [userId: string]
+const emit = defineEmits<{
+  'toggle-menu': [userId: string, buttonElement: HTMLElement]
 }>()
 
 const { getRoleColor } = useUserRoleColors()
@@ -143,7 +143,13 @@ const formatDate = (date: string) =>
     year: 'numeric'
   })
 
-// Expose the action button ref for parent positioning
 const actionButton = ref<HTMLElement | null>(null)
+
+// Handle menu click and pass the button element directly
+const handleMenuClick = (event: MouseEvent) => {
+  const target = event.currentTarget as HTMLElement
+  emit('toggle-menu', props.user.id, target)
+}
+
 defineExpose({ actionButton })
 </script>

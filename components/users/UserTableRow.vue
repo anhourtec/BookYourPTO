@@ -9,14 +9,14 @@
         <div
           class="w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm flex-shrink-0"
           :class="[
-            getRoleColor(user.role).avatar, 
+            getRoleColor(user.role).avatar,
             getRoleColor(user.role).avatarText,
             getRoleColor(user.role).ring
           ]"
         >
           {{ userInitials }}
         </div>
-        
+
         <!-- Star Badge for Administrator -->
         <div
           v-if="user.role === 'ADMINISTRATOR'"
@@ -24,7 +24,7 @@
         >
           <Icon name="lucide:star" class="w-2.5 h-2.5 text-yellow-900 dark:text-yellow-950 fill-current" />
         </div>
-        
+
         <!-- Crown Badge for Executive -->
         <div
           v-else-if="user.role === 'EXECUTIVE'"
@@ -33,7 +33,7 @@
           <Icon name="lucide:crown" class="w-2.5 h-2.5 text-yellow-900 dark:text-yellow-950 fill-current" />
         </div>
       </div>
-      
+
       <div class="min-w-0 flex-1">
         <p class="font-medium text-[rgb(var(--foreground))] truncate text-sm">
           {{ user.firstName }} {{ user.lastName }}
@@ -83,7 +83,7 @@
       <button
         v-if="canManageUsers"
         ref="actionButton"
-        @click="$emit('toggle-menu', user.id)"
+        @click="handleMenuClick"
         class="p-2 hover:bg-[rgb(var(--muted))] rounded-lg transition-colors"
       >
         <Icon name="lucide:more-vertical" class="w-5 h-5 text-[rgb(var(--muted-foreground))]" />
@@ -114,13 +114,13 @@ interface Props {
 
 const props = defineProps<Props>()
 
-defineEmits<{
-  'toggle-menu': [userId: string]
+const emit = defineEmits<{
+  'toggle-menu': [userId: string, buttonElement: HTMLElement]
 }>()
 
 const { getRoleColor } = useUserRoleColors()
 
-const userInitials = computed(() => 
+const userInitials = computed(() =>
   `${props.user.firstName[0]}${props.user.lastName[0]}`.toUpperCase()
 )
 
@@ -137,7 +137,13 @@ const formatDate = (date: string) =>
     day: 'numeric'
   })
 
-// Expose the action button ref for parent positioning
 const actionButton = ref<HTMLElement | null>(null)
+
+// Handle menu click and pass the button element directly
+const handleMenuClick = (event: MouseEvent) => {
+  const target = event.currentTarget as HTMLElement
+  emit('toggle-menu', props.user.id, target)
+}
+
 defineExpose({ actionButton })
 </script>

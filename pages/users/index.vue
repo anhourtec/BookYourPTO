@@ -123,7 +123,6 @@
           <UserCard
             v-for="user in filteredAndSortedUsers"
             :key="user.id"
-            :ref="(el: any) => setComponentRef(user.id, el)"
             :user="user"
             :can-manage-users="canManageUsers()"
             @toggle-menu="toggleUserMenu"
@@ -146,7 +145,6 @@
             <UserTableRow
               v-for="user in filteredAndSortedUsers"
               :key="user.id"
-              :ref="(el: any) => setComponentRef(user.id, el)"
               :user="user"
               :can-manage-users="canManageUsers()"
               @toggle-menu="toggleUserMenu"
@@ -275,6 +273,14 @@ onMounted(async () => {
     })
   }
   await loadData()
+  
+  // Close menu on scroll
+  window.addEventListener('scroll', closeUserMenu, true)
+})
+
+onUnmounted(() => {
+  // Clean up scroll listener
+  window.removeEventListener('scroll', closeUserMenu, true)
 })
 
 // Data
@@ -292,7 +298,6 @@ const selectedUserId = ref<string | null>(null)
 
 // UI State
 const openMenuUserId = ref<string | null>(null)
-const componentRefs = ref<Map<string, any>>(new Map())
 const menuStyle = ref({})
 
 // Filters
@@ -475,13 +480,7 @@ const filteredAndSortedUsers = computed(() => {
   return filtered
 })
 
-const setComponentRef = (userId: string, el: any) => {
-  if (el) {
-    componentRefs.value.set(userId, el)
-  }
-}
-
-const toggleUserMenu = (userId: string) => {
+const toggleUserMenu = (userId: string, buttonElement?: HTMLElement) => {
   if (openMenuUserId.value === userId) {
     openMenuUserId.value = null
     return
@@ -490,28 +489,48 @@ const toggleUserMenu = (userId: string) => {
   openMenuUserId.value = userId
 
   nextTick(() => {
-    const component = componentRefs.value.get(userId)
-    if (component && component.actionButton) {
-      const button = component.actionButton
-      const rect = button.getBoundingClientRect()
-      const menuWidth = 208
-      const menuHeight = 150
-      
-      let top = rect.bottom + 8
-      let left = rect.right - menuWidth
+    const button = buttonElement
+    
+    if (!button) {
+      console.error('❌ No button element provided')
+      return
+    }
 
-      if (top + menuHeight > window.innerHeight) {
-        top = rect.top - menuHeight - 8
-      }
+    const rect = button.getBoundingClientRect()
+    const menuWidth = 208
+    const menuHeight = 150
 
-      if (left < 8) {
-        left = 8
-      }
+    if (rect.width === 0 && rect.height === 0) {
+      console.error('❌ Button has no dimensions!', button)
+      return
+    }
 
-      menuStyle.value = {
-        top: `${top}px`,
-        left: `${left}px`
-      }
+    let top = rect.bottom + 8
+    let left = rect.right - menuWidth
+
+    // Adjust if menu would go off bottom of screen
+    if (top + menuHeight > window.innerHeight) {
+      top = rect.top - menuHeight - 8
+    }
+
+    // Adjust if menu would go off left edge
+    if (left < 8) {
+      left = 8
+    }
+
+    // Adjust if menu would go off right edge
+    if (left + menuWidth > window.innerWidth - 8) {
+      left = window.innerWidth - menuWidth - 8
+    }
+
+    // Ensure top is never negative
+    if (top < 8) {
+      top = 8
+    }
+
+    menuStyle.value = {
+      top: `${top}px`,
+      left: `${left}px`
     }
   })
 }
