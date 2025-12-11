@@ -119,7 +119,8 @@ import { useHeaderNavigation } from '~/composables/header/useHeaderNavigation'
 // Composables
 const { 
   user, 
-  isAuthenticated, 
+  isAuthenticated,
+  currentUserId,
   userName, 
   userInitials, 
   checkAuth, 
@@ -127,7 +128,8 @@ const {
   handleProfileUpdated 
 } = useHeaderAuth()
 
-const { visibleNavLinks, userMenuItems } = useHeaderNavigation(isAuthenticated)
+// Pass currentUserId to navigation composable
+const { visibleNavLinks, userMenuItems } = useHeaderNavigation(isAuthenticated, currentUserId)
 const router = useRouter()
 
 // State
