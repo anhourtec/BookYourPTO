@@ -60,6 +60,10 @@ export default defineEventHandler(async (event) => {
     }
 
     const body = await readBody(event)
+    
+    // Log the incoming request
+    console.log('📥 Create leave request:', body)
+    
     const data = createLeaveSchema.parse(body)
 
     // Permission check: Users can only create leaves for themselves unless admin
@@ -85,9 +89,17 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Validate dates
+    // FIXED: Normalize dates to midnight UTC to avoid timezone issues
     const startDate = new Date(data.startDate)
+    startDate.setUTCHours(0, 0, 0, 0)
+    
     const endDate = new Date(data.endDate)
+    endDate.setUTCHours(0, 0, 0, 0)
+    
+    console.log('📅 Normalized dates:', {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString()
+    })
     
     if (endDate < startDate) {
       throw createError({
@@ -112,16 +124,18 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Check minimum notice period
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const daysDiff = Math.ceil((startDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-    
-    if (daysDiff < leaveType.minDaysNotice) {
-      throw createError({
-        statusCode: 400,
-        message: `This leave type requires at least ${leaveType.minDaysNotice} days notice`
-      })
+    // Check minimum notice period only if it exists
+    if (leaveType.minDaysNotice) {
+      const today = new Date()
+      today.setUTCHours(0, 0, 0, 0)
+      const daysDiff = Math.ceil((startDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+      
+      if (daysDiff < leaveType.minDaysNotice) {
+        throw createError({
+          statusCode: 400,
+          message: `This leave type requires at least ${leaveType.minDaysNotice} days notice`
+        })
+      }
     }
 
     // Get public holidays for calculation
@@ -146,7 +160,7 @@ export default defineEventHandler(async (event) => {
       holidayDates
     )
 
-    // Check max days per request
+    // Check max days per request only if it exists
     if (leaveType.maxDaysPerRequest && totalDays > leaveType.maxDaysPerRequest) {
       throw createError({
         statusCode: 400,
@@ -154,47 +168,158 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Check for overlapping leaves
-    const overlappingLeaves = await prisma.leave.findFirst({
+    // FIXED: Check for overlapping leaves with detailed logging
+    console.log('🔍 Checking for overlaps between:', {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      userId: data.userId
+    })
+
+    // Get all active leaves for this user
+    const existingLeaves = await prisma.leave.findMany({
       where: {
         userId: data.userId,
         organizationId: auth.organizationId,
         status: {
           in: ['PENDING', 'APPROVED']
-        },
-        OR: [
-          {
-            AND: [
-              { startDate: { lte: endDate } },
-              { endDate: { gte: startDate } }
-            ]
-          }
-        ]
+        }
+      },
+      include: {
+        leaveType: true
       }
     })
 
-    if (overlappingLeaves) {
+    // Filter overlapping leaves manually with proper date comparison
+    const overlappingLeaves = existingLeaves.filter(existing => {
+      const existingStart = new Date(existing.startDate)
+      existingStart.setUTCHours(0, 0, 0, 0)
+      
+      const existingEnd = new Date(existing.endDate)
+      existingEnd.setUTCHours(0, 0, 0, 0)
+
+      // Two date ranges overlap if they share any common days
+      // Ranges DON'T overlap if one ends before the other starts
+      // So overlap exists if: NOT (end1 < start2 OR start1 > end2)
+      // Which simplifies to: start1 <= end2 AND end1 >= start2
+      // BUT we need to check if they're on DIFFERENT days, not just touching
+      
+      // Get timestamps for comparison
+      const reqStartTime = startDate.getTime()
+      const reqEndTime = endDate.getTime()
+      const existStartTime = existingStart.getTime()
+      const existEndTime = existingEnd.getTime()
+      
+      // Overlap if the ranges intersect (not just touch at boundaries)
+      const overlaps = reqStartTime <= existEndTime && reqEndTime >= existStartTime
+
+      console.log('🔍 Comparing with existing leave:', {
+        existingId: existing.id,
+        existingType: existing.leaveType?.name,
+        existingStart: existingStart.toISOString(),
+        existingEnd: existingEnd.toISOString(),
+        requestedStart: startDate.toISOString(),
+        requestedEnd: endDate.toISOString(),
+        existingStartTime: existStartTime,
+        existingEndTime: existEndTime,
+        requestedStartTime: reqStartTime,
+        requestedEndTime: reqEndTime,
+        comparison: {
+          'reqStart <= existEnd': reqStartTime <= existEndTime,
+          'reqEnd >= existStart': reqEndTime >= existStartTime,
+        },
+        overlaps
+      })
+
+      return overlaps
+    })
+
+    console.log(`🔍 Found ${overlappingLeaves.length} overlapping leaves`)
+
+    if (overlappingLeaves.length > 0) {
+      // Log detailed information about overlapping leaves for debugging
+      console.error('❌ OVERLAP DETECTED:', {
+        requestedStart: startDate.toISOString(),
+        requestedEnd: endDate.toISOString(),
+        overlapping: overlappingLeaves.map(l => ({
+          id: l.id,
+          leaveType: l.leaveType?.name,
+          startDate: new Date(l.startDate).toISOString(),
+          endDate: new Date(l.endDate).toISOString(),
+          status: l.status,
+          createdAt: new Date(l.createdAt).toISOString()
+        }))
+      })
+
+      const firstOverlap = overlappingLeaves[0]
+      const overlapStart = new Date(firstOverlap.startDate).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      })
+      const overlapEnd = new Date(firstOverlap.endDate).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      })
+
       throw createError({
         statusCode: 400,
-        message: 'You already have a leave request for these dates'
+        message: `You already have a ${firstOverlap.status.toLowerCase()} leave request (${firstOverlap.leaveType?.name || 'Leave'}) from ${overlapStart} to ${overlapEnd}`
       })
     }
 
-    // Check leave balance (for deductible leaves)
-    const nonDeductibleCodes = ['WFH', 'MEETING', 'SICK_PAID', 'SPECIAL']
-    
-    if (!nonDeductibleCodes.includes(leaveType.code)) {
-      const user = await prisma.user.findUnique({
-        where: { id: data.userId },
-        select: { annualLeaveBalance: true, carryOverBalance: true }
+    // Check leave balance only for deductible leave types
+    if (leaveType.annualAllowance && leaveType.annualAllowance > 0) {
+      const organization = await prisma.organization.findUnique({
+        where: { id: auth.organizationId },
+        select: { 
+          defaultLeaveAllowance: true,
+          leaveYearStartMonth: true
+        }
       })
 
-      const totalAvailable = (user?.annualLeaveBalance || 0) + (user?.carryOverBalance || 0)
-      
-      if (totalDays > totalAvailable) {
+      const year = new Date().getFullYear()
+      const fiscalStartMonth = organization?.leaveYearStartMonth || 1
+      const fiscalPeriodStart = new Date(year, fiscalStartMonth - 1, 1)
+      const fiscalPeriodEnd = new Date(year + 1, fiscalStartMonth - 1, 0)
+
+      // Get used leaves this year
+      const usedLeaves = await prisma.leave.findMany({
+        where: {
+          userId: data.userId,
+          organizationId: auth.organizationId,
+          startDate: {
+            gte: fiscalPeriodStart,
+            lte: fiscalPeriodEnd
+          },
+          status: {
+            in: ['APPROVED', 'PENDING']
+          }
+        },
+        include: {
+          leaveType: true
+        }
+      })
+
+      // Calculate used days (only deductible types)
+      const totalUsed = usedLeaves
+        .filter(l => l.leaveType && l.leaveType.annualAllowance && l.leaveType.annualAllowance > 0)
+        .reduce((sum, l) => sum + (l.totalDays || 0), 0)
+
+      const totalAllowance = organization?.defaultLeaveAllowance || 0
+      const remaining = totalAllowance - totalUsed
+
+      console.log('💰 Leave balance check:', {
+        totalAllowance,
+        totalUsed,
+        remaining,
+        requestedDays: totalDays
+      })
+
+      if (totalDays > remaining) {
         throw createError({
           statusCode: 400,
-          message: 'Insufficient leave balance'
+          message: `Insufficient leave balance. You have ${remaining} days remaining but are requesting ${totalDays} days.`
         })
       }
     }
@@ -202,6 +327,8 @@ export default defineEventHandler(async (event) => {
     // Determine approval requirements
     const requiresApproval = leaveType.requiresApproval
     const initialStatus = requiresApproval ? 'PENDING' : 'APPROVED'
+
+    console.log('📝 Creating leave with status:', initialStatus)
 
     // Create leave request
     const leave = await prisma.leave.create({
@@ -251,14 +378,22 @@ export default defineEventHandler(async (event) => {
           leaveType: leaveType.name,
           startDate: data.startDate,
           endDate: data.endDate,
-          totalDays
+          totalDays,
+          status: initialStatus
         },
         ipAddress: getHeader(event, 'x-forwarded-for') || 'unknown',
         userAgent: getHeader(event, 'user-agent') || 'unknown'
       }
     })
 
-    // TODO: Send notification to approvers if requiresApproval
+    console.log('✅ Leave created successfully:', {
+      id: leave.id,
+      leaveType: leave.leaveType?.name,
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      totalDays: leave.totalDays,
+      status: leave.status
+    })
 
     return leave
   } catch (error: any) {
@@ -267,13 +402,14 @@ export default defineEventHandler(async (event) => {
     }
     
     if (error.issues) {
+      console.error('❌ Validation error:', error.issues)
       throw createError({
         statusCode: 400,
         message: `Validation failed: ${error.issues[0].message}`
       })
     }
     
-    console.error('Error creating leave request:', error)
+    console.error('❌ Error creating leave request:', error)
     throw createError({
       statusCode: 500,
       message: 'Failed to create leave request'

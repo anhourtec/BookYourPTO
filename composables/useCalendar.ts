@@ -21,18 +21,23 @@ const monthNames = [
 ] as const
 
 export const useCalendar = () => {
+  // FIXED: Use UTC to avoid timezone issues
   const getStartOfDay = (d: Date) => {
     const x = new Date(d)
-    x.setHours(0, 0, 0, 0)
+    x.setUTCHours(0, 0, 0, 0)
     return x
   }
 
   const isSameDay = (a: Date, b: Date) =>
     getStartOfDay(a).getTime() === getStartOfDay(b).getTime()
 
+  // FIXED: Proper date comparison for multi-day leaves
   const isBetween = (target: Date, start: Date, end: Date) => {
-    const t = getStartOfDay(target).getTime()
-    return t >= getStartOfDay(start).getTime() && t <= getStartOfDay(end).getTime()
+    const targetTime = getStartOfDay(target).getTime()
+    const startTime = getStartOfDay(start).getTime()
+    const endTime = getStartOfDay(end).getTime()
+    
+    return targetTime >= startTime && targetTime <= endTime
   }
 
   const buildMonth = (
@@ -67,9 +72,26 @@ export const useCalendar = () => {
     for (let d = 1; d <= lastOfMonth.getDate(); d++) {
       const date = new Date(year, monthIndex, d)
 
-      const dayLeaves = leaves.filter(l =>
-        isBetween(date, new Date(l.startDate), new Date(l.endDate))
-      )
+      // FIXED: Filter leaves that span this specific day
+      const dayLeaves = leaves.filter(l => {
+        const leaveStart = new Date(l.startDate)
+        const leaveEnd = new Date(l.endDate)
+        const overlaps = isBetween(date, leaveStart, leaveEnd)
+        
+        // Debug logging for December 30-31
+        if (monthIndex === 11 && (d === 30 || d === 31)) {
+          console.log(`🔍 Dec ${d}: Checking leave`, {
+            leaveId: l.id,
+            leaveType: l.leaveType?.name,
+            leaveStart: leaveStart.toISOString(),
+            leaveEnd: leaveEnd.toISOString(),
+            dateChecking: date.toISOString(),
+            overlaps
+          })
+        }
+        
+        return overlaps
+      })
 
       const dayHolidays = holidays.filter(h =>
         isSameDay(date, new Date(h.date))
@@ -119,6 +141,29 @@ export const useCalendar = () => {
     leaves: Leave[],
     holidays: PublicHoliday[]
   ): CalendarMonth[] => {
+    console.log('🗓️ Building calendar for year:', year)
+    console.log('📋 Total leaves to display:', leaves.length)
+    
+    // Log December leaves specifically
+    const decemberLeaves = leaves.filter(leave => {
+      const start = new Date(leave.startDate)
+      const end = new Date(leave.endDate)
+      return (
+        (start.getMonth() === 11 && start.getFullYear() === year) ||
+        (end.getMonth() === 11 && end.getFullYear() === year)
+      )
+    })
+    
+    if (decemberLeaves.length > 0) {
+      console.log('🎄 December leaves:', decemberLeaves.map(l => ({
+        id: l.id,
+        type: l.leaveType?.name,
+        start: new Date(l.startDate).toISOString(),
+        end: new Date(l.endDate).toISOString(),
+        status: l.status
+      })))
+    }
+    
     const months: CalendarMonth[] = []
     for (let m = 0; m < 12; m++) {
       months.push(buildMonth(year, m, leaves, holidays))

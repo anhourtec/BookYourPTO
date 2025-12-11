@@ -25,9 +25,7 @@
         </section>
 
         <!-- Right: sidebar column -->
-        <aside
-          class="w-full lg:w-80 lg:shrink-0 space-y-4 lg:sticky lg:top-24 lg:self-start"
-        >
+        <aside class="w-full lg:w-80 lg:shrink-0 space-y-4 lg:sticky lg:top-24 lg:self-start">
           <!-- Year end summary card group -->
           <div class="rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
             <div class="text-xs text-gray-500 dark:text-gray-400 mb-3">
@@ -242,13 +240,19 @@ interface LeaveType {
   icon?: string
   requiresApproval: boolean
   requiresDocumentation: boolean
-  // ... other LeaveType properties
+  annualAllowance?: number | null
+  isActive: boolean
   updatedAt: string
 }
 
 interface NonDeductibleItem {
   leaveType: LeaveType
   count: number
+  days: number
+}
+
+interface DeductibleItem {
+  leaveType: LeaveType
   days: number
 }
 
@@ -268,6 +272,7 @@ interface BalanceSummary {
   totalRemaining: number
   carriedOver: number
   balances: BalanceItem[]
+  deductible: DeductibleItem[]
   nonDeductible: NonDeductibleItem[]
 }
 
@@ -336,87 +341,79 @@ const handleCreateLeave = async (payload: {
   leaveTypeId: string
   startDate: string
   endDate: string
+  startHalf: 'FULL_DAY' | 'FIRST_HALF' | 'SECOND_HALF'
+  endHalf: 'FULL_DAY' | 'FIRST_HALF' | 'SECOND_HALF'
   reason?: string
 }) => {
-  await createLeave({
-    ...payload,
-    startHalf: 'FULL_DAY',
-    endHalf: 'FULL_DAY',
-  })
-  requestModalOpen.value = false
-  fabOpen.value = false
-  await loadCalendarData(routeUserId.value, year.value)
+  console.log('📤 Sending leave request:', payload)
+  
+  try {
+    await createLeave(payload)
+    requestModalOpen.value = false
+    fabOpen.value = false
+    // Reload calendar data to refresh balance calculations
+    await loadCalendarData(routeUserId.value, year.value)
+  } catch (error: any) {
+    console.error('❌ Create leave error:', error)
+    // Show error to user
+    alert(error.data?.message || error.message || 'Failed to create leave request')
+  }
 }
+
 
 /**
  * Handle leave cancellation from DayLeavesList
+ * This ensures the database is updated and balances recalculated
  */
 const handleLeaveCancel = async (leaveId: string) => {
   try {
-    // Optimistic update - remove immediately
+    // Optimistic update - remove from UI immediately
     const leaveIndex = leaves.value.findIndex(l => l.id === leaveId)
     if (leaveIndex !== -1) {
       leaves.value.splice(leaveIndex, 1)
     }
     
-    // Refresh data from server
+    // Refresh all data from server (this recalculates balances automatically)
     await loadCalendarData(routeUserId.value, year.value)
   } catch (error) {
-    console.error('Failed to delete leave:', error)
+    console.error('Failed to cancel leave:', error)
     // Revert optimistic update on error
     await loadCalendarData(routeUserId.value, year.value)
   }
 }
 
 /**
- * Deductible leave from balances array (VACATION, PERSONAL, etc.)
+ * FIXED: Deductible leave display based on annualAllowance field
+ * Shows leave types that deduct from annual allowance
  */
 const deductibleDisplay = computed(() => {
-  if (!balanceSummary.value?.balances) return []
+  if (!balanceSummary.value?.balances?.length) return []
   
   return balanceSummary.value.balances
-    .filter(b => b.used > 0) // Only show used leave
+    .filter(balance => balance.used > 0) // Only show types with used days
     .map(balance => ({
       key: balance.leaveType.code,
-      label: `${balance.leaveType.name} (${balance.used} days used)`,
-      icon: 'lucide:calendar',
+      label: balance.leaveType.name,
+      icon: balance.leaveType.icon || 'lucide:calendar',
       color: balance.leaveType.color || '#3b82f6',
       days: balance.used,
     }))
 })
 
-
-
 /**
- * Non-deductible mapping using balanceSummary.nonDeductible
+ * FIXED: Non-deductible leave display based on annualAllowance field
+ * Shows leave types that don't deduct from annual allowance
  */
 const nonDeductibleDisplay = computed(() => {
   if (!balanceSummary.value?.nonDeductible?.length) return []
 
-  const iconMap: Record<string, { icon: string; color: string; label: string }> = {
-    PUBLIC_HOLIDAYS: { icon: 'lucide:calendar-days', color: '#4b5563', label: 'Public Holidays' },
-    WFH: { icon: 'lucide:home', color: '#14b8a6', label: 'Working from home' },
-    SPECIAL: { icon: 'lucide:sparkles', color: '#6366f1', label: 'Special Event Leave' },
-    MEETING: { icon: 'lucide:users', color: '#eab308', label: 'Meeting' },
-    SICK_PAID: { icon: 'lucide:heart-pulse', color: '#ec4899', label: 'Sick Leave - Paid' },
-  }
-
-  return balanceSummary.value.nonDeductible.map((item: NonDeductibleItem) => {
-    const code = item.leaveType.code
-    const mapEntry = iconMap[code] ?? {
-      icon: 'lucide:circle',
-      color: item.leaveType.color || '#6b7280',
-      label: item.leaveType.name,
-    }
-
-    return {
-      key: code,
-      label: mapEntry.label,
-      icon: mapEntry.icon,
-      color: mapEntry.color,
-      days: item.days,
-    }
-  })
+  return balanceSummary.value.nonDeductible.map(item => ({
+    key: item.leaveType.code,
+    label: item.leaveType.name,
+    icon: item.leaveType.icon || 'lucide:circle',
+    color: item.leaveType.color || '#6b7280',
+    days: item.days,
+  }))
 })
 
 /**

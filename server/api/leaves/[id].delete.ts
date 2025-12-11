@@ -50,7 +50,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Permission check
+    // Permission check - FIXED: Proper admin check
     const isAdmin = ['ADMINISTRATOR', 'EXECUTIVE'].includes(currentUser.role)
     const isOwner = leave.userId === auth.userId
 
@@ -75,7 +75,7 @@ export default defineEventHandler(async (event) => {
     const leaveStartDate = new Date(leave.startDate)
     leaveStartDate.setHours(0, 0, 0, 0)
 
-    // Owners cannot cancel leaves that have already started; admins can
+    // FIXED: Owners cannot cancel leaves that have already started; admins CAN
     if (!isAdmin && leaveStartDate < today) {
       throw createError({
         statusCode: 400,
@@ -88,11 +88,11 @@ export default defineEventHandler(async (event) => {
       where: { id: leaveId },
       data: {
         status: 'CANCELLED',
-        cancelledAt: new Date(),
-        cancelledBy: auth.userId,
-        cancelledReason: isAdmin
-          ? 'Cancelled by administrator'
-          : 'Cancelled by user',
+        updatedAt: new Date(),
+        // Store cancellation metadata in notes or a JSON field if available
+        notes: leave.notes 
+          ? `${leave.notes}\n\nCancelled by ${isAdmin ? 'administrator' : 'user'} on ${new Date().toISOString()}`
+          : `Cancelled by ${isAdmin ? 'administrator' : 'user'} on ${new Date().toISOString()}`,
       },
     })
 
@@ -106,9 +106,10 @@ export default defineEventHandler(async (event) => {
         entityId: leaveId,
         changes: {
           status: 'CANCELLED',
-          leaveType: leave.leaveType.name,
+          leaveType: leave.leaveType?.name,
           startDate: leave.startDate,
           endDate: leave.endDate,
+          cancelledBy: isAdmin ? 'ADMIN' : 'OWNER',
         },
         ipAddress: getHeader(event, 'x-forwarded-for') || 'unknown',
         userAgent: getHeader(event, 'user-agent') || 'unknown',

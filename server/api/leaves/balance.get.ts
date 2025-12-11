@@ -14,8 +14,7 @@ export default defineEventHandler(async (event) => {
     // Query params
     const query = getQuery(event)
     const userId = (query.userId as string) || auth.userId
-    const year =
-      query.year != null ? parseInt(query.year as string, 10) : new Date().getFullYear()
+    const year = query.year != null ? parseInt(query.year as string, 10) : new Date().getFullYear()
 
     // Current user
     const currentUser = await prisma.user.findUnique({
@@ -70,18 +69,6 @@ export default defineEventHandler(async (event) => {
       },
     })
 
-    // Balances (per leave type)
-    const balances = await prisma.leaveBalance.findMany({
-      where: {
-        userId,
-        year,
-        organizationId: auth.organizationId,
-      },
-      include: {
-        leaveType: true,
-      },
-    })
-
     // Used leaves in fiscal period
     const usedLeaves = await prisma.leave.findMany({
       where: {
@@ -100,29 +87,22 @@ export default defineEventHandler(async (event) => {
       },
     })
 
-    const nonDeductibleCodes = ['WFH', 'MEETING', 'SICK_PAID', 'SPECIAL']
-
+    // FIXED: Separate deductible from non-deductible based on annualAllowance field
     const deductibleLeaves = usedLeaves.filter(
-      (l) => l.leaveType && !nonDeductibleCodes.includes(l.leaveType.code),
+      (l) => l.leaveType && l.leaveType.annualAllowance != null && l.leaveType.annualAllowance > 0
     )
     const nonDeductibleLeaves = usedLeaves.filter(
-      (l) => l.leaveType && nonDeductibleCodes.includes(l.leaveType.code),
+      (l) => l.leaveType && (l.leaveType.annualAllowance == null || l.leaveType.annualAllowance === 0)
     )
 
     // Totals using totalDays
-    const totalUsed = deductibleLeaves.reduce(
-      (sum, leave) => sum + (leave.totalDays || 0),
-      0,
-    )
+    const totalUsed = deductibleLeaves.reduce((sum, leave) => sum + (leave.totalDays || 0), 0)
     const totalAllowance = organization.defaultLeaveAllowance
-    const carriedOver = balances.reduce((sum, b) => sum + (b.carriedOver || 0), 0)
+    const carriedOver = 0 // TODO: Implement carry-over logic from previous year
     const totalRemaining = totalAllowance + carriedOver - totalUsed
 
     // Deductible breakdown (by leave type)
-    const deductibleMap: Record<
-      string,
-      { leaveType: any; days: number }
-    > = {}
+    const deductibleMap: Record<string, { leaveType: any; days: number }> = {}
 
     for (const l of deductibleLeaves) {
       const lt = l.leaveType
@@ -137,15 +117,14 @@ export default defineEventHandler(async (event) => {
 
     // Balance breakdown (allowance/used/remaining per deductible type)
     const balanceBreakdown = leaveTypes
-      .filter((lt) => !nonDeductibleCodes.includes(lt.code))
+      .filter((lt) => lt.annualAllowance != null && lt.annualAllowance > 0)
       .map((leaveType) => {
-        const balance = balances.find((b) => b.leaveTypeId === leaveType.id)
         const used = deductibleLeaves
           .filter((l) => l.leaveTypeId === leaveType.id)
           .reduce((sum, l) => sum + (l.totalDays || 0), 0)
 
         const allowance = leaveType.annualAllowance || 0
-        const remaining = (balance?.currentBalance ?? allowance) - used
+        const remaining = allowance - used
 
         return {
           leaveType,
@@ -155,9 +134,9 @@ export default defineEventHandler(async (event) => {
         }
       })
 
-    // Non‑deductible breakdown
+    // Non-deductible breakdown
     const nonDeductibleBreakdown = leaveTypes
-      .filter((lt) => nonDeductibleCodes.includes(lt.code))
+      .filter((lt) => lt.annualAllowance == null || lt.annualAllowance === 0)
       .map((leaveType) => {
         const leaves = nonDeductibleLeaves.filter((l) => l.leaveTypeId === leaveType.id)
         const days = leaves.reduce((sum, l) => sum + (l.totalDays || 0), 0)
@@ -178,7 +157,7 @@ export default defineEventHandler(async (event) => {
       totalRemaining,
       carriedOver,
       balances: balanceBreakdown,
-      deductible,       // <-- for sidebar deductibleDisplay
+      deductible,
       nonDeductible: nonDeductibleBreakdown,
     }
   } catch (error: any) {
