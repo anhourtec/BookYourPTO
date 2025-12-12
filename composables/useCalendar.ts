@@ -80,7 +80,8 @@ export const useCalendar = () => {
         
         // Debug logging for December 30-31
         if (monthIndex === 11 && (d === 30 || d === 31)) {
-          console.log(`🔍 Dec ${d}: Checking leave`, {
+          /*
+           console.log(`🔍 Dec ${d}: Checking leave`, {
             leaveId: l.id,
             leaveType: l.leaveType?.name,
             leaveStart: leaveStart.toISOString(),
@@ -88,6 +89,8 @@ export const useCalendar = () => {
             dateChecking: date.toISOString(),
             overlaps
           })
+          */
+         
         }
         
         return overlaps
@@ -141,8 +144,8 @@ export const useCalendar = () => {
     leaves: Leave[],
     holidays: PublicHoliday[]
   ): CalendarMonth[] => {
-    console.log('🗓️ Building calendar for year:', year)
-    console.log('📋 Total leaves to display:', leaves.length)
+    // console.log('🗓️ Building calendar for year:', year)
+    // console.log('📋 Total leaves to display:', leaves.length)
     
     // Log December leaves specifically
     const decemberLeaves = leaves.filter(leave => {
@@ -155,13 +158,16 @@ export const useCalendar = () => {
     })
     
     if (decemberLeaves.length > 0) {
-      console.log('🎄 December leaves:', decemberLeaves.map(l => ({
+      /*
+       console.log('🎄 December leaves:', decemberLeaves.map(l => ({
         id: l.id,
         type: l.leaveType?.name,
         start: new Date(l.startDate).toISOString(),
         end: new Date(l.endDate).toISOString(),
         status: l.status
       })))
+      */
+     
     }
     
     const months: CalendarMonth[] = []
