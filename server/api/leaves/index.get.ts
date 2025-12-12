@@ -70,8 +70,16 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    // ✅ FIXED: Default behavior - exclude cancelled, rejected, and withdrawn leaves
+    // Only show active leaves (PENDING, APPROVED) unless specifically requested
     if (status) {
+      // If specific status requested, use that
       where.status = status
+    } else {
+      // Default: only show active leaves on calendar
+      where.status = {
+        in: ['PENDING', 'APPROVED']
+      }
     }
 
     // Fetch leaves
@@ -100,13 +108,15 @@ export default defineEventHandler(async (event) => {
       }
     })
 
+    console.log(`📅 Fetched ${leaves.length} active leaves for user ${userId} in ${year}`)
+
     return leaves
   } catch (error: any) {
     if (error.statusCode) {
       throw error
     }
     
-    console.error('Error fetching leaves:', error)
+    console.error('❌ Error fetching leaves:', error)
     throw createError({
       statusCode: 500,
       message: 'Failed to fetch leaves'
