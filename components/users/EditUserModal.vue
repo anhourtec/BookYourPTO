@@ -357,13 +357,13 @@
 
               <div>
                 <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
-                  Reports To (Manager)
+                  Reports To (Department Head)
                 </label>
                 <select
                   v-model="form.reportsToId"
                   class="w-full px-3 py-2 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--primary))] text-[rgb(var(--foreground))]"
                 >
-                  <option value="">No manager</option>
+                  <option value="">No Department Head</option>
                   <option v-for="manager in potentialManagers" :key="manager.id" :value="manager.id">
                     {{ manager.firstName }} {{ manager.lastName }} ({{ manager.jobTitle || 'No title' }})
                   </option>
@@ -416,7 +416,7 @@
                   </option>
                 </select>
                 <p v-if="form.role" class="text-xs text-[rgb(var(--muted-foreground))] mt-1.5">
-                  {{ userRoles.find((r: { value: any; }) => r.value === form.role)?.description }}
+                  {{ userRoles.find((r: { value: any }) => r.value === form.role)?.description }}
                 </p>
               </div>
 
@@ -450,16 +450,16 @@
                       {{ form.isActive ? 'User can log in and access the system' : 'User is deactivated and cannot log in' }}
                     </p>
                     <p v-if="cannotDeactivate && form.isActive" class="text-xs text-amber-600 mt-1">
-                        {{ cannotDeactivateReason }}
-                      </p>
+                      {{ cannotDeactivateReason }}
+                    </p>
                   </div>
                 </div>
-              <SwitchToggle 
-                v-model="form.isActive" 
-                :disabled="cannotDeactivate && form.isActive"
-                :class="{ 'opacity-50 cursor-not-allowed': cannotDeactivate && form.isActive }"
-              />             
-             </div>
+                <SwitchToggle 
+                  v-model="form.isActive" 
+                  :disabled="cannotDeactivate && form.isActive"
+                  :class="{ 'opacity-50 cursor-not-allowed': cannotDeactivate && form.isActive }"
+                />             
+              </div>
             </div>
           </div>
 
@@ -566,6 +566,7 @@
     </div>
   </CustomModal>
 </template>
+
 <script setup lang="ts">
 import type { User } from '~/types/user'
 
@@ -591,7 +592,7 @@ const emit = defineEmits<{
   'userUpdated': [user: User]
 }>()
 
-// Use the composable
+// Use the composable - ONLY 4 ROLES
 const { roles: userRoles } = useUserRoles()
 const { getUser } = usePermissions()
 const currentUser = computed(() => getUser())
@@ -782,7 +783,7 @@ const handleSubmit = async () => {
       lastName: form.value.lastName,
       middleName: form.value.middleName || null,
       preferredName: form.value.preferredName || null,
-  dateOfBirth: form.value.dateOfBirth || undefined, // Changed from null
+      dateOfBirth: form.value.dateOfBirth || undefined,
       gender: form.value.gender || null,
       jobTitle: form.value.jobTitle || null,
       employeeId: form.value.employeeId || null,
