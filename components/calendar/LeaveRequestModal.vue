@@ -1,7 +1,7 @@
 <template>
   <Transition name="fade">
     <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-2 sm:px-0">
-      <div class="w-full max-w-2xl rounded-2xl bg-white dark:bg-gray-950 shadow-xl border border-gray-200 dark:border-gray-800 p-4 sm:p-6 space-y-5">
+      <div class="w-full max-w-2xl rounded-2xl bg-white dark:bg-gray-950 shadow-xl border border-gray-200 dark:border-gray-800 p-4 sm:p-6 space-y-5 max-h-[90vh] overflow-y-auto">
         <!-- Header with user -->
         <div class="flex items-start justify-between gap-4">
           <div class="flex items-center gap-3">
@@ -20,18 +20,122 @@
 
           <button
             type="button"
-            class="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+            class="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             @click="$emit('close')"
           >
             <Icon name="lucide:x" class="w-4 h-4 text-gray-500" />
           </button>
         </div>
 
-        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
-          Book time off
-        </h2>
+        <!-- VIEW MODE: Show existing leave details -->
+        <div v-if="mode === 'view' && existingLeave" class="space-y-4">
+          <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+            Leave Request Details
+          </h2>
 
-        <form @submit.prevent="handleSubmit" class="space-y-4">
+          <!-- Leave Type Badge -->
+          <div class="flex items-center gap-3">
+            <div
+              class="w-10 h-10 rounded-full flex items-center justify-center"
+              :style="{ backgroundColor: (existingLeave.leaveType?.color || '#3b82f6') + '22' }"
+            >
+              <Icon
+                :name="existingLeave.leaveType?.icon || 'lucide:calendar'"
+                class="w-5 h-5"
+                :style="{ color: existingLeave.leaveType?.color || '#3b82f6' }"
+              />
+            </div>
+            <div>
+              <div class="font-semibold text-gray-900 dark:text-white">
+                {{ existingLeave.leaveType?.name || 'Leave' }}
+              </div>
+              <div class="text-xs">
+                <span :class="statusBadgeClass(existingLeave.status)">
+                  {{ existingLeave.status }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Date Range -->
+          <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-3 space-y-2">
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-gray-500 dark:text-gray-400">Start Date</span>
+              <span class="font-medium text-gray-900 dark:text-white">
+                {{ formatDate(existingLeave.startDate) }}
+                <span v-if="existingLeave.startHalf !== 'FULL_DAY'" class="text-xs text-gray-500">
+                  ({{ existingLeave.startHalf === 'FIRST_HALF' ? 'Morning' : 'Afternoon' }})
+                </span>
+              </span>
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-gray-500 dark:text-gray-400">End Date</span>
+              <span class="font-medium text-gray-900 dark:text-white">
+                {{ formatDate(existingLeave.endDate) }}
+                <span v-if="existingLeave.endHalf !== 'FULL_DAY'" class="text-xs text-gray-500">
+                  ({{ existingLeave.endHalf === 'FIRST_HALF' ? 'Morning' : 'End of day' }})
+                </span>
+              </span>
+            </div>
+            <div class="flex items-center justify-between text-sm pt-2 border-t border-gray-200 dark:border-gray-800">
+              <span class="text-gray-500 dark:text-gray-400">Total Days</span>
+              <span class="font-semibold text-gray-900 dark:text-white">
+                {{ existingLeave.totalDays }} day{{ existingLeave.totalDays === 1 ? '' : 's' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Reason -->
+          <div v-if="existingLeave.reason" class="rounded-lg border border-gray-200 dark:border-gray-800 p-3">
+            <div class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Reason</div>
+            <div class="text-sm text-gray-900 dark:text-white">{{ existingLeave.reason }}</div>
+          </div>
+
+          <!-- Notes -->
+          <div v-if="existingLeave.notes" class="rounded-lg border border-gray-200 dark:border-gray-800 p-3">
+            <div class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Notes</div>
+            <div class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">{{ existingLeave.notes }}</div>
+          </div>
+
+          <!-- Submission Info -->
+          <div class="text-xs text-gray-500 dark:text-gray-400">
+            Submitted {{ formatDate(existingLeave.submittedAt) }}
+          </div>
+
+          <!-- Actions -->
+          <div class="flex items-center justify-end gap-2 pt-2">
+            <button
+              type="button"
+              class="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+              @click="$emit('close')"
+            >
+              Close
+            </button>
+            <!-- ✅ FIXED: Only show cancel button if user has permission -->
+            <button
+              v-if="canCancelLeave"
+              type="button"
+              class="px-4 py-1.5 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
+              :disabled="cancelling"
+              @click="handleCancelLeave"
+            >
+              <Icon
+                v-if="cancelling"
+                name="lucide:loader-2"
+                class="w-4 h-4 animate-spin"
+              />
+              <Icon v-else name="lucide:trash-2" class="w-4 h-4" />
+              <span>{{ cancelling ? 'Cancelling...' : 'Cancel Leave' }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- CREATE MODE: New leave request form -->
+        <div v-else class="space-y-4">
+          <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+            Book time off
+          </h2>
+
           <!-- Type -->
           <div class="space-y-1">
             <label class="text-xs font-medium text-gray-700 dark:text-gray-300">
@@ -39,7 +143,7 @@
             </label>
             <select
               v-model="form.leaveTypeId"
-              class="w-full rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm"
+              class="w-full rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               required
             >
               <option
@@ -63,12 +167,12 @@
                 <input
                   type="date"
                   v-model="startDateInput"
-                  class="flex-1 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm"
+                  class="flex-1 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   required
                 />
                 <select
                   v-model="form.startHalf"
-                  class="w-32 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-2 py-2 text-xs"
+                  class="w-32 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-2 py-2 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                 >
                   <option value="FULL_DAY">Full day</option>
                   <option value="FIRST_HALF">Morning</option>
@@ -86,12 +190,12 @@
                 <input
                   type="date"
                   v-model="endDateInput"
-                  class="flex-1 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm"
+                  class="flex-1 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   required
                 />
                 <select
                   v-model="form.endHalf"
-                  class="w-32 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-2 py-2 text-xs"
+                  class="w-32 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-2 py-2 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                 >
                   <option value="FULL_DAY">End of day</option>
                   <option value="FIRST_HALF">Morning</option>
@@ -109,7 +213,7 @@
             <textarea
               v-model="form.reason"
               rows="3"
-              class="w-full rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm resize-none"
+              class="w-full rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               placeholder="Reason for time off..."
             />
           </div>
@@ -134,14 +238,15 @@
             <div class="flex items-center justify-end gap-2">
               <button
                 type="button"
-                class="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900"
+                class="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
                 @click="$emit('close')"
               >
                 Cancel
               </button>
               <button
-                type="submit"
-                class="px-4 py-1.5 text-sm rounded-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 flex items-center gap-2"
+                type="button"
+                @click="handleSubmit"
+                class="px-4 py-1.5 text-sm rounded-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
                 :disabled="submitting"
               >
                 <Icon
@@ -153,7 +258,7 @@
               </button>
             </div>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   </Transition>
@@ -161,18 +266,47 @@
 
 <script setup lang="ts">
 import type { LeaveType } from '~/types/api'
+import { useApi } from '~/composables/useApi'
+import { usePermissions } from '~/composables/usePermissions'
+
+interface Leave {
+  id: string
+  userId: string
+  leaveTypeId: string
+  startDate: string
+  endDate: string
+  startHalf: 'FULL_DAY' | 'FIRST_HALF' | 'SECOND_HALF'
+  endHalf: 'FULL_DAY' | 'FIRST_HALF' | 'SECOND_HALF'
+  totalDays: number
+  reason?: string
+  notes?: string
+  status: string
+  submittedAt: string
+  leaveType?: LeaveType
+}
 
 interface Props {
   open: boolean
-  startDate: Date | null
-  endDate: Date | null
+  mode?: 'create' | 'view'
+  existingLeave?: Leave | null
+  startDate?: Date | null
+  endDate?: Date | null
   userId: string
+  currentUserId?: string
+  currentUserRole?: string
   leaveTypes: LeaveType[]
   userName?: string
   userJobTitle?: string
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  mode: 'create',
+  existingLeave: null,
+  startDate: null,
+  endDate: null,
+  currentUserId: '',
+  currentUserRole: 'EMPLOYEE'
+})
 
 const emit = defineEmits<{
   'close': []
@@ -185,9 +319,13 @@ const emit = defineEmits<{
     endHalf: 'FULL_DAY' | 'FIRST_HALF' | 'SECOND_HALF'
     reason?: string
   }]
+  'cancel': [leaveId: string]
 }>()
 
+const api = useApi()
+const permissions = usePermissions()
 const submitting = ref(false)
+const cancelling = ref(false)
 
 const form = reactive({
   leaveTypeId: '',
@@ -204,7 +342,6 @@ const selectedLeaveType = computed(() =>
   activeLeaveTypes.value.find(t => t.id === form.leaveTypeId) || null
 )
 
-// Deduct / paid flags from backend settings
 const deductsFromAllowance = computed(() => {
   return !!selectedLeaveType.value?.annualAllowance
 })
@@ -221,8 +358,16 @@ const userInitials = computed(() => {
   return (first + last).toUpperCase() || 'U'
 })
 
-const userName = computed(() => props.userName ?? '')
-const userJobTitle = computed(() => props.userJobTitle ?? '')
+// ✅ FIXED: Use permissions composable properly
+const canCancelLeave = computed(() => {
+  if (!props.existingLeave) return false
+  
+  return permissions.canCancelLeave(
+    props.existingLeave.status,
+    props.existingLeave.startDate,
+    props.existingLeave.userId
+  )
+})
 
 const startDateInput = ref('')
 const endDateInput = ref('')
@@ -230,7 +375,7 @@ const endDateInput = ref('')
 watch(
   () => props.open,
   (val) => {
-    if (!val) return
+    if (!val || props.mode === 'view') return
     const start = props.startDate ?? new Date()
     const end = props.endDate ?? start
 
@@ -265,25 +410,40 @@ const estimatedDays = computed(() => {
   return Math.max(total, 0.5)
 })
 
+const formatDate = (date: string | Date) => {
+  return new Date(date).toLocaleDateString('en-US', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC'  
+  })
+}
+
+const statusBadgeClass = (status: string) => {
+  const classes = 'inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wide '
+  switch (status) {
+    case 'APPROVED':
+      return classes + 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+    case 'PENDING':
+      return classes + 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
+    case 'CANCELLED':
+      return classes + 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+    case 'REJECTED':
+      return classes + 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300'
+    case 'WITHDRAWN':
+      return classes + 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+    default:
+      return classes + 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+  }
+}
+
 const handleSubmit = async () => {
   if (!startDateInput.value || !endDateInput.value || !form.leaveTypeId) {
-    console.error('❌ Missing required fields:', {
-      startDate: startDateInput.value,
-      endDate: endDateInput.value,
-      leaveTypeId: form.leaveTypeId
-    })
+    alert('Please fill in all required fields')
     return
   }
 
-  console.log('🚀 SUBMITTING:', {
-    userId: props.userId,
-    leaveTypeId: form.leaveTypeId,
-    startDate: startDateInput.value,
-    endDate: endDateInput.value,
-    startHalf: form.startHalf,
-    endHalf: form.endHalf,
-    reason: form.reason
-  })
+  if (submitting.value) return // Prevent double submission
 
   submitting.value = true
   try {
@@ -297,16 +457,34 @@ const handleSubmit = async () => {
       reason: form.reason || undefined,
     }
     
-    console.log('📤 EMITTING PAYLOAD:', payload)
-    await emit('submit', payload)
-    console.log('✅ EMIT SUCCESS')
+    emit('submit', payload)
   } catch (error) {
-    console.error('❌ SUBMIT ERROR:', error)
-  } finally {
+    console.error('Error submitting leave:', error)
     submitting.value = false
   }
 }
 
+const handleCancelLeave = async () => {
+  if (!props.existingLeave) return
+  
+  const confirmMessage = 'Are you sure you want to cancel this leave request? This will restore the leave balance.'
+  if (!confirm(confirmMessage)) return
+  
+  if (cancelling.value) return // Prevent double submission
+  
+  cancelling.value = true
+  try {
+    await api.cancelLeaveRequest(props.existingLeave.id)
+    
+    emit('cancel', props.existingLeave.id)
+    emit('close')
+  } catch (error: any) {
+    console.error('❌ Failed to cancel leave:', error)
+    alert(error.data?.message || error.message || 'Failed to cancel leave request')
+  } finally {
+    cancelling.value = false
+  }
+}
 </script>
 
 <style scoped>
