@@ -38,7 +38,6 @@
         <span>{{ user.isActive ? 'Deactivate' : 'Activate' }}</span>
       </button>
 
-
       <!-- Divider - Only show if delete button will be shown -->
       <div v-if="canDelete" class="h-px bg-[rgb(var(--border))] my-1.5"></div>
 
@@ -73,6 +72,7 @@ const emit = defineEmits<{
   'reset-password': [user: User]
 }>()
 
+const router = useRouter()
 const { getUser } = usePermissions()
 const currentUser = computed(() => getUser())
 
@@ -143,10 +143,13 @@ const canDelete = computed(() => {
 // ============================================
 
 const handleViewCalendar = () => {
-  // TODO: Navigate to user's calendar view
-  // For now, just close the menu
+  if (!props.user) return
+  
+  // Close the menu
   emit('close')
-  // navigateTo(`/calendar/${props.user?.id}`)
+  
+  // Navigate to the user's calendar
+  router.push(`/calendar/${props.user.id}`)
 }
 
 const handleClickOutside = () => {
