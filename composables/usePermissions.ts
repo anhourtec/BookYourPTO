@@ -27,7 +27,21 @@ export const usePermissions = () => {
     return hasRole(['ADMINISTRATOR', 'EXECUTIVE'])
   }
 
+  /**
+   * ✅ Can access settings page
+   * ALL USERS can access settings (for password change)
+   * But only admins see admin settings
+   */
   const canAccessSettings = () => {
+    // Everyone can access settings page (at minimum for password change)
+    return true
+  }
+
+  /**
+   * ✅ Can access admin settings tabs
+   * Only ADMINISTRATOR and EXECUTIVE can see/manage admin settings
+   */
+  const canAccessAdminSettings = () => {
     return hasRole(['ADMINISTRATOR', 'EXECUTIVE'])
   }
 
@@ -131,6 +145,7 @@ export const usePermissions = () => {
     canManageDepartments,
     canDeleteDepartments,
     canAccessSettings,
+    canAccessAdminSettings, // NEW: Separate permission for admin settings
     canManageOrganization,
     canManageLeaveTypes,
     canManageCarryForward,
