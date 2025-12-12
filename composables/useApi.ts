@@ -243,8 +243,15 @@ export const useApi = () => {
     return await authenticatedFetch<LeaveType[]>('/api/leave-types')
   }
 
-  const fetchPublicHolidays = async (year: number): Promise<PublicHoliday[]> => {
-    return await authenticatedFetch<PublicHoliday[]>(`/api/public-holidays?year=${year}`)
+  const fetchPublicHolidays = async (year?: number): Promise<PublicHoliday[]> => {
+    const currentYear = year || new Date().getFullYear()
+    
+    // console.log('Fetching public holidays for year:', currentYear)
+    
+    const holidays = await authenticatedFetch<PublicHoliday[]>(`/api/public-holidays?year=${currentYear}`)
+    
+    // console.log('Received holidays:', holidays)
+    return holidays
   }
 
   // ============================================
