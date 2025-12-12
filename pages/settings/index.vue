@@ -30,8 +30,7 @@
         >
           <aside
             v-show="showMobileMenu || isLargeScreen"
-            class="fixed lg:static left-0 w-64 sm:w-72 lg:w-64 flex-shrink-0 bg-[rgb(var(--card))] lg:bg-transparent border-r border-[rgb(var(--border))] py-4 sm:py-6 lg:py-8 px-4 sm:px-6 lg:pr-6 lg:pl-0 overflow-y-auto shadow-xl lg:shadow-none"
-            :class="showMobileMenu ? 'z-50' : 'lg:z-auto'"
+            class="fixed lg:static left-0 w-64 sm:w-72 lg:w-64 flex-shrink-0 bg-[rgb(var(--card))] lg:bg-transparent border-r border-[rgb(var(--border))] py-4 sm:py-6 lg:py-8 px-4 sm:px-6 lg:pr-6 lg:pl-0 overflow-y-auto shadow-xl lg:shadow-none z-50 lg:z-auto"
             :style="{ top: headerHeight + 'px', bottom: 0, height: `calc(100vh - ${headerHeight}px)` }"
           >
             <!-- Mobile Header in Sidebar -->
@@ -68,7 +67,7 @@
         </Transition>
         
         <!-- Right Content Area -->
-        <main class="flex-1 py-4 sm:py-6 lg:py-8 lg:pl-6 xl:pl-8 min-w-0">
+        <main class="flex-1 py-4 sm:py-6 lg:py-8 lg:pl-6 xl:pl-8 min-w-0 overflow-x-hidden">
           <!-- Mobile menu toggle button (visible only on mobile when sidebar is hidden) -->
           <div class="lg:hidden mb-4 flex items-center justify-between">
             <h1 class="text-2xl font-bold text-[rgb(var(--foreground))]">Settings</h1>
@@ -84,14 +83,19 @@
             </button>
           </div>
 
-          <!-- Use v-if instead of v-show for lazy loading -->
-          <GeneralSettings v-if="activeSection === 'general'" />
-          <CarryForwardSettings v-if="activeSection === 'carryforward'" />
-          <LeaveTypesSettings v-if="activeSection === 'leavetypes'" />
-          <DepartmentsSettings v-if="activeSection === 'departments'" />
-          <PublicHolidaysSettings v-if="activeSection === 'holidays'" />
-          <EmailSettings v-if="activeSection === 'email'" />
-          <DeleteOrganizationSettings v-if="activeSection === 'dangerzone'" />
+          <!-- Change Password - Available to ALL users -->
+          <ChangePasswordSettings v-if="activeSection === 'password'" />
+
+          <!-- Admin-only sections - Only for ADMINISTRATOR and EXECUTIVE -->
+          <template v-if="canAccessAdminSettings()">
+            <GeneralSettings v-if="activeSection === 'general'" />
+            <CarryForwardSettings v-if="activeSection === 'carryforward'" />
+            <LeaveTypesSettings v-if="activeSection === 'leavetypes'" />
+            <DepartmentsSettings v-if="activeSection === 'departments'" />
+            <PublicHolidaysSettings v-if="activeSection === 'holidays'" />
+            <EmailSettings v-if="activeSection === 'email'" />
+            <DeleteOrganizationSettings v-if="activeSection === 'dangerzone'" />
+          </template>
         </main>
       </div>
     </div>
@@ -100,6 +104,7 @@
 
 <script setup lang="ts">
 import GeneralSettings from '../../components/settings/GeneralSettings.vue'
+import ChangePasswordSettings from '../../components/settings/ChangePasswordSettings.vue'
 import CarryForwardSettings from '../../components/settings/CarryForwardSettings.vue'
 import LeaveTypesSettings from '../../components/settings/LeaveTypesSettings.vue'
 import DepartmentsSettings from '../../components/settings/DepartmentsSettings.vue'
@@ -107,15 +112,18 @@ import PublicHolidaysSettings from '../../components/settings/PublicHolidaysSett
 import EmailSettings from '../../components/settings/EmailSettings.vue'
 import DeleteOrganizationSettings from '../../components/settings/DeleteOrganizationSettings.vue'
 
-const { canAccessSettings, getUser } = usePermissions()
+const { canAccessSettings, canAccessAdminSettings, getUser } = usePermissions()
 
 const currentUser = computed(() => getUser())
 const isExecutive = computed(() => currentUser.value?.role === 'EXECUTIVE')
+const isAdmin = computed(() => canAccessAdminSettings())
 
-const activeSection = ref('general')
 const showMobileMenu = ref(false)
 const isLargeScreen = ref(false)
 const headerHeight = ref(0)
+
+// Default to 'password' for employees, 'general' for admins
+const activeSection = ref(isAdmin.value ? 'general' : 'password')
 
 const updateScreenSize = () => {
   isLargeScreen.value = window.innerWidth >= 1024
@@ -159,22 +167,39 @@ onUnmounted(() => {
   window.removeEventListener('resize', updateHeaderHeight)
 })
 
+// Base navigation items with access control
 const navigationItems = [
-  { id: 'general', label: 'General', icon: 'lucide:settings', isDanger: false },
-  { id: 'carryforward', label: 'Carry forward', icon: 'lucide:calendar-arrow-up', isDanger: false },
-  { id: 'leavetypes', label: 'Leave types', icon: 'lucide:calendar-days', isDanger: false },
-  { id: 'departments', label: 'Departments', icon: 'lucide:building-2', isDanger: false },
-  { id: 'holidays', label: 'Public holidays', icon: 'lucide:calendar', isDanger: false },
-  { id: 'email', label: 'Email', icon: 'lucide:mail', isDanger: false },
-  { id: 'dangerzone', label: 'Danger zone', icon: 'lucide:alert-triangle', isDanger: true, executiveOnly: true },
+  // Change Password - Available to ALL users (placed first for employees)
+  { id: 'password', label: 'Change Password', icon: 'lucide:key-round', isDanger: false, adminOnly: false },
+  
+  // Admin-only sections
+  { id: 'general', label: 'General', icon: 'lucide:settings', isDanger: false, adminOnly: true },
+  { id: 'carryforward', label: 'Carry forward', icon: 'lucide:calendar-arrow-up', isDanger: false, adminOnly: true },
+  { id: 'leavetypes', label: 'Leave types', icon: 'lucide:calendar-days', isDanger: false, adminOnly: true },
+  { id: 'departments', label: 'Departments', icon: 'lucide:building-2', isDanger: false, adminOnly: true },
+  { id: 'holidays', label: 'Public holidays', icon: 'lucide:calendar', isDanger: false, adminOnly: true },
+  { id: 'email', label: 'Email', icon: 'lucide:mail', isDanger: false, adminOnly: true },
+  { id: 'dangerzone', label: 'Danger zone', icon: 'lucide:alert-triangle', isDanger: true, executiveOnly: true, adminOnly: true },
 ]
 
-// Only show items that user has access to
+// Filter navigation items based on user permissions
 const visibleNavigationItems = computed(() => {
   return navigationItems.filter(item => {
+    // Show Change Password to everyone
+    if (!item.adminOnly) {
+      return true
+    }
+    
+    // Show admin sections only to admins
+    if (item.adminOnly && !canAccessAdminSettings()) {
+      return false
+    }
+    
+    // Show danger zone only to executives
     if (item.executiveOnly) {
       return isExecutive.value
     }
+    
     return true
   })
 })
