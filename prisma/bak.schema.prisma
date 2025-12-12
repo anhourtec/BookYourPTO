@@ -120,6 +120,20 @@ model Department {
   @@index([headOfDepartmentId])
 }
 
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([token])
+}
+
+
 // Employees/Users
 model User {
   id             String @id @default(cuid())
@@ -132,6 +146,8 @@ model User {
   emailVerificationExpiry DateTime?
   passwordResetToken      String?
   passwordResetExpiry     DateTime?
+  refreshTokens RefreshToken[]
+
 
   // Basic Info
   firstName     String
@@ -577,17 +593,13 @@ enum EmploymentType {
 
 enum UserRole {
   EMPLOYEE
-  MANAGER
   DEPARTMENT_HEAD
-  HR
   ADMINISTRATOR
   EXECUTIVE
 }
 
 enum UserLevel {
   STANDARD
-  SENIOR
-  LEAD
   DIRECTOR
   EXECUTIVE
   ADMINISTRATOR
