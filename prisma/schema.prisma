@@ -31,12 +31,12 @@ model Organization {
   accentColor    String  @default("#10b981") // Green
   customCSS      Json? // Custom styling overrides
 
-    // Privacy Settings
+  // Privacy Settings
   calendarViewRestricted   Boolean @default(false)
   departmentViewRestricted Boolean @default(false)
 
   // Regional Settings
-  timezone       String @default("UTC")
+  timezone       String @default("UTC") // IANA timezone identifier (e.g., "America/New_York")
   dateFormat     String @default("YYYY-MM-DD")
   timeFormat     String @default("HH:mm") // 24h or 12h
   weekStartDay   Int    @default(1) // 1 = Monday, 0 = Sunday
@@ -195,7 +195,7 @@ model User {
 
   // Work Schedule (stored as JSON)
   workSchedule Json? // { monday: { start: "09:00", end: "17:00", isWorkday: true }, ... }
-  timezone     String @default("UTC")
+  timezone     String @default("UTC") // User-specific timezone override (IANA identifier)
   hoursPerWeek Float  @default(40)
 
   // Leave Balances (Quick access - detailed tracking in LeaveBalance table)
@@ -302,7 +302,7 @@ model PublicHoliday {
   country        String
   region         String? // For regional holidays (e.g., "California")
   name           String
-  date           DateTime
+  date           DateTime // Stored in UTC, displayed in organization timezone
   isRecurring    Boolean @default(true) // Recurs annually
   recurringPattern Json? // For complex patterns
   affectedDepartments String[] // Empty = all departments
@@ -327,8 +327,8 @@ model Leave {
   leaveTypeId    String
 
   // Leave Details
-  startDate  DateTime
-  endDate    DateTime
+  startDate  DateTime // Stored in UTC, interpreted in organization timezone
+  endDate    DateTime // Stored in UTC, interpreted in organization timezone
   startHalf  DayPortion @default(FULL_DAY) // FULL_DAY, FIRST_HALF, SECOND_HALF
   endHalf    DayPortion @default(FULL_DAY)
   totalDays  Float // Calculated: accounting for half days, weekends, holidays
@@ -393,8 +393,8 @@ model LeaveBalance {
   userId         String
   leaveTypeId    String
   year           Int // Fiscal year
-  fiscalPeriodStart DateTime
-  fiscalPeriodEnd   DateTime
+  fiscalPeriodStart DateTime // Stored in UTC
+  fiscalPeriodEnd   DateTime // Stored in UTC
 
   // Balance Tracking
   openingBalance Float @default(0) // Balance at start of year
