@@ -12,7 +12,10 @@ const createLeaveSchema = z.object({
   notes: z.string().optional()
 })
 
-// Calculate business days excluding weekends and public holidays
+/**
+ * ✅ FIXED: Calculate business days excluding weekends and public holidays
+ * Uses UTC consistently to avoid timezone issues
+ */
 function calculateBusinessDays(
   startDate: Date,
   endDate: Date,
@@ -21,31 +24,77 @@ function calculateBusinessDays(
   publicHolidays: Date[]
 ): number {
   let days = 0
-  const current = new Date(startDate)
   
-  while (current <= endDate) {
-    const dayOfWeek = current.getDay()
+  // Clone dates and normalize to UTC midnight
+  const current = new Date(startDate)
+  current.setUTCHours(0, 0, 0, 0)
+  
+  const end = new Date(endDate)
+  end.setUTCHours(0, 0, 0, 0)
+  
+  console.log('🔢 Calculating business days:', {
+    start: current.toISOString(),
+    end: end.toISOString(),
+    holidayCount: publicHolidays.length
+  })
+  
+  // Normalize all holiday dates to YYYY-MM-DD strings for comparison
+  const holidayStrings = publicHolidays.map(h => {
+    const d = new Date(h)
+    d.setUTCHours(0, 0, 0, 0)
+    return d.toISOString().split('T')[0]
+  })
+  
+  console.log('🗓️ Public holidays:', holidayStrings)
+  
+  // Count business days
+  while (current <= end) {
+    const dayOfWeek = current.getUTCDay() // 0 = Sunday, 6 = Saturday
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
-    const isHoliday = publicHolidays.some(h => 
-      h.toDateString() === current.toDateString()
-    )
     
+    // Check if current date is a holiday
+    const currentDateStr = current.toISOString().split('T')[0]
+    const isHoliday = holidayStrings.includes(currentDateStr)
+    
+    const dayName = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dayOfWeek]
+    
+    console.log(`📅 ${currentDateStr} (${dayName}):`, {
+      isWeekend,
+      isHoliday,
+      counts: !isWeekend && !isHoliday
+    })
+    
+    // Only count if it's not a weekend and not a holiday
     if (!isWeekend && !isHoliday) {
       days++
     }
     
-    current.setDate(current.getDate() + 1)
+    // Move to next day
+    current.setUTCDate(current.getUTCDate() + 1)
   }
+  
+  console.log('📊 Base business days:', days)
   
   // Adjust for half days
+  let adjustments = 0
   if (startHalf === 'FIRST_HALF' || startHalf === 'SECOND_HALF') {
-    days -= 0.5
+    adjustments += 0.5
+    console.log('📉 Start half-day adjustment: -0.5')
   }
   if (endHalf === 'FIRST_HALF' || endHalf === 'SECOND_HALF') {
-    days -= 0.5
+    adjustments += 0.5
+    console.log('📉 End half-day adjustment: -0.5')
   }
   
-  return days
+  const finalDays = days - adjustments
+  console.log('✅ Final calculated days:', finalDays, `(${days} - ${adjustments})`)
+  
+  // ✅ FIXED: Don't allow booking if there are no business days
+  if (finalDays <= 0) {
+    return 0 // Return 0 instead of forcing 0.5
+  }
+  
+  return Math.max(finalDays, 0.5) // Minimum 0.5 days only if there are business days
 }
 
 export default defineEventHandler(async (event) => {
@@ -60,8 +109,6 @@ export default defineEventHandler(async (event) => {
     }
 
     const body = await readBody(event)
-    
-    // Log the incoming request
     console.log('📥 Create leave request:', body)
     
     const data = createLeaveSchema.parse(body)
@@ -89,7 +136,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // FIXED: Normalize dates to midnight UTC to avoid timezone issues
+    // ✅ Normalize dates to midnight UTC to avoid timezone issues
     const startDate = new Date(data.startDate)
     startDate.setUTCHours(0, 0, 0, 0)
     
@@ -98,7 +145,9 @@ export default defineEventHandler(async (event) => {
     
     console.log('📅 Normalized dates:', {
       startDate: startDate.toISOString(),
-      endDate: endDate.toISOString()
+      endDate: endDate.toISOString(),
+      startDay: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][startDate.getUTCDay()],
+      endDay: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][endDate.getUTCDay()]
     })
     
     if (endDate < startDate) {
@@ -149,9 +198,10 @@ export default defineEventHandler(async (event) => {
       }
     })
     
+    console.log(`🗓️ Found ${publicHolidays.length} public holidays in date range`)
     const holidayDates = publicHolidays.map(h => new Date(h.date))
 
-    // Calculate total days
+    // ✅ Calculate total days with improved function
     const totalDays = calculateBusinessDays(
       startDate,
       endDate,
@@ -159,6 +209,16 @@ export default defineEventHandler(async (event) => {
       data.endHalf,
       holidayDates
     )
+
+    console.log('📊 Calculated total days:', totalDays)
+
+    // ✅ FIXED: Prevent booking weekends/holidays only
+    if (totalDays === 0) {
+      throw createError({
+        statusCode: 400,
+        message: 'You cannot book leave for weekends or public holidays only. Please select at least one business day.'
+      })
+    }
 
     // Check max days per request only if it exists
     if (leaveType.maxDaysPerRequest && totalDays > leaveType.maxDaysPerRequest) {
@@ -168,14 +228,9 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // FIXED: Check for overlapping leaves with detailed logging
-    console.log('🔍 Checking for overlaps between:', {
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-      userId: data.userId
-    })
+    // ✅ Check for overlapping leaves - only PENDING and APPROVED
+    console.log('🔍 Checking for overlaps...')
 
-    // Get all active leaves for this user
     const existingLeaves = await prisma.leave.findMany({
       where: {
         userId: data.userId,
@@ -189,7 +244,9 @@ export default defineEventHandler(async (event) => {
       }
     })
 
-    // Filter overlapping leaves manually with proper date comparison
+    console.log(`🔍 Found ${existingLeaves.length} active leaves to check`)
+
+    // Filter overlapping leaves
     const overlappingLeaves = existingLeaves.filter(existing => {
       const existingStart = new Date(existing.startDate)
       existingStart.setUTCHours(0, 0, 0, 0)
@@ -197,59 +254,27 @@ export default defineEventHandler(async (event) => {
       const existingEnd = new Date(existing.endDate)
       existingEnd.setUTCHours(0, 0, 0, 0)
 
-      // Two date ranges overlap if they share any common days
-      // Ranges DON'T overlap if one ends before the other starts
-      // So overlap exists if: NOT (end1 < start2 OR start1 > end2)
-      // Which simplifies to: start1 <= end2 AND end1 >= start2
-      // BUT we need to check if they're on DIFFERENT days, not just touching
-      
-      // Get timestamps for comparison
       const reqStartTime = startDate.getTime()
       const reqEndTime = endDate.getTime()
       const existStartTime = existingStart.getTime()
       const existEndTime = existingEnd.getTime()
       
-      // Overlap if the ranges intersect (not just touch at boundaries)
+      // Overlap if: start1 <= end2 AND end1 >= start2
       const overlaps = reqStartTime <= existEndTime && reqEndTime >= existStartTime
 
-      console.log('🔍 Comparing with existing leave:', {
-        existingId: existing.id,
-        existingType: existing.leaveType?.name,
-        existingStart: existingStart.toISOString(),
-        existingEnd: existingEnd.toISOString(),
-        requestedStart: startDate.toISOString(),
-        requestedEnd: endDate.toISOString(),
-        existingStartTime: existStartTime,
-        existingEndTime: existEndTime,
-        requestedStartTime: reqStartTime,
-        requestedEndTime: reqEndTime,
-        comparison: {
-          'reqStart <= existEnd': reqStartTime <= existEndTime,
-          'reqEnd >= existStart': reqEndTime >= existStartTime,
-        },
-        overlaps
-      })
+      if (overlaps) {
+        console.log('⚠️ OVERLAP DETECTED:', {
+          existingId: existing.id,
+          existingType: existing.leaveType?.name,
+          existingRange: `${existingStart.toISOString().split('T')[0]} to ${existingEnd.toISOString().split('T')[0]}`,
+          requestedRange: `${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`
+        })
+      }
 
       return overlaps
     })
 
-    console.log(`🔍 Found ${overlappingLeaves.length} overlapping leaves`)
-
     if (overlappingLeaves.length > 0) {
-      // Log detailed information about overlapping leaves for debugging
-      console.error('❌ OVERLAP DETECTED:', {
-        requestedStart: startDate.toISOString(),
-        requestedEnd: endDate.toISOString(),
-        overlapping: overlappingLeaves.map(l => ({
-          id: l.id,
-          leaveType: l.leaveType?.name,
-          startDate: new Date(l.startDate).toISOString(),
-          endDate: new Date(l.endDate).toISOString(),
-          status: l.status,
-          createdAt: new Date(l.createdAt).toISOString()
-        }))
-      })
-
       const firstOverlap = overlappingLeaves[0]
       const overlapStart = new Date(firstOverlap.startDate).toLocaleDateString('en-US', {
         month: 'short',
@@ -268,6 +293,8 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    console.log('✅ No overlaps found')
+
     // Check leave balance only for deductible leave types
     if (leaveType.annualAllowance && leaveType.annualAllowance > 0) {
       const organization = await prisma.organization.findUnique({
@@ -283,7 +310,7 @@ export default defineEventHandler(async (event) => {
       const fiscalPeriodStart = new Date(year, fiscalStartMonth - 1, 1)
       const fiscalPeriodEnd = new Date(year + 1, fiscalStartMonth - 1, 0)
 
-      // Get used leaves this year
+      // Get used leaves this year - only APPROVED and PENDING
       const usedLeaves = await prisma.leave.findMany({
         where: {
           userId: data.userId,
@@ -313,7 +340,8 @@ export default defineEventHandler(async (event) => {
         totalAllowance,
         totalUsed,
         remaining,
-        requestedDays: totalDays
+        requestedDays: totalDays,
+        sufficient: totalDays <= remaining
       })
 
       if (totalDays > remaining) {
@@ -389,8 +417,8 @@ export default defineEventHandler(async (event) => {
     console.log('✅ Leave created successfully:', {
       id: leave.id,
       leaveType: leave.leaveType?.name,
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0],
       totalDays: leave.totalDays,
       status: leave.status
     })
