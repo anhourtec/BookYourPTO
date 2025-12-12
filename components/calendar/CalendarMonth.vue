@@ -7,8 +7,9 @@
       <span>{{ month.year }}</span>
     </div>
 
+    <!-- ✅ FIXED: Correct day headers for Sunday-starting weeks -->
     <div class="grid grid-cols-7 gap-1.5 text-[10px] text-gray-400 dark:text-gray-500">
-      <span v-for="d in ['M','T','W','T','F','S','S']" :key="d" class="text-center">
+      <span v-for="d in dayHeaders" :key="d" class="text-center">
         {{ d }}
       </span>
     </div>
@@ -30,11 +31,25 @@
 import type { CalendarMonth as CalendarMonthType } from '~/composables/useCalendar'
 import CalendarDay from './CalendarDay.vue'
 
-defineProps<{
+const props = defineProps<{
   month: CalendarMonthType
+  weekStartDay?: number // 0 = Sunday, 1 = Monday
 }>()
 
 defineEmits<{
   'day-click': [payload: any]
 }>()
+
+// ✅ FIXED: Generate correct day headers based on week start day
+const dayHeaders = computed(() => {
+  const weekStartDay = props.weekStartDay ?? 0 // Default to Sunday (0)
+  
+  if (weekStartDay === 0) {
+    // Sunday start: S M T W T F S
+    return ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+  } else {
+    // Monday start: M T W T F S S
+    return ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+  }
+})
 </script>
