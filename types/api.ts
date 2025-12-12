@@ -193,7 +193,7 @@ export interface PublicHoliday {
   id: string
   organizationId: string
   country: string
-  region?: string
+  region?: string | null
   name: string
   date: string
   isRecurring: boolean
