@@ -39,9 +39,9 @@
       <div
         v-if="showGenerator"
         v-click-outside="() => showGenerator = false"
-        class="fixed sm:absolute inset-x-4 bottom-4 sm:inset-x-auto sm:bottom-auto sm:right-0 sm:mt-2 sm:w-80 md:w-96 bg-[rgb(var(--card))] border border-[rgb(var(--border))] rounded-lg shadow-xl overflow-hidden z-[100] max-h-[calc(100vh-8rem)] sm:max-h-[600px] flex flex-col"
+        class="fixed sm:absolute inset-x-4 bottom-4 sm:inset-x-auto sm:bottom-auto sm:right-0 sm:mt-2 sm:w-80 md:w-96 bg-[rgb(var(--card))] border border-[rgb(var(--border))] rounded-lg shadow-xl z-[100] max-h-[80vh] sm:max-h-[min(600px,80vh)] flex flex-col"
       >
-        <!-- Header -->
+        <!-- Header - Fixed -->
         <div class="px-4 py-3 border-b border-[rgb(var(--border))] bg-[rgb(var(--muted))]/30 flex-shrink-0">
           <div class="flex items-center justify-between">
             <h3 class="text-sm font-semibold text-[rgb(var(--foreground))]">Password Generator</h3>
@@ -55,7 +55,7 @@
         </div>
 
         <!-- Scrollable Content -->
-        <div class="p-3 sm:p-4 space-y-3 sm:space-y-4 flex-1 min-h-0">
+        <div class="p-3 sm:p-4 space-y-3 sm:space-y-4 flex-1 overflow-y-auto overscroll-contain">
           <!-- Generated Password Display -->
           <div>
             <label class="block text-xs font-medium text-[rgb(var(--muted-foreground))] mb-1.5 sm:mb-2 uppercase tracking-wide">
@@ -168,8 +168,8 @@
           </div>
         </div>
 
-        <!-- Action Buttons - Sticky Footer -->
-        <div class="p-3 sm:p-4 border-t border-[rgb(var(--border))] bg-[rgb(var(--background))] flex-shrink-0">
+        <!-- Action Buttons - Fixed Footer -->
+        <div class="p-3 sm:p-4 border-t border-[rgb(var(--border))] bg-[rgb(var(--card))] flex-shrink-0">
           <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
             <button
               type="button"
