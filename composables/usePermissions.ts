@@ -63,6 +63,66 @@ export const usePermissions = () => {
     return false
   }
 
+  /**
+   * ✅ Can create group bookings
+   * Only ADMINISTRATOR and EXECUTIVE
+   */
+  const canCreateGroupBooking = () => {
+    return hasRole(['ADMINISTRATOR', 'EXECUTIVE'])
+  }
+
+  /**
+   * ✅ Can lock dates
+   * Only ADMINISTRATOR and EXECUTIVE
+   */
+  const canLockDates = () => {
+    return hasRole(['ADMINISTRATOR', 'EXECUTIVE'])
+  }
+
+  /**
+   * ✅ Can cancel any leave (including others' leaves and started leaves)
+   * Only ADMINISTRATOR and EXECUTIVE
+   */
+  const canCancelAnyLeave = () => {
+    return hasRole(['ADMINISTRATOR', 'EXECUTIVE'])
+  }
+
+  /**
+   * ✅ Can cancel own leave
+   * IMPORTANT: Regular employees CANNOT cancel their own leaves
+   * Only ADMINISTRATOR and EXECUTIVE can cancel leaves
+   */
+  const canCancelOwnLeave = (
+    leaveStatus: string,
+    leaveStartDate: string | Date,
+    leaveUserId: string
+  ) => {
+    // Employees cannot cancel their own leaves
+    // Only admins/executives have this privilege
+    return false
+  }
+
+  /**
+   * ✅ Can cancel a specific leave
+   * Only ADMINISTRATOR and EXECUTIVE can cancel any leave
+   * Regular employees (including the owner) CANNOT cancel leaves
+   */
+  const canCancelLeave = (
+    leaveStatus: string,
+    leaveStartDate: string | Date,
+    leaveUserId: string
+  ) => {
+    // Only admins/executives can cancel leaves
+    return canCancelAnyLeave()
+  }
+
+  /**
+   * ✅ Check if user is a regular employee
+   */
+  const isEmployee = () => {
+    return hasRole(['EMPLOYEE'])
+  }
+
   return {
     getUser,
     hasRole,
@@ -77,5 +137,12 @@ export const usePermissions = () => {
     canApproveRequests,
     isAdmin,
     canEditUser,
+    // Leave cancellation and group booking permissions
+    canCreateGroupBooking,
+    canLockDates,
+    canCancelAnyLeave,
+    canCancelOwnLeave,
+    canCancelLeave,
+    isEmployee,
   }
 }
