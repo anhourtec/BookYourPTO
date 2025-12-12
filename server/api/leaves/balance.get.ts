@@ -38,6 +38,24 @@ export default defineEventHandler(async (event) => {
           message: 'Insufficient permissions',
         })
       }
+      
+      // If department head, verify they can view this user
+      if (currentUser.role === 'DEPARTMENT_HEAD') {
+        const targetUser = await prisma.user.findFirst({
+          where: {
+            id: userId,
+            departmentId: currentUser.departmentId,
+            organizationId: auth.organizationId
+          }
+        })
+        
+        if (!targetUser) {
+          throw createError({
+            statusCode: 403,
+            message: 'Insufficient permissions to view this user'
+          })
+        }
+      }
     }
 
     // Org settings
@@ -61,6 +79,12 @@ export default defineEventHandler(async (event) => {
     const fiscalPeriodStart = new Date(year, fiscalStartMonth - 1, 1)
     const fiscalPeriodEnd = new Date(year + 1, fiscalStartMonth - 1, 0)
 
+    console.log(`📊 Calculating balance for fiscal period:`, {
+      start: fiscalPeriodStart.toISOString(),
+      end: fiscalPeriodEnd.toISOString(),
+      userId
+    })
+
     // Leave types
     const leaveTypes = await prisma.leaveType.findMany({
       where: {
@@ -69,7 +93,8 @@ export default defineEventHandler(async (event) => {
       },
     })
 
-    // Used leaves in fiscal period
+    // ✅ Used leaves in fiscal period - ONLY APPROVED and PENDING
+    // Cancelled, rejected, and withdrawn leaves do NOT count toward usage
     const usedLeaves = await prisma.leave.findMany({
       where: {
         userId,
@@ -87,7 +112,9 @@ export default defineEventHandler(async (event) => {
       },
     })
 
-    // FIXED: Separate deductible from non-deductible based on annualAllowance field
+    console.log(`📊 Found ${usedLeaves.length} used leaves (APPROVED/PENDING only)`)
+
+    // Separate deductible from non-deductible based on annualAllowance field
     const deductibleLeaves = usedLeaves.filter(
       (l) => l.leaveType && l.leaveType.annualAllowance != null && l.leaveType.annualAllowance > 0
     )
@@ -100,6 +127,14 @@ export default defineEventHandler(async (event) => {
     const totalAllowance = organization.defaultLeaveAllowance
     const carriedOver = 0 // TODO: Implement carry-over logic from previous year
     const totalRemaining = totalAllowance + carriedOver - totalUsed
+
+    console.log(`📊 Balance summary:`, {
+      totalAllowance,
+      totalUsed,
+      totalRemaining,
+      deductibleCount: deductibleLeaves.length,
+      nonDeductibleCount: nonDeductibleLeaves.length
+    })
 
     // Deductible breakdown (by leave type)
     const deductibleMap: Record<string, { leaveType: any; days: number }> = {}
@@ -165,7 +200,7 @@ export default defineEventHandler(async (event) => {
       throw error
     }
 
-    console.error('Error fetching leave balance:', error)
+    console.error('❌ Error fetching leave balance:', error)
     throw createError({
       statusCode: 500,
       message: 'Failed to fetch leave balance',

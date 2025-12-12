@@ -136,30 +136,6 @@
               </p>
             </div>
           </div>
-
-          <!-- Time off mini chart -->
-          <div class="rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
-            <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-              Time off
-            </h3>
-            <div class="flex items-end gap-1 h-20 mb-2 px-1">
-              <div
-                v-for="(value, idx) in monthlyUsage"
-                :key="idx"
-                class="flex-1 rounded-full bg-fuchsia-100 dark:bg-fuchsia-950/40 overflow-hidden"
-              >
-                <div
-                  class="w-full rounded-full bg-fuchsia-600 dark:bg-fuchsia-400 transition-all ease-out duration-200"
-                  :style="{ height: value === 0 ? '0px' : `calc(${(value / maxMonthlyUsage) * 100}% - 3px)` }"
-                />
-              </div>
-            </div>
-            <div class="flex justify-between text-[10px] text-gray-500 dark:text-gray-400 tracking-tight px-0.5">
-              <span v-for="m in ['J','F','M','A','M','J','J','A','S','O','N','D']" :key="m">
-                {{ m }}
-              </span>
-            </div>
-          </div>
         </aside>
       </div>
 
@@ -170,8 +146,9 @@
             v-if="fabOpen"
             class="flex flex-col items-end gap-2 mb-1"
           >
+            <!-- Book Time Off -->
             <button
-              class="flex items-center gap-2 rounded-full bg-blue-600 text-white px-3 py-1.5 shadow-lg hover:bg-blue-700 text-sm"
+              class="flex items-center gap-2 rounded-full bg-blue-600 text-white px-3 py-1.5 shadow-lg hover:bg-blue-700 text-sm transition-colors"
               @click="openBookTimeOff"
             >
               <span>Book time off</span>
@@ -180,24 +157,34 @@
               </span>
             </button>
 
+            <!-- Group Booking -->
             <button
-              class="w-9 h-9 rounded-full bg-blue-600 text-white shadow-lg flex items-center justify-center hover:bg-blue-700"
-              title="Group booking"
+              v-if="canAccessGroupBooking"
+              class="flex items-center gap-2 rounded-full bg-blue-600 text-white px-3 py-1.5 shadow-lg hover:bg-blue-700 text-sm transition-colors"
+              @click="openGroupBooking"
             >
-              <Icon name="lucide:users" class="w-4 h-4" />
+              <span>Group Booking</span>
+              <span class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+                <Icon name="lucide:users" class="w-4 h-4" />
+              </span>
             </button>
 
+            <!-- Lock Dates (placeholder for future) -->
             <button
-              class="w-9 h-9 rounded-full bg-blue-600 text-white shadow-lg flex items-center justify-center hover:bg-blue-700"
-              title="Lock dates"
+              v-if="canAccessGroupBooking"
+              class="flex items-center gap-2 rounded-full bg-blue-600 text-white px-3 py-1.5 shadow-lg hover:bg-blue-700 text-sm transition-colors"
+              @click="openLockDates"
             >
-              <Icon name="lucide:lock" class="w-4 h-4" />
+              <span>Lock Dates</span>
+              <span class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+                <Icon name="lucide:lock" class="w-4 h-4" />
+              </span>
             </button>
           </div>
         </Transition>
 
         <button
-          class="w-11 h-11 rounded-full bg-blue-600 text-white shadow-xl flex items-center justify-center hover:bg-blue-700 transition-transform"
+          class="w-11 h-11 rounded-full bg-blue-600 text-white shadow-xl flex items-center justify-center hover:bg-blue-700 transition-all"
           :class="fabOpen ? 'rotate-45' : ''"
           @click="fabOpen = !fabOpen"
         >
@@ -205,14 +192,32 @@
         </button>
       </div>
 
+      <!-- Individual Leave Request Modal -->
       <LeaveRequestModal
         :open="requestModalOpen"
+        :mode="modalMode"
+        :existing-leave="selectedLeave"
         :start-date="selectedStart"
         :end-date="selectedEnd"
         :user-id="routeUserId"
+        :current-user-id="user?.id"
+        :current-user-role="user?.role"
+        :user-name="`${user?.firstName} ${user?.lastName}`"
+        :user-job-title="user?.jobTitle"
         :leave-types="leaveTypes"
+        :public-holidays="publicHolidays"
         @close="requestModalOpen = false"
         @submit="handleCreateLeave"
+        @cancel="handleLeaveCancel"
+      />
+
+      <!-- Group Booking Modal -->
+      <GroupBookingModal
+        :open="groupBookingModalOpen"
+        :departments="departments"
+        :leave-types="leaveTypes"
+        @close="groupBookingModalOpen = false"
+        @submit="handleGroupBooking"
       />
     </main>
   </div>
@@ -222,6 +227,7 @@
 import CalendarHeader from '~/components/calendar/CalendarHeader.vue'
 import CalendarGrid from '~/components/calendar/CalendarGrid.vue'
 import LeaveRequestModal from '~/components/calendar/LeaveRequestModal.vue'
+import GroupBookingModal from '~/components/calendar/GroupBookingModal.vue'
 
 import { useRoute } from 'vue-router'
 import { useApi } from '~/composables/useApi'
@@ -229,7 +235,7 @@ import { useLeaves } from '~/composables/useLeaves'
 import { useCalendar } from '~/composables/useCalendar'
 import type { User } from '~/types/user'
 
-// Correct TypeScript interfaces matching your actual data structure
+// TypeScript interfaces
 interface LeaveType {
   id: string
   organizationId: string
@@ -243,6 +249,17 @@ interface LeaveType {
   annualAllowance?: number | null
   isActive: boolean
   updatedAt: string
+}
+
+interface Department {
+  id: string
+  name: string
+  code: string
+  color: string
+  isActive: boolean
+  _count?: {
+    users: number
+  }
 }
 
 interface NonDeductibleItem {
@@ -276,6 +293,7 @@ interface BalanceSummary {
   nonDeductible: NonDeductibleItem[]
 }
 
+// Composables and route
 const route = useRoute()
 const api = useApi()
 const {
@@ -288,54 +306,121 @@ const {
 } = useLeaves()
 const { buildYear } = useCalendar()
 
+// State
 const routeUserId = computed(() => String(route.params.userId || ''))
 const year = ref(new Date().getFullYear())
 const user = ref<User | null>(null)
-const months = computed(() =>
-  buildYear(year.value, leaves.value, publicHolidays.value)
-)
+const departments = ref<Department[]>([])
 
+// Calendar months computation
+const months = computed(() => {
+  // console.log('🗓️ Building calendar', { year: year.value, leavesCount: leaves.value.length })
+  return buildYear(year.value, leaves.value, publicHolidays.value)
+})
+
+// Modal states
 const requestModalOpen = ref(false)
+const groupBookingModalOpen = ref(false)
 const selectedStart = ref<Date | null>(null)
 const selectedEnd = ref<Date | null>(null)
 const fabOpen = ref(false)
+const modalMode = ref<'create' | 'view'>('create')
+const selectedLeave = ref<any>(null)
 
+// Permission checks
+const canAccessGroupBooking = computed(() => {
+  const role = user.value?.role
+  return ['ADMINISTRATOR', 'EXECUTIVE', 'HR', 'DEPARTMENT_HEAD', 'MANAGER'].includes(role || '')
+})
+
+// Load user data
 const loadUser = async () => {
   if (!routeUserId.value) return
-  user.value = await api.fetchUser(routeUserId.value)
+  try {
+    user.value = await api.fetchUser(routeUserId.value)
+  } catch (error) {
+    console.error('Failed to load user:', error)
+  }
 }
 
+// Load departments (for group booking)
+const loadDepartments = async () => {
+  if (!canAccessGroupBooking.value) return
+  try {
+    const token = localStorage.getItem('auth_token')
+    const data = await $fetch('/api/departments', {
+      headers: { 'Authorization': `Bearer ${token}` },
+    })
+    departments.value = data as Department[]
+  } catch (error) {
+    console.error('Failed to load departments:', error)
+  }
+}
+
+// Load all data
 const loadAll = async () => {
   if (!routeUserId.value) return
   await Promise.all([
     loadUser(),
     loadCalendarData(routeUserId.value, year.value),
   ])
+  // Load departments after user is loaded (to check permissions)
+  await loadDepartments()
 }
 
+// Lifecycle
 onMounted(loadAll)
 
 watch([routeUserId, year], () => {
   loadAll()
 })
 
+// Year navigation
 const changeYear = (delta: number) => {
   year.value += delta
 }
 
+// Day click handler
 const onDayClick = (day: any) => {
-  selectedStart.value = day.date
-  selectedEnd.value = day.date
-  requestModalOpen.value = true
+  if (day.leaves && day.leaves.length > 0) {
+    // View existing leave
+    selectedLeave.value = day.leaves[0]
+    modalMode.value = 'view'
+    requestModalOpen.value = true
+  } else {
+    // Create new leave
+    selectedStart.value = day.date
+    selectedEnd.value = day.date
+    selectedLeave.value = null
+    modalMode.value = 'create'
+    requestModalOpen.value = true
+  }
 }
 
+// Open individual booking modal
 const openBookTimeOff = () => {
   const today = new Date()
   selectedStart.value = today
   selectedEnd.value = today
+  selectedLeave.value = null
+  modalMode.value = 'create'
   requestModalOpen.value = true
+  fabOpen.value = false
 }
 
+// Open group booking modal
+const openGroupBooking = () => {
+  groupBookingModalOpen.value = true
+  fabOpen.value = false
+}
+
+// Open lock dates (placeholder)
+const openLockDates = () => {
+  alert('Lock Dates feature coming soon!')
+  fabOpen.value = false
+}
+
+// Handle individual leave creation
 const handleCreateLeave = async (payload: {
   userId: string
   leaveTypeId: string
@@ -345,52 +430,77 @@ const handleCreateLeave = async (payload: {
   endHalf: 'FULL_DAY' | 'FIRST_HALF' | 'SECOND_HALF'
   reason?: string
 }) => {
-  console.log('📤 Sending leave request:', payload)
+  // console.log('📤 Creating leave request:', payload)
   
   try {
     await createLeave(payload)
     requestModalOpen.value = false
     fabOpen.value = false
-    // Reload calendar data to refresh balance calculations
     await loadCalendarData(routeUserId.value, year.value)
   } catch (error: any) {
-    console.error('❌ Create leave error:', error)
-    // Show error to user
+    console.error('Create leave error:', error)
     alert(error.data?.message || error.message || 'Failed to create leave request')
   }
 }
 
+// Handle group booking creation
+const handleGroupBooking = async (payload: {
+  departmentId: string
+  leaveTypeId: string
+  startDate: string
+  endDate: string
+  startHalf: 'FULL_DAY' | 'FIRST_HALF' | 'SECOND_HALF'
+  endHalf: 'FULL_DAY' | 'FIRST_HALF' | 'SECOND_HALF'
+  reason?: string
+}) => {
+  // console.log('📤 Creating group booking:', payload)
+  
+  try {
+    const token = localStorage.getItem('auth_token')
+    await $fetch('/api/leaves/group-booking', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: payload,
+    })
+    
+    groupBookingModalOpen.value = false
+    fabOpen.value = false
+    
+    // Show success message
+    const dept = departments.value.find(d => d.id === payload.departmentId)
+    alert(`Successfully created leave requests for ${dept?._count?.users || 0} members of ${dept?.name || 'department'}`)
+    
+    // Reload calendar
+    await loadCalendarData(routeUserId.value, year.value)
+  } catch (error: any) {
+    console.error('Group booking error:', error)
+    alert(error.data?.message || error.message || 'Failed to create group booking')
+  }
+}
 
-/**
- * Handle leave cancellation from DayLeavesList
- * This ensures the database is updated and balances recalculated
- */
+// Handle leave cancellation
 const handleLeaveCancel = async (leaveId: string) => {
   try {
-    // Optimistic update - remove from UI immediately
+    // Optimistic update
     const leaveIndex = leaves.value.findIndex(l => l.id === leaveId)
     if (leaveIndex !== -1) {
       leaves.value.splice(leaveIndex, 1)
     }
     
-    // Refresh all data from server (this recalculates balances automatically)
+    // Refresh from server
     await loadCalendarData(routeUserId.value, year.value)
   } catch (error) {
     console.error('Failed to cancel leave:', error)
-    // Revert optimistic update on error
     await loadCalendarData(routeUserId.value, year.value)
   }
 }
 
-/**
- * FIXED: Deductible leave display based on annualAllowance field
- * Shows leave types that deduct from annual allowance
- */
+// Deductible leave display
 const deductibleDisplay = computed(() => {
   if (!balanceSummary.value?.balances?.length) return []
   
   return balanceSummary.value.balances
-    .filter(balance => balance.used > 0) // Only show types with used days
+    .filter(balance => balance.used > 0)
     .map(balance => ({
       key: balance.leaveType.code,
       label: balance.leaveType.name,
@@ -400,10 +510,7 @@ const deductibleDisplay = computed(() => {
     }))
 })
 
-/**
- * FIXED: Non-deductible leave display based on annualAllowance field
- * Shows leave types that don't deduct from annual allowance
- */
+// Non-deductible leave display
 const nonDeductibleDisplay = computed(() => {
   if (!balanceSummary.value?.nonDeductible?.length) return []
 
@@ -414,24 +521,6 @@ const nonDeductibleDisplay = computed(() => {
     color: item.leaveType.color || '#6b7280',
     days: item.days,
   }))
-})
-
-/**
- * Monthly usage for tiny bar chart
- */
-const monthlyUsage = computed(() => {
-  const arr = new Array(12).fill(0)
-  leaves.value.forEach(l => {
-    const d = new Date(l.startDate)
-    if (d.getFullYear() === year.value) {
-      arr[d.getMonth()] += l.totalDays
-    }
-  })
-  return arr
-})
-
-const maxMonthlyUsage = computed(() => {
-  return Math.max(...monthlyUsage.value, 1)
 })
 </script>
 
