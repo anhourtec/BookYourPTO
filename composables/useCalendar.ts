@@ -77,25 +77,29 @@ export const useCalendar = () => {
   }
 
   /**
-   * Check if two dates are the same day
+   * ✅ FIXED: Check if two dates are the same day (comparing UTC date parts)
+   * This handles both local dates and UTC dates correctly
    */
   const isSameDay = (a: Date, b: Date): boolean => {
+    // Always compare using UTC date parts to avoid timezone issues
     return (
-      a.getFullYear() === b.getFullYear() &&
-      a.getMonth() === b.getMonth() &&
-      a.getDate() === b.getDate()
+      a.getUTCFullYear() === b.getUTCFullYear() &&
+      a.getUTCMonth() === b.getUTCMonth() &&
+      a.getUTCDate() === b.getUTCDate()
     )
   }
 
   /**
-   * Check if a date falls between two other dates (inclusive)
+   * ✅ FIXED: Check if a date falls between two other dates (inclusive)
+   * Compares using UTC date parts to avoid timezone issues
    */
   const isBetween = (target: Date, start: Date, end: Date): boolean => {
-    const targetTime = getStartOfDay(target).getTime()
-    const startTime = getStartOfDay(start).getTime()
-    const endTime = getStartOfDay(end).getTime()
+    // Compare only the UTC date parts (ignore time)
+    const targetUTC = Date.UTC(target.getFullYear(), target.getMonth(), target.getDate())
+    const startUTC = Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate())
+    const endUTC = Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate())
     
-    return targetTime >= startTime && targetTime <= endTime
+    return targetUTC >= startUTC && targetUTC <= endUTC
   }
 
   const buildMonth = (
@@ -103,7 +107,7 @@ export const useCalendar = () => {
     monthIndex: number,
     leaves: Leave[],
     holidays: PublicHoliday[],
-    today: Date // ✅ Pass today as parameter so we use org timezone
+    today: Date
   ): CalendarMonth => {
     const firstOfMonth = new Date(year, monthIndex, 1)
     const lastOfMonth = new Date(year, monthIndex + 1, 0)
@@ -120,7 +124,7 @@ export const useCalendar = () => {
       days.push({
         date,
         isCurrentMonth: false,
-        isToday: isSameDay(date, today), // ✅ Compare with org timezone today
+        isToday: false, // Previous month days can't be today
         leaves: [],
         holidays: [],
       })
@@ -130,21 +134,25 @@ export const useCalendar = () => {
     for (let d = 1; d <= lastOfMonth.getDate(); d++) {
       const date = new Date(year, monthIndex, d)
 
-      // Filter leaves that span this specific day
+      // Filter leaves that span this specific day with proper UTC comparison
       const dayLeaves = leaves.filter(l => {
         const leaveStart = new Date(l.startDate)
         const leaveEnd = new Date(l.endDate)
         return isBetween(date, leaveStart, leaveEnd)
       })
 
-      const dayHolidays = holidays.filter(h =>
-        isSameDay(date, new Date(h.date))
-      )
+      // ✅ FIXED: Compare holidays using UTC date parts
+      const dayHolidays = holidays.filter(h => {
+        const holidayDate = new Date(h.date)
+        // Create a UTC date for the current calendar day
+        const calendarDateUTC = new Date(Date.UTC(year, monthIndex, d))
+        return isSameDay(calendarDateUTC, holidayDate)
+      })
 
       days.push({
         date,
         isCurrentMonth: true,
-        isToday: isSameDay(date, today), // ✅ Compare with org timezone today
+        isToday: isSameDay(date, today),
         leaves: dayLeaves,
         holidays: dayHolidays,
       })
@@ -160,7 +168,7 @@ export const useCalendar = () => {
       days.push({
         date,
         isCurrentMonth: false,
-        isToday: isSameDay(date, today), // ✅ Compare with org timezone today
+        isToday: false, // Next month days can't be today
         leaves: [],
         holidays: [],
       })
@@ -192,7 +200,18 @@ export const useCalendar = () => {
       orgTimezone: orgTimezone.value,
       todayInOrgTz: today.toDateString(),
       year,
-      leavesCount: leaves.length
+      leavesCount: leaves.length,
+      holidaysCount: holidays.length,
+      leaves: leaves.map(l => ({
+        id: l.id,
+        start: l.startDate,
+        end: l.endDate,
+        type: l.leaveType?.name
+      })),
+      holidays: holidays.map(h => ({
+        name: h.name,
+        date: h.date
+      }))
     })
 
     const months: CalendarMonth[] = []

@@ -60,6 +60,7 @@ export interface OrganizationSettings {
   timeFormat?: string
   weekStartDay: number
   currency?: string
+  businessDays?: string[]
   country?: string
   
   // Leave Settings

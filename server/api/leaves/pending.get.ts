@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
     // Check permissions
     const canApprove = 
       currentUser.isApprover ||
-      ['ADMINISTRATOR', 'EXECUTIVE', 'HR', 'DEPARTMENT_HEAD', 'MANAGER'].includes(currentUser.role)
+      ['ADMINISTRATOR', 'EXECUTIVE', 'DEPARTMENT_HEAD'].includes(currentUser.role)
 
     if (!canApprove) {
       throw createError({
@@ -52,7 +52,6 @@ export default defineEventHandler(async (event) => {
         departmentId: currentUser.departmentId,
       }
     }
-    // HR and Managers see all requests (no additional filter needed)
     // Administrators and Executives see all requests (no additional filter needed)
 
     // Fetch pending leave requests
@@ -65,6 +64,7 @@ export default defineEventHandler(async (event) => {
             firstName: true,
             lastName: true,
             email: true,
+            role: true, // ✅ ADDED: Include role for badge display
             jobTitle: true,
             department: {
               select: {

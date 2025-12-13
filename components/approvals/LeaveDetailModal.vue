@@ -11,9 +11,9 @@
         </div>
         <button
           @click="closeModal"
-          class="text-[rgb(var(--muted-foreground))] hover:text-[rgb(var(--foreground))] transition-colors"
+          class="p-1.5 hover:bg-[rgb(var(--muted))] rounded-lg transition-colors"
         >
-          <Icon name="lucide:x" class="w-6 h-6" />
+          <Icon name="lucide:x" class="w-5 h-5 text-[rgb(var(--muted-foreground))]" />
         </button>
       </div>
 
@@ -27,8 +27,34 @@
           </h3>
           
           <div class="flex items-start gap-4">
-            <div class="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold text-xl flex-shrink-0">
-              {{ userInitials }}
+            <!-- Avatar - EXACT COPY from UserCard/UserTableRow -->
+            <div class="relative flex-shrink-0">
+              <div
+                class="w-16 h-16 rounded-full flex items-center justify-center font-semibold text-xl"
+                :class="[
+                  getRoleColor(request.user.role).avatar,
+                  getRoleColor(request.user.role).avatarText,
+                  getRoleColor(request.user.role).ring
+                ]"
+              >
+                {{ userInitials }}
+              </div>
+
+              <!-- Star Badge for Administrator - EXACT COPY -->
+              <div
+                v-if="request.user.role === 'ADMINISTRATOR'"
+                class="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full bg-yellow-400 dark:bg-yellow-500 flex items-center justify-center ring-2 ring-[rgb(var(--card))]"
+              >
+                <Icon name="lucide:star" class="w-3.5 h-3.5 text-yellow-900 dark:text-yellow-950 fill-current" />
+              </div>
+
+              <!-- Crown Badge for Executive - EXACT COPY -->
+              <div
+                v-else-if="request.user.role === 'EXECUTIVE'"
+                class="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full bg-yellow-400 dark:bg-yellow-500 flex items-center justify-center ring-2 ring-[rgb(var(--card))]"
+              >
+                <Icon name="lucide:crown" class="w-3.5 h-3.5 text-yellow-900 dark:text-yellow-950 fill-current" />
+              </div>
             </div>
             
             <div class="flex-1 space-y-2">
@@ -43,13 +69,7 @@
               
               <div v-if="request.user.department" class="flex items-center gap-2">
                 <Icon name="lucide:building-2" class="w-4 h-4 text-[rgb(var(--muted-foreground))]" />
-                <span
-                  class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium"
-                  :style="{
-                    backgroundColor: request.user.department.color + '20',
-                    color: request.user.department.color,
-                  }"
-                >
+                <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-[rgb(var(--muted))] text-[rgb(var(--foreground))]">
                   {{ request.user.department.name }}
                 </span>
               </div>
@@ -233,6 +253,8 @@ const emit = defineEmits<{
   approve: [id: string]
   reject: [request: LeaveRequest]
 }>()
+
+const { getRoleColor } = useUserRoleColors()
 
 const isOpen = computed({
   get: () => props.modelValue,

@@ -5,12 +5,33 @@
   >
     <!-- Mobile Card View -->
     <div class="flex items-start gap-3">
-      <!-- Avatar -->
+      <!-- Avatar with Badge - EXACT COPY from UserCard -->
       <div class="relative flex-shrink-0">
         <div
-          class="w-12 h-12 rounded-full flex items-center justify-center font-semibold text-sm bg-gradient-to-br from-blue-500 to-purple-500 text-white"
+          class="w-12 h-12 rounded-full flex items-center justify-center font-semibold text-sm"
+          :class="[
+            getRoleColor(request.user.role).avatar, 
+            getRoleColor(request.user.role).avatarText,
+            getRoleColor(request.user.role).ring
+          ]"
         >
           {{ userInitials }}
+        </div>
+        
+        <!-- Star Badge for Administrator - EXACT COPY from UserCard -->
+        <div
+          v-if="request.user.role === 'ADMINISTRATOR'"
+          class="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-yellow-400 dark:bg-yellow-500 flex items-center justify-center ring-2 ring-[rgb(var(--card))]"
+        >
+          <Icon name="lucide:star" class="w-3 h-3 text-yellow-900 dark:text-yellow-950 fill-current" />
+        </div>
+        
+        <!-- Crown Badge for Executive - EXACT COPY from UserCard -->
+        <div
+          v-else-if="request.user.role === 'EXECUTIVE'"
+          class="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-yellow-400 dark:bg-yellow-500 flex items-center justify-center ring-2 ring-[rgb(var(--card))]"
+        >
+          <Icon name="lucide:crown" class="w-3 h-3 text-yellow-900 dark:text-yellow-950 fill-current" />
         </div>
       </div>
 
@@ -30,12 +51,9 @@
         <!-- Department Badge -->
         <div v-if="request.user.department" class="mb-2">
           <span
-            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
-            :style="{
-              backgroundColor: request.user.department.color + '20',
-              color: request.user.department.color,
-            }"
+            class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-[rgb(var(--muted))] text-[rgb(var(--foreground))]"
           >
+            <Icon name="lucide:building-2" class="w-3 h-3 mr-1" />
             {{ request.user.department.name }}
           </span>
         </div>
@@ -92,7 +110,7 @@
 
           <!-- Requested -->
           <div class="col-span-2 flex items-center gap-2">
-            <div class="w-8 h-8 rounded-md bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400 flex-shrink-0">
+            <div class="w-8 h-8 rounded-md bg-[rgb(var(--muted))] flex items-center justify-center text-[rgb(var(--muted-foreground))] flex-shrink-0">
               <Icon name="lucide:clock" class="w-4 h-4" />
             </div>
             <div class="min-w-0 flex-1">
@@ -160,6 +178,8 @@ defineEmits<{
   reject: [request: LeaveRequest]
   'view-details': [request: LeaveRequest]
 }>()
+
+const { getRoleColor } = useUserRoleColors()
 
 const userInitials = computed(() =>
   `${props.request.user.firstName[0]}${props.request.user.lastName[0]}`.toUpperCase()

@@ -23,6 +23,7 @@ export interface LeaveRequest {
     firstName: string
     lastName: string
     email: string
+    role: 'EMPLOYEE' | 'DEPARTMENT_HEAD' | 'ADMINISTRATOR' | 'EXECUTIVE'
     jobTitle?: string
     department?: {
       id: string

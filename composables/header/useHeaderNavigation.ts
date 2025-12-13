@@ -2,7 +2,7 @@ export const useHeaderNavigation = (
   isAuthenticated: Ref<boolean>, 
   currentUserId: Ref<string | null>
 ) => {
-  const { canAccessUsers, canAccessSettings } = usePermissions()
+  const { canAccessUsers, canAccessSettings, canApproveRequests } = usePermissions()
   
   const userCalendarPath = computed(() => {
     return currentUserId.value ? `/calendar/${currentUserId.value}` : '/calendar'
@@ -14,6 +14,10 @@ export const useHeaderNavigation = (
     { to: '#', label: 'Docs', show: true },
     // Calendar visible only when logged in
     { to: '/users', label: 'Users', show: isAuthenticated.value && canAccessUsers() },
+    { to: '/settings', label: 'Settings', icon: 'lucide:settings', show: canAccessSettings() },
+    { to: '/approvals', label: 'Approvals', icon: 'lucide:check-circle', show: isAuthenticated.value && canApproveRequests() }
+
+
   ])
   
   const visibleNavLinks = computed(() => navLinks.value.filter(link => link.show))
@@ -22,8 +26,6 @@ export const useHeaderNavigation = (
     const items = [
       { to: userCalendarPath.value, label: 'My calendar', icon: 'lucide:calendar', show: isAuthenticated.value && !!currentUserId.value },       
       { to: '/#', label: 'Dashboard', icon: 'lucide:layout-dashboard', show: true },
-      { to: '/users', label: 'Users', icon: 'lucide:users', show: canAccessUsers() },
-      { to: '/settings', label: 'Settings', icon: 'lucide:settings', show: canAccessSettings() }
     ]
     return items.filter(item => item.show)
   })

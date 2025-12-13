@@ -44,6 +44,9 @@ model Organization {
   fiscalYearStart Int   @default(1) // Month (1-12)
   country        String @default("US") // For public holidays
 
+  businessDays   String[] @default(["mon", "tue", "wed", "thu", "fri"])
+
+
   // Onboarding
   leaveYearStartMonth    Int     @default(1) // 1-12 (January - December)
   defaultLeaveAllowance  Float   @default(25) // Default days per year

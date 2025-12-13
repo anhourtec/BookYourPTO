@@ -446,6 +446,7 @@ const fetchSettings = async (): Promise<void> => {
     if (data) {
       form.value.companyName = data.name || ''
       form.value.timezone = data.timezone || 'UTC'
+      form.value.businessDays = data.businessDays || ['mon', 'tue', 'wed', 'thu', 'fri'] // ✅ Load business days
       form.value.weekStartDay = data.weekStartDay ?? 1
       form.value.leaveYearStart = data.leaveYearStartMonth || 1
       form.value.defaultLeaveAllowance = data.defaultLeaveAllowance || 25
@@ -459,10 +460,15 @@ const fetchSettings = async (): Promise<void> => {
     loading.value = false
   }
 }
-
 const saveSettings = async (): Promise<void> => {
   if (!canEditSettings()) {
     error.value = 'You do not have permission to update settings'
+    return
+  }
+
+  // ✅ Validate that at least one business day is selected
+  if (form.value.businessDays.length === 0) {
+    error.value = 'Please select at least one business day'
     return
   }
 
@@ -474,6 +480,7 @@ const saveSettings = async (): Promise<void> => {
     const payload = {
       name: form.value.companyName,
       timezone: form.value.timezone,
+      businessDays: form.value.businessDays, // ✅ Include business days
       weekStartDay: form.value.weekStartDay,
       leaveYearStartMonth: form.value.leaveYearStart,
       defaultLeaveAllowance: form.value.defaultLeaveAllowance,

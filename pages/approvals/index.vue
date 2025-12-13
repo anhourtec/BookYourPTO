@@ -16,20 +16,20 @@
           </div>
           
           <!-- Stats Summary -->
-          <div class="flex items-center gap-2 sm:gap-3">
-            <div class="bg-orange-100 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800 px-3 sm:px-4 py-2 sm:py-2.5">
-              <div class="text-xs text-orange-600 dark:text-orange-400">Pending</div>
-              <div class="text-xl sm:text-2xl font-bold text-orange-600 dark:text-orange-400">
-                {{ pendingCount }}
+            <div class="flex items-center gap-2 sm:gap-3">
+              <div class="bg-[rgb(var(--muted))] rounded-lg border border-[rgb(var(--border))] px-3 sm:px-4 py-2 sm:py-2.5">
+                <div class="text-xs text-[rgb(var(--muted-foreground))]">Pending</div>
+                <div class="text-xl sm:text-2xl font-bold text-[rgb(var(--foreground))]">
+                  {{ pendingCount }}
+                </div>
+              </div>
+              <div class="bg-[rgb(var(--muted))] rounded-lg border border-[rgb(var(--border))] px-3 sm:px-4 py-2 sm:py-2.5">
+                <div class="text-xs text-[rgb(var(--muted-foreground))]">Today</div>
+                <div class="text-xl sm:text-2xl font-bold text-[rgb(var(--foreground))]">
+                  {{ processedToday }}
+                </div>
               </div>
             </div>
-            <div class="bg-green-100 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 px-3 sm:px-4 py-2 sm:py-2.5">
-              <div class="text-xs text-green-600 dark:text-green-400">Today</div>
-              <div class="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
-                {{ processedToday }}
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -298,10 +298,11 @@ import ApprovalFilter from '~/components/approvals/ApprovalFilter.vue'
 import LeaveDetailModal from '~/components/approvals/LeaveDetailModal.vue'
 import type { LeaveRequest } from '~/types/approval'
 
-const { getUser, hasRole, canApproveRequests } = usePermissions()
+const { getUser, canApproveRequests } = usePermissions()
+const { ensureValidToken } = useAuth()
 
-// Check permissions
-onMounted(() => {
+// Check permissions and ensure token is valid
+onMounted(async () => {
   if (!canApproveRequests()) {
     throw createError({
       statusCode: 404,
@@ -309,7 +310,12 @@ onMounted(() => {
       fatal: true,
     })
   }
-  fetchPendingRequests()
+  
+  // Ensure token is valid before making API calls
+  const tokenValid = await ensureValidToken()
+  if (tokenValid) {
+    await fetchPendingRequests()
+  }
 })
 
 // Check if user is department head

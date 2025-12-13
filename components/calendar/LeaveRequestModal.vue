@@ -21,7 +21,7 @@
           <button
             type="button"
             class="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            @click="$emit('close')"
+            @click="handleClose"
           >
             <Icon name="lucide:x" class="w-4 h-4 text-gray-500" />
           </button>
@@ -107,11 +107,10 @@
             <button
               type="button"
               class="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
-              @click="$emit('close')"
+              @click="handleClose"
             >
               Close
             </button>
-            <!-- ✅ FIXED: Only show cancel button if user has permission -->
             <button
               v-if="canCancelLeave"
               type="button"
@@ -239,7 +238,7 @@
               <button
                 type="button"
                 class="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
-                @click="$emit('close')"
+                @click="handleClose"
               >
                 Cancel
               </button>
@@ -358,7 +357,6 @@ const userInitials = computed(() => {
   return (first + last).toUpperCase() || 'U'
 })
 
-// ✅ FIXED: Use permissions composable properly
 const canCancelLeave = computed(() => {
   if (!props.existingLeave) return false
   
@@ -372,23 +370,32 @@ const canCancelLeave = computed(() => {
 const startDateInput = ref('')
 const endDateInput = ref('')
 
+// ✅ Watch for modal open/close to reset states
 watch(
   () => props.open,
-  (val) => {
-    if (!val || props.mode === 'view') return
-    const start = props.startDate ?? new Date()
-    const end = props.endDate ?? start
+  (isOpen, wasOpen) => {
+    if (isOpen && !wasOpen) {
+      // Modal is opening
+      if (props.mode === 'create') {
+        // Reset form for create mode
+        const start = props.startDate ?? new Date()
+        const end = props.endDate ?? start
 
-    const toInput = (d: Date) =>
-      d.toISOString().slice(0, 10)
+        const toInput = (d: Date) => d.toISOString().slice(0, 10)
 
-    startDateInput.value = toInput(start)
-    endDateInput.value = toInput(end)
+        startDateInput.value = toInput(start)
+        endDateInput.value = toInput(end)
 
-    form.leaveTypeId = activeLeaveTypes.value[0]?.id ?? ''
-    form.reason = ''
-    form.startHalf = 'FULL_DAY'
-    form.endHalf = 'FULL_DAY'
+        form.leaveTypeId = activeLeaveTypes.value[0]?.id ?? ''
+        form.reason = ''
+        form.startHalf = 'FULL_DAY'
+        form.endHalf = 'FULL_DAY'
+      }
+    } else if (!isOpen && wasOpen) {
+      // Modal is closing - reset all loading states
+      submitting.value = false
+      cancelling.value = false
+    }
   }
 )
 
@@ -437,6 +444,13 @@ const statusBadgeClass = (status: string) => {
   }
 }
 
+// ✅ Handle close to ensure state cleanup
+const handleClose = () => {
+  submitting.value = false
+  cancelling.value = false
+  emit('close')
+}
+
 const handleSubmit = async () => {
   if (!startDateInput.value || !endDateInput.value || !form.leaveTypeId) {
     alert('Please fill in all required fields')
@@ -446,21 +460,32 @@ const handleSubmit = async () => {
   if (submitting.value) return // Prevent double submission
 
   submitting.value = true
+  
   try {
     const payload = {
       userId: props.userId,
       leaveTypeId: form.leaveTypeId,
-      startDate: new Date(startDateInput.value).toISOString(),
-      endDate: new Date(endDateInput.value).toISOString(),
+      startDate: new Date(startDateInput.value + 'T12:00:00.000Z').toISOString(),
+      endDate: new Date(endDateInput.value + 'T12:00:00.000Z').toISOString(),
       startHalf: form.startHalf,
       endHalf: form.endHalf,
       reason: form.reason || undefined,
     }
     
+    console.log('📤 Submitting leave request:', {
+      ...payload,
+      inputDates: { start: startDateInput.value, end: endDateInput.value }
+    })
+    
+    // Emit the submit event - parent will handle closing the modal
     emit('submit', payload)
+    
+    // ✅ NOTE: Don't reset submitting here - the watcher will do it when modal closes
+    // This prevents the button from flickering back to "Send request" before modal closes
   } catch (error) {
     console.error('Error submitting leave:', error)
-    submitting.value = false
+    submitting.value = false // Only reset on error
+    alert('An error occurred while submitting the request. Please try again.')
   }
 }
 
@@ -473,16 +498,18 @@ const handleCancelLeave = async () => {
   if (cancelling.value) return // Prevent double submission
   
   cancelling.value = true
+  
   try {
     await api.cancelLeaveRequest(props.existingLeave.id)
     
     emit('cancel', props.existingLeave.id)
     emit('close')
+    
+    // ✅ NOTE: Don't reset cancelling here - the watcher will do it when modal closes
   } catch (error: any) {
     console.error('❌ Failed to cancel leave:', error)
     alert(error.data?.message || error.message || 'Failed to cancel leave request')
-  } finally {
-    cancelling.value = false
+    cancelling.value = false // Only reset on error
   }
 }
 </script>
