@@ -21,7 +21,7 @@
               :visible="{ opacity: 1, y: 0, transition: { delay: 0, duration: 600 } }"
               class="text-5xl md:text-6xl lg:text-7xl font-bold text-foreground mb-4 leading-tight"
             >
-              Enterprise PTO Management
+              Opensource PTO Management
             </h1>
             <h2
               v-motion
@@ -626,7 +626,9 @@
             :visible="{ opacity: 1, y: 0, transition: { delay: 100, duration: 600 } }"
             class="bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-2xl p-8 border border-green-500/20"
           >
-            <Icon name="lucide:dollar-sign" class="w-12 h-12 text-green-600 dark:text-green-400 mb-4" />
+            <!--
+          <Icon name="lucide:dollar-sign" class="w-12 h-12 text-green-600 dark:text-green-400 mb-4" />
+            -->
             <h3 class="text-2xl font-bold text-foreground mb-4">Zero Monthly Costs</h3>
             <p class="text-muted-foreground leading-relaxed">
               No per-user fees, no hidden costs. Deploy once and use forever.
@@ -640,7 +642,10 @@
             :visible="{ opacity: 1, y: 0, transition: { delay: 200, duration: 600 } }"
             class="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-2xl p-8 border border-blue-500/20"
           >
-            <Icon name="lucide:shield" class="w-12 h-12 text-blue-600 dark:text-blue-400 mb-4" />
+          <!--
+                      <Icon name="lucide:shield" class="w-12 h-12 text-blue-600 dark:text-blue-400 mb-4" />
+
+          -->
             <h3 class="text-2xl font-bold text-foreground mb-4">Complete Data Control</h3>
             <p class="text-muted-foreground leading-relaxed">
               Your data stays on your infrastructure. Full GDPR compliance,
@@ -654,7 +659,10 @@
             :visible="{ opacity: 1, y: 0, transition: { delay: 300, duration: 600 } }"
             class="bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-2xl p-8 border border-purple-500/20"
           >
-            <Icon name="lucide:code" class="w-12 h-12 text-purple-600 dark:text-purple-400 mb-4" />
+          <!--
+                      <Icon name="lucide:code" class="w-12 h-12 text-purple-600 dark:text-purple-400 mb-4" />
+
+          -->
             <h3 class="text-2xl font-bold text-foreground mb-4">Fully Customizable</h3>
             <p class="text-muted-foreground leading-relaxed">
               Open-source means unlimited customization. Modify workflows,
@@ -668,7 +676,10 @@
             :visible="{ opacity: 1, y: 0, transition: { delay: 400, duration: 600 } }"
             class="bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-2xl p-8 border border-orange-500/20"
           >
-            <Icon name="lucide:trending-up" class="w-12 h-12 text-orange-600 dark:text-orange-400 mb-4" />
+          <!--
+                      <Icon name="lucide:trending-up" class="w-12 h-12 text-orange-600 dark:text-orange-400 mb-4" />
+
+          -->
             <h3 class="text-2xl font-bold text-foreground mb-4">Scales With You</h3>
             <p class="text-muted-foreground leading-relaxed">
               From 10 to 10,000 employees. Multi-tenant architecture supports
