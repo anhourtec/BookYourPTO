@@ -36,10 +36,10 @@ export const useCalendar = () => {
       
       if (settings && typeof settings === 'object' && 'timezone' in settings) {
         orgTimezone.value = (settings as any).timezone || 'UTC'
-        console.log('📍 Loaded organization timezone:', orgTimezone.value)
+      //  console.log('📍 Loaded organization timezone:', orgTimezone.value)
       }
     } catch (error) {
-      console.error('Failed to load organization timezone:', error)
+// console.error('Failed to load organization timezone:', error)
       orgTimezone.value = 'UTC'
     }
   }
@@ -195,8 +195,10 @@ export const useCalendar = () => {
   ): CalendarMonth[] => {
     // ✅ Get "today" in organization's timezone ONCE
     const today = getTodayInOrgTimezone()
+
+    /*
     
-    console.log('📅 Building calendar:', {
+     console.log('📅 Building calendar:', {
       orgTimezone: orgTimezone.value,
       todayInOrgTz: today.toDateString(),
       year,
@@ -213,6 +215,10 @@ export const useCalendar = () => {
         date: h.date
       }))
     })
+      
+    */
+    
+   
 
     const months: CalendarMonth[] = []
     for (let m = 0; m < 12; m++) {
