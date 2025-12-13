@@ -94,6 +94,7 @@
             <DepartmentsSettings v-if="activeSection === 'departments'" />
             <PublicHolidaysSettings v-if="activeSection === 'holidays'" />
             <EmailSettings v-if="activeSection === 'email'" />
+            <ReportsSettings v-if="activeSection === 'reports'" />
             <DeleteOrganizationSettings v-if="activeSection === 'dangerzone'" />
           </template>
         </main>
@@ -110,6 +111,7 @@ import LeaveTypesSettings from '../../components/settings/LeaveTypesSettings.vue
 import DepartmentsSettings from '../../components/settings/DepartmentsSettings.vue'
 import PublicHolidaysSettings from '../../components/settings/PublicHolidaysSettings.vue'
 import EmailSettings from '../../components/settings/EmailSettings.vue'
+import ReportsSettings from '../../components/settings/ReportsSettings.vue'
 import DeleteOrganizationSettings from '../../components/settings/DeleteOrganizationSettings.vue'
 
 const { canAccessSettings, canAccessAdminSettings, getUser } = usePermissions()
@@ -179,6 +181,7 @@ const navigationItems = [
   { id: 'departments', label: 'Departments', icon: 'lucide:building-2', isDanger: false, adminOnly: true },
   { id: 'holidays', label: 'Public holidays', icon: 'lucide:calendar', isDanger: false, adminOnly: true },
   { id: 'email', label: 'Email', icon: 'lucide:mail', isDanger: false, adminOnly: true },
+  { id: 'reports', label: 'Reports', icon: 'lucide:file-bar-chart-2', isDanger: false, adminOnly: true },
   { id: 'dangerzone', label: 'Danger zone', icon: 'lucide:alert-triangle', isDanger: true, executiveOnly: true, adminOnly: true },
 ]
 
