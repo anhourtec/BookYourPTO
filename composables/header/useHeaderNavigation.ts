@@ -10,7 +10,7 @@ export const useHeaderNavigation = (
   
   const navLinks = computed(() => [
     { to: '/', label: 'Home', show: true },
-    { to: '#', label: 'Features', show: true },
+    { to: '/features', label: 'Features', show: true },
     { to: '#', label: 'Docs', show: true },
     // Calendar visible only when logged in
     { to: '/users', label: 'Users', show: isAuthenticated.value && canAccessUsers() },
