@@ -194,6 +194,54 @@ export const useApi = () => {
   }
 
   // ============================================
+// REPORTS API METHODS
+// ============================================
+
+const downloadLeaveReport = async (filters: {
+  startDate?: string
+  endDate?: string
+  status?: string
+}): Promise<Blob> => {
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    throw new Error('Not available on server side')
+  }
+
+  const token = localStorage.getItem('auth_token')
+  
+  if (!token) {
+    throw new Error('Authentication token not found')
+  }
+
+  // Build query string
+  const params = new URLSearchParams()
+  if (filters.startDate) params.append('startDate', filters.startDate)
+  if (filters.endDate) params.append('endDate', filters.endDate)
+  if (filters.status) params.append('status', filters.status)
+
+  // Use native fetch for blob download
+  const response = await fetch(`/api/reports/leaves?${params.toString()}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    }
+  })
+
+  if (!response.ok) {
+    let errorMessage = 'Failed to generate report'
+    try {
+      const errorData = await response.json()
+      errorMessage = errorData.message || errorMessage
+    } catch {
+      errorMessage = response.statusText || errorMessage
+    }
+    throw new Error(errorMessage)
+  }
+
+  return await response.blob()
+}
+
+  // ============================================
   // LEAVE MANAGEMENT API METHODS
   // ============================================
 
@@ -279,5 +327,6 @@ export const useApi = () => {
     cancelLeaveRequest,
     fetchLeaveTypes,
     fetchPublicHolidays,
+    downloadLeaveReport
   }
 }
