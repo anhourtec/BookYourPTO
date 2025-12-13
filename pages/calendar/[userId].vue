@@ -304,7 +304,9 @@ const {
   loadCalendarData,
   createLeave,
 } = useLeaves()
-const { buildYear } = useCalendar()
+
+// ✅ FIX: Destructure loadOrgTimezone and orgTimezone from useCalendar
+const { buildYear, loadOrgTimezone, orgTimezone } = useCalendar()
 
 // State
 const routeUserId = computed(() => String(route.params.userId || ''))
@@ -359,6 +361,9 @@ const loadDepartments = async () => {
 
 // Load all data
 const loadAll = async () => {
+  // ✅ FIX: Load organization timezone FIRST
+  await loadOrgTimezone()
+
   if (!routeUserId.value) return
   await Promise.all([
     loadUser(),

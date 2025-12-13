@@ -21,18 +21,76 @@ const monthNames = [
 ] as const
 
 export const useCalendar = () => {
-  // FIXED: Use UTC to avoid timezone issues
-  const getStartOfDay = (d: Date) => {
-    const x = new Date(d)
-    x.setUTCHours(0, 0, 0, 0)
-    return x
+  // Organization timezone - will be loaded from settings
+  const orgTimezone = ref<string>('UTC')
+
+  /**
+   * Load organization timezone from API
+   */
+  const loadOrgTimezone = async () => {
+    try {
+      const token = localStorage.getItem('auth_token')
+      const settings = await $fetch('/api/organization/settings', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      })
+      
+      if (settings && typeof settings === 'object' && 'timezone' in settings) {
+        orgTimezone.value = (settings as any).timezone || 'UTC'
+        console.log('📍 Loaded organization timezone:', orgTimezone.value)
+      }
+    } catch (error) {
+      console.error('Failed to load organization timezone:', error)
+      orgTimezone.value = 'UTC'
+    }
   }
 
-  const isSameDay = (a: Date, b: Date) =>
-    getStartOfDay(a).getTime() === getStartOfDay(b).getTime()
+  /**
+   * ✅ Get current date in organization's timezone
+   * This is the KEY function that makes "today" work correctly
+   */
+  const getTodayInOrgTimezone = (): Date => {
+    const tz = orgTimezone.value
+    const now = new Date()
+    
+    // Use Intl.DateTimeFormat to get the current date in the org's timezone
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
+    
+    const parts = formatter.formatToParts(now)
+    const year = parseInt(parts.find(p => p.type === 'year')?.value || '0')
+    const month = parseInt(parts.find(p => p.type === 'month')?.value || '1') - 1
+    const day = parseInt(parts.find(p => p.type === 'day')?.value || '1')
+    
+    // Return as a Date object (at midnight local browser time, but representing the org timezone date)
+    return new Date(year, month, day, 0, 0, 0, 0)
+  }
 
-  // FIXED: Proper date comparison for multi-day leaves
-  const isBetween = (target: Date, start: Date, end: Date) => {
+  /**
+   * Get start of day (midnight) for a given date
+   */
+  const getStartOfDay = (d: Date): Date => {
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0)
+  }
+
+  /**
+   * Check if two dates are the same day
+   */
+  const isSameDay = (a: Date, b: Date): boolean => {
+    return (
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate()
+    )
+  }
+
+  /**
+   * Check if a date falls between two other dates (inclusive)
+   */
+  const isBetween = (target: Date, start: Date, end: Date): boolean => {
     const targetTime = getStartOfDay(target).getTime()
     const startTime = getStartOfDay(start).getTime()
     const endTime = getStartOfDay(end).getTime()
@@ -44,14 +102,14 @@ export const useCalendar = () => {
     year: number,
     monthIndex: number,
     leaves: Leave[],
-    holidays: PublicHoliday[]
+    holidays: PublicHoliday[],
+    today: Date // ✅ Pass today as parameter so we use org timezone
   ): CalendarMonth => {
     const firstOfMonth = new Date(year, monthIndex, 1)
     const lastOfMonth = new Date(year, monthIndex + 1, 0)
     const firstDayOfWeek = firstOfMonth.getDay() // 0-6
 
     const days: CalendarDay[] = []
-    const today = new Date()
 
     // start from Monday or Sunday? using organization weekStartDay later if needed
     const offset = firstDayOfWeek // simple: Sunday = first column
@@ -62,7 +120,7 @@ export const useCalendar = () => {
       days.push({
         date,
         isCurrentMonth: false,
-        isToday: isSameDay(date, today),
+        isToday: isSameDay(date, today), // ✅ Compare with org timezone today
         leaves: [],
         holidays: [],
       })
@@ -72,28 +130,11 @@ export const useCalendar = () => {
     for (let d = 1; d <= lastOfMonth.getDate(); d++) {
       const date = new Date(year, monthIndex, d)
 
-      // FIXED: Filter leaves that span this specific day
+      // Filter leaves that span this specific day
       const dayLeaves = leaves.filter(l => {
         const leaveStart = new Date(l.startDate)
         const leaveEnd = new Date(l.endDate)
-        const overlaps = isBetween(date, leaveStart, leaveEnd)
-        
-        // Debug logging for December 30-31
-        if (monthIndex === 11 && (d === 30 || d === 31)) {
-          /*
-           console.log(`🔍 Dec ${d}: Checking leave`, {
-            leaveId: l.id,
-            leaveType: l.leaveType?.name,
-            leaveStart: leaveStart.toISOString(),
-            leaveEnd: leaveEnd.toISOString(),
-            dateChecking: date.toISOString(),
-            overlaps
-          })
-          */
-         
-        }
-        
-        return overlaps
+        return isBetween(date, leaveStart, leaveEnd)
       })
 
       const dayHolidays = holidays.filter(h =>
@@ -103,13 +144,13 @@ export const useCalendar = () => {
       days.push({
         date,
         isCurrentMonth: true,
-        isToday: isSameDay(date, today),
+        isToday: isSameDay(date, today), // ✅ Compare with org timezone today
         leaves: dayLeaves,
         holidays: dayHolidays,
       })
     }
 
-    // fill remaining cells to complete last week (up to 6 rows total)
+    // fill remaining cells to complete last week
     while (days.length > 0 && days.length % 7 !== 0) {
       const lastDay = days[days.length - 1]
       if (!lastDay) break
@@ -119,7 +160,7 @@ export const useCalendar = () => {
       days.push({
         date,
         isCurrentMonth: false,
-        isToday: isSameDay(date, today),
+        isToday: isSameDay(date, today), // ✅ Compare with org timezone today
         leaves: [],
         holidays: [],
       })
@@ -144,35 +185,19 @@ export const useCalendar = () => {
     leaves: Leave[],
     holidays: PublicHoliday[]
   ): CalendarMonth[] => {
-    // console.log('🗓️ Building calendar for year:', year)
-    // console.log('📋 Total leaves to display:', leaves.length)
+    // ✅ Get "today" in organization's timezone ONCE
+    const today = getTodayInOrgTimezone()
     
-    // Log December leaves specifically
-    const decemberLeaves = leaves.filter(leave => {
-      const start = new Date(leave.startDate)
-      const end = new Date(leave.endDate)
-      return (
-        (start.getMonth() === 11 && start.getFullYear() === year) ||
-        (end.getMonth() === 11 && end.getFullYear() === year)
-      )
+    console.log('📅 Building calendar:', {
+      orgTimezone: orgTimezone.value,
+      todayInOrgTz: today.toDateString(),
+      year,
+      leavesCount: leaves.length
     })
-    
-    if (decemberLeaves.length > 0) {
-      /*
-       console.log('🎄 December leaves:', decemberLeaves.map(l => ({
-        id: l.id,
-        type: l.leaveType?.name,
-        start: new Date(l.startDate).toISOString(),
-        end: new Date(l.endDate).toISOString(),
-        status: l.status
-      })))
-      */
-     
-    }
-    
+
     const months: CalendarMonth[] = []
     for (let m = 0; m < 12; m++) {
-      months.push(buildMonth(year, m, leaves, holidays))
+      months.push(buildMonth(year, m, leaves, holidays, today))
     }
     return months
   }
@@ -183,5 +208,8 @@ export const useCalendar = () => {
     isSameDay,
     isBetween,
     getStartOfDay,
+    getTodayInOrgTimezone,
+    loadOrgTimezone,
+    orgTimezone: readonly(orgTimezone),
   }
 }

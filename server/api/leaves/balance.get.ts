@@ -64,6 +64,9 @@ export default defineEventHandler(async (event) => {
       select: {
         leaveYearStartMonth: true,
         defaultLeaveAllowance: true,
+        carryForwardDays: true,
+        carryForwardExpires: true,
+        carryForwardExpiryMonths: true,
       },
     })
 
@@ -71,6 +74,24 @@ export default defineEventHandler(async (event) => {
       throw createError({
         statusCode: 404,
         message: 'Organization not found',
+      })
+    }
+
+    // ✅ Get user-specific settings (custom allowances and carry-over)
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        customLeaveAllowance: true,
+        allowCarryForward: true,
+        maxCarryForwardDays: true,
+        carryOverBalance: true,
+      },
+    })
+
+    if (!targetUser) {
+      throw createError({
+        statusCode: 404,
+        message: 'User not found',
       })
     }
 
@@ -82,7 +103,10 @@ export default defineEventHandler(async (event) => {
     console.log(`📊 Calculating balance for fiscal period:`, {
       start: fiscalPeriodStart.toISOString(),
       end: fiscalPeriodEnd.toISOString(),
-      userId
+      userId,
+      customAllowance: targetUser.customLeaveAllowance,
+      carryOverBalance: targetUser.carryOverBalance,
+      allowCarryForward: targetUser.allowCarryForward,
     })
 
     // Leave types
@@ -122,13 +146,23 @@ export default defineEventHandler(async (event) => {
       (l) => l.leaveType && (l.leaveType.annualAllowance == null || l.leaveType.annualAllowance === 0)
     )
 
-    // Totals using totalDays
+    // ✅ Calculate totals using user-specific or organization default allowance
+    const baseAllowance = targetUser.customLeaveAllowance ?? organization.defaultLeaveAllowance
+    
+    // ✅ Calculate carry-over based on user settings
+    let carriedOver = 0
+    if (targetUser.allowCarryForward !== false) {
+      // Use user's manual carry-over balance if set, otherwise 0
+      carriedOver = targetUser.carryOverBalance || 0
+    }
+    
     const totalUsed = deductibleLeaves.reduce((sum, leave) => sum + (leave.totalDays || 0), 0)
-    const totalAllowance = organization.defaultLeaveAllowance
-    const carriedOver = 0 // TODO: Implement carry-over logic from previous year
-    const totalRemaining = totalAllowance + carriedOver - totalUsed
+    const totalAllowance = baseAllowance + carriedOver
+    const totalRemaining = totalAllowance - totalUsed
 
     console.log(`📊 Balance summary:`, {
+      baseAllowance,
+      carriedOver,
       totalAllowance,
       totalUsed,
       totalRemaining,

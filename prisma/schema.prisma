@@ -202,6 +202,12 @@ model User {
   annualLeaveBalance   Float @default(0)
   sickLeaveBalance     Float @default(0)
   carryOverBalance     Float @default(0)
+
+   // NEW: Carry Forward Settings
+  allowCarryForward    Boolean @default(true)  
+  maxCarryForwardDays  Float?              
+
+
   customLeaveAllowance Float? // Override organization default
   customLeaveBalances  Json? // Other leave types: { MATERNITY: 90, etc. }
 

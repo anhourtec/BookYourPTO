@@ -140,12 +140,15 @@ export interface Leave {
   notes?: string
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'WITHDRAWN'
   submittedAt: string
+  
+  // ✅ CORRECTED: Two-level approval system
   firstLevelApproverId?: string
   firstLevelApprovedAt?: string
   firstLevelComment?: string
   secondLevelApproverId?: string
   secondLevelApprovedAt?: string
   secondLevelComment?: string
+  
   rejectionReason?: string
   cancelledAt?: string
   cancelledReason?: string
@@ -160,10 +163,24 @@ export interface Leave {
     lastName: string
     email: string
     avatar?: string
+    jobTitle?: string
     department?: {
       id: string
       name: string
+      color?: string
     }
+  }
+  
+  // ✅ CORRECTED: Approval relations
+  firstLevelApprover?: {
+    id: string
+    firstName: string
+    lastName: string
+  }
+  secondLevelApprover?: {
+    id: string
+    firstName: string
+    lastName: string
   }
 }
 
@@ -237,6 +254,12 @@ export interface LeaveBalanceSummary {
     allowance: number
     used: number
     remaining: number
+  }[]
+  
+  // Deductible leaves breakdown
+  deductible: {
+    leaveType: LeaveType
+    days: number
   }[]
   
   // Non-deductible leaves (for display only)

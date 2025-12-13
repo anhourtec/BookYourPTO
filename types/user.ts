@@ -58,6 +58,10 @@ export interface User {
   carryOverBalance: number
   customLeaveAllowance?: number
   
+  // ✅ NEW: Carry Forward Settings
+  allowCarryForward?: boolean
+  maxCarryForwardDays?: number
+  
   // Relations (populated)
   department?: {
     id: string
@@ -116,10 +120,10 @@ export interface UpdateUserInput {
   state?: string | null
   postalCode?: string | null
   country?: string | null
-  annualLeaveBalance?: number
-  sickLeaveBalance?: number
   carryOverBalance?: number
   customLeaveAllowance?: number | null
+  allowCarryForward?: boolean
+  maxCarryForwardDays?: number | null
   emergencyContact?: {
     name?: string
     relationship?: string
