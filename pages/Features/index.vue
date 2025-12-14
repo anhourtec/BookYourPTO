@@ -363,40 +363,110 @@
     </section>
 
     <!-- CTA Section -->
-    <section class="py-20 md:py-28 px-4 relative overflow-hidden">
-      <div class="absolute inset-0 bg-gradient-to-br from-primary to-primary/80"></div>
-      <div class="absolute inset-0 opacity-10">
-        <div class="absolute inset-0" style="background-image: radial-gradient(circle, currentColor 2px, transparent 2px); background-size: 40px 40px;"></div>
-      </div>
+   <!-- CTA Section -->
+<section class="relative overflow-hidden py-20 md:py-28 px-4">
+  <!-- Background Gradient -->
+  <div class="absolute inset-0 bg-gradient-to-br from-primary to-primary/80"></div>
 
-      <div
-        v-motion
-        :initial="{ opacity: 0, scale: 0.95 }"
-        :visible="{ opacity: 1, scale: 1, transition: { duration: 800 } }"
-        class="container max-w-4xl mx-auto text-center relative z-10"
+  <!-- Dot Pattern Overlay -->
+  <div class="absolute inset-0 opacity-10">
+    <div
+      class="absolute inset-0"
+      style="
+        background-image: radial-gradient(circle, currentColor 2px, transparent 2px);
+        background-size: 40px 40px;
+      "
+    ></div>
+  </div>
+
+  <!-- Content -->
+  <div
+    v-motion
+    :initial="{
+      opacity: 0,
+      y: 40,
+      scale: 0.95
+    }"
+    :visible="{
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        duration: 0.8,
+        ease: 'easeOut',
+        staggerChildren: 0.15
+      }
+    }"
+    class="relative z-10 container max-w-4xl mx-auto text-center"
+  >
+    <!-- Title -->
+    <h2
+      v-motion
+      :initial="{ opacity: 0, y: 20 }"
+      :visible="{ opacity: 1, y: 0 }"
+      class="text-3xl md:text-5xl font-bold text-foreground mb-4"
+    >
+      Secure Your Team's Time-Off with BookYourPTO
+    </h2>
+
+    <!-- Subtitle -->
+    <p
+      v-motion
+      :initial="{ opacity: 0, y: 20 }"
+      :visible="{ opacity: 1, y: 0 }"
+      class="text-xl md:text-2xl text-primary-foreground/90 mb-10 max-w-3xl mx-auto"
+    >
+      Join teams worldwide who manage time-off with complete control and zero monthly fees.
+    </p>
+
+    <!-- Buttons -->
+    <div
+      v-motion
+      :initial="{ opacity: 0, y: 20 }"
+      :visible="{ opacity: 1, y: 0 }"
+      class="flex flex-col sm:flex-row gap-4 justify-center"
+    >
+      <NuxtLink to="/register">
+        <button
+          class="group px-12 py-5 bg-white text-gray-900 rounded-lg flex items-center justify-center gap-2 text-lg font-medium shadow-2xl transition-all hover:bg-white/90 hover:scale-105"
+        >
+          <Icon
+            name="lucide:rocket"
+            class="w-5 h-5 transition-transform group-hover:translate-x-1"
+          />
+          Get Started Free
+        </button>
+      </NuxtLink>
+
+      <a
+        href="https://github.com/anhourtec/BookYourPTO"
+        target="_blank"
+        rel="noopener noreferrer"
       >
-        <h2 class="text-3xl md:text-5xl font-bold text-white mb-6">
-          Secure Your Team's Time-Off with BookYourPTO
-        </h2>
-        <p class="text-xl text-white/90 mb-10 max-w-2xl mx-auto">
-          Start managing leave requests in 5 minutes. No credit card required.
-        </p>
-        <div class="flex flex-col sm:flex-row gap-4 justify-center">
-          <NuxtLink to="/register">
-            <button class="px-10 py-4 bg-white text-gray-900 hover:bg-white/90 rounded-lg font-semibold text-lg shadow-2xl hover:scale-105 transition-all duration-300 flex items-center gap-2">
-              <Icon name="lucide:rocket" class="w-5 h-5" />
-              Get Started
-            </button>
-          </NuxtLink>
-          <a href="https://github.com/anhourtec/BookYourPTO" target="_blank" rel="noopener noreferrer">
-            <button class="px-10 py-4 border-2 border-white text-white hover:bg-white/20 rounded-lg font-semibold text-lg hover:scale-105 transition-all duration-300 flex items-center gap-2">
-              <Icon name="lucide:github" class="w-5 h-5" />
-              View on GitHub
-            </button>
-          </a>
-        </div>
-      </div>
-    </section>
+        <button
+          class="group px-12 py-5 bg-[rgb(var(--primary))] text-[rgb(var(--primary-foreground))] rounded-lg flex items-center justify-center gap-2 text-lg font-medium shadow-lg transition-all hover:opacity-90 hover:scale-105 hover:shadow-xl"
+        >
+          <Icon
+            name="lucide:github"
+            class="w-5 h-5 transition-transform group-hover:scale-110"
+          />
+          View on GitHub
+        </button>
+      </a>
+    </div>
+
+    <!-- Footer Text -->
+    <p
+      v-motion
+      :initial="{ opacity: 0 }"
+      :visible="{ opacity: 1 }"
+      class="mt-8 text-sm text-primary-foreground/80"
+    >
+      No credit card required • Deploy in 5 minutes • Open source forever
+    </p>
+  </div>
+</section>
+
   </div>
 </template>
 
