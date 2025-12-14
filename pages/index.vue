@@ -234,13 +234,12 @@
             class="relative"
           >
             <div class="rounded-2xl overflow-hidden shadow-2xl border border-border bg-card">
-              <div class="aspect-[4/3] bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-blue-950/20 dark:via-background dark:to-purple-950/20 flex items-center justify-center">
-                <div class="text-center space-y-4 p-8">
-                  <Icon name="lucide:calendar-days" class="w-32 h-32 mx-auto text-muted-foreground/30" />
-                  <p class="text-muted-foreground text-lg">Interactive Calendar View</p>
+                  <img 
+                    src="/views/calendar_view.png" 
+                    alt="Interactive Calendar View - BookYourPTO dashboard showing team availability and leave requests"
+                    class="w-full h-auto object-contain scale-105 hover:scale-110 transition-transform duration-500"
+                  />
                 </div>
-              </div>
-            </div>
             <div class="absolute -bottom-6 -right-6 w-32 h-32 bg-primary/20 rounded-full blur-3xl -z-10"></div>
           </div>
         </div>
