@@ -25,7 +25,7 @@ export const useHeaderNavigation = (
   const userMenuItems = computed(() => {
     const items = [
       { to: userCalendarPath.value, label: 'My calendar', icon: 'lucide:calendar', show: isAuthenticated.value && !!currentUserId.value },       
-      { to: '/#', label: 'Dashboard', icon: 'lucide:layout-dashboard', show: true },
+      { to: '/dashboard', label: 'Dashboard', icon: 'lucide:layout-dashboard', show: true },
     ]
     return items.filter(item => item.show)
   })
