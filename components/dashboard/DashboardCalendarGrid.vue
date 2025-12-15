@@ -1,34 +1,24 @@
 <template>
-  <div class="bg-[rgb(var(--card))] rounded-lg border border-[rgb(var(--border))] overflow-hidden shadow-sm">
+  <div class="bg-[rgb(var(--card))] rounded-xl border border-[rgb(var(--border))] overflow-hidden shadow-md">
     <!-- Day Headers -->
-    <div class="flex items-center gap-2 sm:gap-4 px-2 sm:px-4 py-2.5 bg-[rgb(var(--muted))]/50 border-b border-[rgb(var(--border))]">
+    <div class="flex items-center gap-2 sm:gap-4 px-2 sm:px-4 py-3 bg-[rgb(var(--muted))]/50 border-b border-[rgb(var(--border))]">
       <!-- Spacer for user column - responsive -->
       <div class="w-20 sm:w-52 flex-shrink-0" />
-      
-      <!-- Day headers -->
-      <div class="flex-1 overflow-x-auto">
-        <div class="flex gap-0">
+
+      <!-- Day headers - no overflow -->
+      <div class="flex-1 min-w-0">
+        <div class="grid gap-0.5 sm:gap-0" :style="{ gridTemplateColumns: `repeat(${headerDays.length}, minmax(0, 1fr))` }">
           <div
             v-for="day in headerDays"
             :key="day.dateKey"
-            :class="[
-              'text-center',
-              isMobile ? 'flex-1 min-w-[40px]' : 'w-8 flex-shrink-0'
-            ]"
+            class="text-center py-1"
           >
-            <!-- Day of week letter -->
+            <!-- Day of week letter only -->
             <div
-              class="text-[10px] font-semibold uppercase tracking-wide"
+              class="text-xs sm:text-sm font-bold uppercase tracking-wider"
               :class="getDayHeaderClass(day)"
             >
               {{ day.dayLetter }}
-            </div>
-            <!-- Date number -->
-            <div
-              class="text-xs font-medium"
-              :class="getDateNumberClass(day)"
-            >
-              {{ day.date.getDate() }}
             </div>
           </div>
         </div>
@@ -38,48 +28,28 @@
     <!-- User Rows -->
     <div class="divide-y divide-[rgb(var(--border))]">
       <template v-if="users.length > 0">
-        <div
+        <UserCalendarRow
           v-for="user in users"
           :key="user.id"
-          class="px-2 sm:px-4 hover:bg-[rgb(var(--muted))]/30 transition-colors"
-        >
-          <UserCalendarRow
-            :user="user"
-            :visible-days="getUserDays(user)"
-            :current-month="currentMonth"
-            :week-start-day="weekStartDay"
-            :is-mobile="isMobile"
-            @day-click="$emit('day-click', $event)"
-          />
-        </div>
+          :user="user"
+          :visible-days="getUserDays(user)"
+          :current-month="currentMonth"
+          :week-start-day="weekStartDay"
+          :is-mobile="isMobile"
+          :today="todayDate"
+          @day-click="$emit('day-click', $event)"
+        />
       </template>
       
       <!-- Empty State -->
-      <div v-else class="px-4 py-12 text-center">
-        <div class="w-16 h-16 rounded-full bg-[rgb(var(--muted))] flex items-center justify-center mx-auto mb-4">
-          <Icon name="lucide:users" class="w-8 h-8 text-[rgb(var(--muted-foreground))]" />
+      <div v-else class="px-4 py-16 text-center">
+        <div class="w-20 h-20 rounded-full bg-[rgb(var(--muted))]/50 flex items-center justify-center mx-auto mb-4">
+          <Icon name="lucide:users" class="w-10 h-10 text-[rgb(var(--muted-foreground))]/70" />
         </div>
-        <h3 class="text-base font-semibold text-[rgb(var(--foreground))] mb-2">No users found</h3>
-        <p class="text-sm text-[rgb(var(--muted-foreground))]">
-          Try adjusting your filters or add new users.
+        <h3 class="text-lg font-bold text-[rgb(var(--foreground))] mb-2">No users found</h3>
+        <p class="text-sm text-[rgb(var(--muted-foreground))] max-w-sm mx-auto">
+          Try adjusting your filters to see more users.
         </p>
-      </div>
-    </div>
-
-    <!-- Add New User Row -->
-    <div
-      v-if="canAddUsers"
-      class="px-2 sm:px-4 py-3 border-t border-[rgb(var(--border))] hover:bg-[rgb(var(--muted))]/30 transition-colors cursor-pointer"
-      @click="$emit('add-user')"
-    >
-      <div class="flex items-center gap-2 sm:gap-3">
-        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[rgb(var(--muted))] flex items-center justify-center ring-2 ring-[rgb(var(--border))]">
-          <Icon name="lucide:plus" class="w-4 h-4 sm:w-5 sm:h-5 text-[rgb(var(--muted-foreground))]" />
-        </div>
-        <div>
-          <div class="text-sm font-medium text-[rgb(var(--primary))]">New user</div>
-          <div class="text-xs text-[rgb(var(--muted-foreground))] hidden sm:block">Add someone else</div>
-        </div>
       </div>
     </div>
   </div>
@@ -127,12 +97,14 @@ interface Props {
   weekStartDay?: number
   canAddUsers?: boolean
   isMobile?: boolean
+  today?: Date
 }
 
 const props = withDefaults(defineProps<Props>(), {
   weekStartDay: 0,
   canAddUsers: false,
   isMobile: false,
+  today: () => new Date(),
 })
 
 defineEmits<{
@@ -143,10 +115,20 @@ defineEmits<{
 const dayLetters: string[] = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 const mondayStartDayLetters: string[] = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
-// Get today's date for comparison
-const today = computed(() => {
-  const now = new Date()
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate())
+// Helper function to compare dates by calendar day (ignoring time)
+const isSameDay = (a: Date, b: Date): boolean => {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  )
+}
+
+// Use timezone-aware today from props
+const todayDate = computed(() => {
+  const date = new Date(props.today)
+  date.setHours(0, 0, 0, 0)
+  return date
 })
 
 // Generate all visible days for the header
@@ -155,7 +137,7 @@ const headerDays = computed(() => {
   
   if (props.isMobile) {
     // Mobile: Show 7 days starting from today
-    const startDate = new Date(today.value)
+    const startDate = new Date(todayDate.value)
     
     for (let i = 0; i < 7; i++) {
       const date = new Date(startDate)
@@ -164,13 +146,13 @@ const headerDays = computed(() => {
       const dayOfWeek = date.getDay()
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
       const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-      
+
       days.push({
         date,
         dateKey,
         dayLetter: props.weekStartDay === 1 ? (mondayStartDayLetters[dayOfWeek] || 'M') : (dayLetters[dayOfWeek] || 'S'),
         isCurrentMonth: date.getMonth() === props.currentMonth,
-        isToday: i === 0,
+        isToday: isSameDay(date, todayDate.value),
         isWeekend,
         isHoliday: false,
         holiday: undefined,
@@ -200,7 +182,7 @@ const headerDays = computed(() => {
         dateKey,
         dayLetter: props.weekStartDay === 1 ? (mondayStartDayLetters[i % 7] || 'M') : (dayLetters[dayOfWeek] || 'S'),
         isCurrentMonth: date.getMonth() === props.currentMonth,
-        isToday: date.getTime() === today.value.getTime(),
+        isToday: isSameDay(date, todayDate.value),
         isWeekend,
         isHoliday: false,
         holiday: undefined,

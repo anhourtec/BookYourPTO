@@ -204,15 +204,12 @@ const handleFilterUpdate = (id: string, value: string | string[]) => {
       break
     case 'departments':
       const deptValues = value as string[]
-      // If 'all' is selected or all departments are selected, clear the filter
-      if (deptValues.includes('all') && deptValues.length === props.departments.length + 1) {
-        localFilters.departmentIds = []
-      } else if (deptValues.includes('all')) {
-        // 'all' was just selected, select everything
+      // If 'all' is included, clear the filter (show all)
+      if (deptValues.includes('all')) {
         localFilters.departmentIds = []
       } else {
-        // Filter out 'all' and store specific departments
-        localFilters.departmentIds = deptValues.filter(v => v !== 'all')
+        // Store only specific department IDs
+        localFilters.departmentIds = deptValues
       }
       break
   }

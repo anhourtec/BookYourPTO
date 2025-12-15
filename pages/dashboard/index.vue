@@ -22,32 +22,30 @@
         :month="month"
         :total-users="users.length"
         :active-filter-count="activeFilterCount"
-        :can-create-leave="true"
         @toggle-filter="filterModalOpen = true"
         @prev-period="navigatePeriod(-1)"
         @next-period="navigatePeriod(1)"
-        @add-leave="openLeaveModal()"
       />
 
       <!-- Loading State -->
-      <div v-if="loading" class="flex flex-col items-center justify-center py-12 sm:py-16">
-        <Icon name="lucide:loader-2" class="w-8 sm:w-10 h-8 sm:h-10 animate-spin text-[rgb(var(--primary))] mb-3" />
-        <p class="text-[rgb(var(--muted-foreground))] text-sm">Loading dashboard...</p>
+      <div v-if="loading" class="flex flex-col items-center justify-center py-16 sm:py-20 bg-[rgb(var(--card))] rounded-xl border border-[rgb(var(--border))]">
+        <Icon name="lucide:loader-2" class="w-10 sm:w-12 h-10 sm:h-12 animate-spin text-[rgb(var(--primary))] mb-4" />
+        <p class="text-[rgb(var(--muted-foreground))] text-sm font-medium">Loading dashboard...</p>
       </div>
 
       <!-- Error State -->
       <div
         v-else-if="error"
-        class="flex flex-col items-center justify-center py-12 sm:py-16 bg-[rgb(var(--card))] rounded-lg border border-[rgb(var(--border))]"
+        class="flex flex-col items-center justify-center py-16 sm:py-20 bg-[rgb(var(--card))] rounded-xl border border-[rgb(var(--border))]"
       >
-        <div class="w-12 sm:w-16 h-12 sm:h-16 rounded-full bg-[rgb(var(--destructive))]/10 flex items-center justify-center mb-3 sm:mb-4">
-          <Icon name="lucide:alert-circle" class="w-6 sm:w-8 h-6 sm:h-8 text-[rgb(var(--destructive))]" />
+        <div class="w-16 sm:w-20 h-16 sm:h-20 rounded-full bg-[rgb(var(--destructive))]/10 flex items-center justify-center mb-4 sm:mb-5">
+          <Icon name="lucide:alert-circle" class="w-8 sm:w-10 h-8 sm:h-10 text-[rgb(var(--destructive))]" />
         </div>
-        <h3 class="text-base sm:text-lg font-semibold text-[rgb(var(--foreground))] mb-2">Failed to load dashboard</h3>
-        <p class="text-xs sm:text-sm text-[rgb(var(--muted-foreground))] mb-4 sm:mb-6 text-center max-w-md px-4">{{ error }}</p>
+        <h3 class="text-lg sm:text-xl font-bold text-[rgb(var(--foreground))] mb-2">Failed to load dashboard</h3>
+        <p class="text-sm text-[rgb(var(--muted-foreground))] mb-6 text-center max-w-md px-4">{{ error }}</p>
         <button
           type="button"
-          class="bg-[rgb(var(--primary))] text-[rgb(var(--primary-foreground))] px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg hover:opacity-90 transition-opacity text-sm font-medium"
+          class="bg-[rgb(var(--primary))] text-[rgb(var(--primary-foreground))] px-5 py-2.5 rounded-lg hover:opacity-90 transition-opacity text-sm font-semibold shadow-md"
           @click="loadDashboard"
         >
           Try Again
@@ -57,12 +55,14 @@
       <!-- Calendar Grid -->
       <DashboardCalendarGrid
         v-else
-        :users="users"
+        :users="users as any"
         :year="year"
         :current-month="month"
         :public-holidays="publicHolidays"
         :week-start-day="weekStartDay"
-        :can-add-users="canManageUsers"
+        :can-add-users="false"
+        :is-mobile="isMobile"
+        :today="todayInOrgTz"
         @day-click="onDayClick"
         @add-user="navigateToAddUser"
       />
@@ -95,6 +95,69 @@
         @submit="handleCreateLeave"
         @cancel="handleCancelLeave"
       />
+
+      <!-- Group Booking Modal -->
+      <GroupBookingModal
+        :open="groupBookingModalOpen"
+        :departments="departments as any"
+        :leave-types="leaveTypes"
+        @close="groupBookingModalOpen = false"
+        @submit="handleGroupBooking"
+      />
+    </div>
+
+    <!-- Floating Action Button -->
+    <div class="fixed right-4 bottom-6 sm:right-6 sm:bottom-10 flex flex-col items-end gap-3 z-50">
+      <Transition name="fab-actions">
+        <div
+          v-if="fabOpen"
+          class="flex flex-col items-end gap-2 mb-1"
+        >
+          <!-- Book Time Off -->
+          <button
+            class="flex items-center gap-2 rounded-full bg-[rgb(var(--primary))] text-[rgb(var(--primary-foreground))] px-3 py-1.5 shadow-lg hover:opacity-90 text-sm transition-all"
+            @click="openLeaveModal(); fabOpen = false"
+          >
+            <span class="font-medium">Book time off</span>
+            <span class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+              <Icon name="lucide:calendar-plus" class="w-4 h-4" />
+            </span>
+          </button>
+
+          <!-- Group Booking -->
+          <button
+            v-if="canAccessGroupBooking"
+            class="flex items-center gap-2 rounded-full bg-[rgb(var(--primary))] text-[rgb(var(--primary-foreground))] px-3 py-1.5 shadow-lg hover:opacity-90 text-sm transition-all"
+            @click="groupBookingModalOpen = true; fabOpen = false"
+          >
+            <span class="font-medium">Group Booking</span>
+            <span class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+              <Icon name="lucide:users" class="w-4 h-4" />
+            </span>
+          </button>
+
+          <!-- Lock Dates (placeholder for future) -->
+          <button
+            v-if="canAccessGroupBooking"
+            class="flex items-center gap-2 rounded-full bg-[rgb(var(--primary))] text-[rgb(var(--primary-foreground))] px-3 py-1.5 shadow-lg hover:opacity-90 text-sm transition-all opacity-60 cursor-not-allowed"
+            disabled
+            title="Coming soon"
+          >
+            <span class="font-medium">Lock Dates</span>
+            <span class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+              <Icon name="lucide:lock" class="w-4 h-4" />
+            </span>
+          </button>
+        </div>
+      </Transition>
+
+      <button
+        class="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[rgb(var(--primary))] text-[rgb(var(--primary-foreground))] shadow-xl flex items-center justify-center hover:opacity-90 transition-all"
+        :class="fabOpen ? 'rotate-45' : ''"
+        @click="fabOpen = !fabOpen"
+      >
+        <Icon name="lucide:plus" class="w-5 h-5 sm:w-6 sm:h-6" />
+      </button>
     </div>
   </div>
 </template>
@@ -104,6 +167,8 @@ import DashboardHeader from '~/components/dashboard/DashboardHeader.vue'
 import DashboardCalendarGrid from '~/components/dashboard/DashboardCalendarGrid.vue'
 import DashboardFilterModal from '~/components/dashboard/DashboardFilterModal.vue'
 import LeaveRequestModal from '~/components/calendar/LeaveRequestModal.vue'
+import GroupBookingModal from '~/components/calendar/GroupBookingModal.vue'
+import { useCalendar } from '~/composables/useCalendar'
 
 import type { Leave, PublicHoliday, LeaveType, Department } from '~/types/api'
 import type { User } from '~/types/user'
@@ -122,7 +187,7 @@ interface DashboardUser {
     id: string
     name: string
     color?: string
-  }
+  } | null
   leaves: Leave[]
 }
 
@@ -147,9 +212,19 @@ interface DayInfo {
 
 // Composables
 const router = useRouter()
-const { getUser } = usePermissions()
+const { getUser, canCreateGroupBooking } = usePermissions()
 const { ensureValidToken } = useAuth()
 const api = useApi()
+const { loadOrgTimezone, getTodayInOrgTimezone } = useCalendar()
+
+// Detect mobile
+const isMobile = ref(false)
+
+// FAB state
+const fabOpen = ref(false)
+
+// Timezone-aware today
+const todayInOrgTz = ref<Date>(new Date())
 
 // State
 const loading = ref(true)
@@ -186,12 +261,19 @@ const selectedUserId = ref('')
 const selectedUserName = ref('')
 const selectedUserJobTitle = ref('')
 
+// Group booking modal state
+const groupBookingModalOpen = ref(false)
+
 // Current user
 const currentUser = computed(() => getUser() as User | null)
 
 const canManageUsers = computed(() => {
   const role = currentUser.value?.role
   return ['ADMINISTRATOR', 'EXECUTIVE'].includes(role || '')
+})
+
+const canAccessGroupBooking = computed(() => {
+  return canCreateGroupBooking()
 })
 
 // Count active filters
@@ -209,6 +291,10 @@ const loadDashboard = async () => {
   error.value = null
 
   try {
+    // Load organization timezone first
+    await loadOrgTimezone()
+    todayInOrgTz.value = getTodayInOrgTimezone()
+
     // Ensure valid token before making API calls
     const isValid = await ensureValidToken()
     if (!isValid) {
@@ -246,7 +332,7 @@ const loadDashboard = async () => {
     // Load departments for filter (uses api composable with auto-refresh)
     if (departments.value.length === 0) {
       const depts = await api.fetchDepartments()
-      departments.value = depts
+      departments.value = depts as any
     }
 
     // Load leave types for modal (uses api composable with auto-refresh)
@@ -371,8 +457,78 @@ const navigateToAddUser = () => {
   router.push('/users')
 }
 
+// Handle group booking
+const handleGroupBooking = async (payload: {
+  departmentId: string
+  leaveTypeId: string
+  startDate: string
+  endDate: string
+  startHalf: 'FULL_DAY' | 'FIRST_HALF' | 'SECOND_HALF'
+  endHalf: 'FULL_DAY' | 'FIRST_HALF' | 'SECOND_HALF'
+  reason?: string
+}) => {
+  try {
+    const token = localStorage.getItem('auth_token')
+    const response = await $fetch('/api/leaves/group-booking', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: payload,
+    })
+
+    groupBookingModalOpen.value = false
+
+    // Show success message with details
+    const summary = response.summary
+    const message = `Group booking created!\n\n✓ ${summary.created} leave requests created\n${summary.skipped > 0 ? `⚠ ${summary.skipped} users skipped\n` : ''}${summary.errors > 0 ? `✗ ${summary.errors} errors` : ''}`
+    alert(message)
+
+    await loadDashboard()
+  } catch (err: any) {
+    console.error('Failed to create group booking:', err)
+    alert(err.data?.message || err.message || 'Failed to create group booking')
+  }
+}
+
+// Check screen size for mobile detection
+const checkMobile = () => {
+  if (process.client) {
+    isMobile.value = window.innerWidth < 640
+  }
+}
+
 // Lifecycle
 onMounted(() => {
   loadDashboard()
+
+  // Setup mobile detection
+  checkMobile()
+  if (process.client) {
+    window.addEventListener('resize', checkMobile)
+  }
+})
+
+onUnmounted(() => {
+  if (process.client) {
+    window.removeEventListener('resize', checkMobile)
+  }
 })
 </script>
+
+<style scoped>
+.fab-actions-enter-active,
+.fab-actions-leave-active {
+  transition: all 0.3s ease;
+}
+
+.fab-actions-enter-from,
+.fab-actions-leave-to {
+  opacity: 0;
+  transform: translateY(10px) scale(0.95);
+}
+
+.fab-actions-enter-to,
+.fab-actions-leave-from {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+</style>

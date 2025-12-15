@@ -14,7 +14,7 @@ export interface DashboardUser {
     id: string
     name: string
     color?: string
-  }
+  } | null
   leaves: Leave[]
 }
 
@@ -215,8 +215,8 @@ export const useDashboard = () => {
 
       days.push({
         date,
-        dateKey: date.toISOString().split('T')[0],
-        dayLetter: dayLetters[i % 7],
+        dateKey: date.toISOString().split('T')[0] || '',
+        dayLetter: dayLetters[i % 7] || 'S',
         isCurrentMonth: date.getMonth() === m,
         isToday: date.getTime() === today.getTime(),
         isWeekend,

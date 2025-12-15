@@ -49,17 +49,9 @@
       </button>
     </div>
 
-    <!-- Right side: Add button -->
+    <!-- Right side: Spacer (actions moved to FAB) -->
     <div class="flex items-center gap-2">
-      <button
-        v-if="canCreateLeave"
-        type="button"
-        class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[rgb(var(--primary))] text-[rgb(var(--primary-foreground))] shadow-lg flex items-center justify-center hover:opacity-90 transition-opacity"
-        @click="$emit('add-leave')"
-        title="Book time off"
-      >
-        <Icon name="lucide:plus" class="w-4 h-4 sm:w-5 sm:h-5" />
-      </button>
+      <!-- Actions moved to floating action button -->
     </div>
   </div>
 </template>
@@ -70,19 +62,16 @@ interface Props {
   month: number
   totalUsers: number
   activeFilterCount?: number
-  canCreateLeave?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   activeFilterCount: 0,
-  canCreateLeave: true,
 })
 
 defineEmits<{
   'toggle-filter': []
   'prev-period': []
   'next-period': []
-  'add-leave': []
 }>()
 
 const monthNames = [

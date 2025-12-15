@@ -79,10 +79,11 @@ export const usePermissions = () => {
 
   /**
    * ✅ Can create group bookings
-   * Only ADMINISTRATOR and EXECUTIVE
+   * ADMINISTRATOR, EXECUTIVE can create for any department
+   * DEPARTMENT_HEAD can create for their own department
    */
   const canCreateGroupBooking = () => {
-    return hasRole(['ADMINISTRATOR', 'EXECUTIVE'])
+    return hasRole(['ADMINISTRATOR', 'EXECUTIVE', 'DEPARTMENT_HEAD'])
   }
 
   /**

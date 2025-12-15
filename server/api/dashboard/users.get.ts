@@ -37,14 +37,21 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Get organization privacy settings
+    // Get organization privacy settings and leave configuration
     const organization = await prisma.organization.findUnique({
       where: { id: auth.organizationId },
       select: {
         calendarViewRestricted: true,
         departmentViewRestricted: true,
         weekStartDay: true,
+        leaveYearStartMonth: true,
+        defaultLeaveAllowance: true,
       },
+    })
+
+    console.log('📊 Organization settings:', {
+      defaultLeaveAllowance: organization?.defaultLeaveAllowance,
+      leaveYearStartMonth: organization?.leaveYearStartMonth,
     })
 
     const isAdmin = ['ADMINISTRATOR', 'EXECUTIVE'].includes(currentUser.role)
@@ -128,7 +135,10 @@ export default defineEventHandler(async (event) => {
         jobTitle: true,
         role: true,
         departmentId: true,
-        annualLeaveBalance: true,
+        customLeaveAllowance: true,
+        allowCarryForward: true,
+        maxCarryForwardDays: true,
+        carryOverBalance: true,
         department: {
           select: {
             id: true,
@@ -186,11 +196,90 @@ export default defineEventHandler(async (event) => {
       },
     })
 
-    // Build response
-    const usersWithLeaves = users.map(user => ({
-      ...user,
-      leaves: leavesByUser[user.id] || [],
-    }))
+    // Calculate leave balances for each user
+    // Use the current fiscal year (not the query year which is for the calendar view)
+    const fiscalStartMonth = organization?.leaveYearStartMonth ?? 1
+    const now = new Date()
+    const currentMonth = now.getMonth() + 1
+
+    // Determine fiscal year
+    const fiscalYear = currentMonth >= fiscalStartMonth ? now.getFullYear() : now.getFullYear() - 1
+    const fiscalPeriodStart = new Date(fiscalYear, fiscalStartMonth - 1, 1)
+    const fiscalPeriodEnd = new Date(fiscalYear + 1, fiscalStartMonth - 1, 0)
+
+    console.log('📊 Dashboard balance calculation:', {
+      fiscalStartMonth,
+      fiscalYear,
+      fiscalPeriodStart: fiscalPeriodStart.toISOString(),
+      fiscalPeriodEnd: fiscalPeriodEnd.toISOString()
+    })
+
+    // Fetch all leaves for balance calculation
+    const allLeavesForBalance = await prisma.leave.findMany({
+      where: {
+        userId: { in: users.map(u => u.id) },
+        organizationId: auth.organizationId,
+        startDate: {
+          gte: fiscalPeriodStart,
+          lte: fiscalPeriodEnd,
+        },
+        status: {
+          in: ['APPROVED', 'PENDING'],
+        },
+      },
+      include: {
+        leaveType: true,
+      },
+    })
+
+    // Group leaves by user for balance calculation
+    const leavesByUserForBalance: Record<string, typeof allLeavesForBalance> = {}
+    for (const leave of allLeavesForBalance) {
+      if (!leavesByUserForBalance[leave.userId]) {
+        leavesByUserForBalance[leave.userId] = []
+      }
+      leavesByUserForBalance[leave.userId].push(leave)
+    }
+
+    // Build response with calculated balances
+    const usersWithLeaves = users.map(user => {
+      // Calculate total used days (only deductible leaves)
+      const userLeaves = leavesByUserForBalance[user.id] || []
+      const totalUsed = userLeaves
+        .filter(l => l.leaveType && l.leaveType.annualAllowance != null && l.leaveType.annualAllowance > 0)
+        .reduce((sum, l) => sum + (l.totalDays || 0), 0)
+
+      // Calculate total allowance
+      const baseAllowance = user.customLeaveAllowance ?? organization?.defaultLeaveAllowance ?? 0
+      const carriedOver = (user.allowCarryForward !== false) ? (user.carryOverBalance || 0) : 0
+      const totalAllowance = baseAllowance + carriedOver
+      const totalRemaining = totalAllowance - totalUsed
+
+      if (totalUsed > 0 || totalAllowance > 0) {
+        console.log(`📊 User ${user.firstName} ${user.lastName} balance:`, {
+          baseAllowance,
+          carriedOver,
+          totalAllowance,
+          totalUsed,
+          totalRemaining,
+          leavesInPeriod: userLeaves.length,
+        })
+      }
+
+      return {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        avatar: user.avatar,
+        jobTitle: user.jobTitle,
+        role: user.role,
+        departmentId: user.departmentId,
+        annualLeaveBalance: totalRemaining, // Use calculated balance (can be negative)
+        department: user.department,
+        leaves: leavesByUser[user.id] || [],
+      }
+    })
 
     return {
       users: usersWithLeaves,

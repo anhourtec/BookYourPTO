@@ -118,8 +118,8 @@ const handleLogin = async () => {
     localStorage.setItem('refresh_token', response.refreshToken)
     localStorage.setItem('user', JSON.stringify(response.user))
 
-    // Navigate to user's calendar instead of users list
-    navigateTo(`/calendar/${response.user.id}`)
+    // Navigate to dashboard
+    navigateTo('/dashboard')
   } catch (err: any) {
     error.value = err.data?.message || 'Login failed. Please try again.'
   } finally {
