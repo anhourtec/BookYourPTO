@@ -14,10 +14,8 @@ export const useHeaderNavigation = (
     { to: '#', label: 'Docs', show: true },
     // Calendar visible only when logged in
     { to: '/users', label: 'Users', show: isAuthenticated.value && canAccessUsers() },
-    { to: '/settings', label: 'Settings', icon: 'lucide:settings', show: canAccessSettings() },
+    { to: '/settings', label: 'Settings', icon: 'lucide:settings', show: isAuthenticated.value && canAccessSettings() },
     { to: '/approvals', label: 'Approvals', icon: 'lucide:check-circle', show: isAuthenticated.value && canApproveRequests() }
-
-
   ])
   
   const visibleNavLinks = computed(() => navLinks.value.filter(link => link.show))
