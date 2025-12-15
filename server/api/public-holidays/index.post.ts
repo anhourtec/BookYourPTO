@@ -8,7 +8,6 @@ const addHolidayLocationSchema = z.object({
   year: z.number().int().min(2020).max(2050),
 })
 
-// Define the API response type from Nager.Date API
 interface NagerHoliday {
   date: string
   localName: string
@@ -21,7 +20,6 @@ interface NagerHoliday {
   types: string[]
 }
 
-// Fetch holidays from Nager.Date API (Free, no rate limit, CORS enabled)
 async function fetchHolidaysFromAPI(countryCode: string, year: number): Promise<NagerHoliday[]> {
   try {
     const response = await $fetch<NagerHoliday[]>(
@@ -32,11 +30,23 @@ async function fetchHolidaysFromAPI(countryCode: string, year: number): Promise<
         },
       }
     )
-    return Array.isArray(response) ? response : []
+    
+    const publicHolidays = Array.isArray(response) 
+      ? response.filter(h => h.types && h.types.includes('Public'))
+      : []
+    
+    return publicHolidays
   } catch (error) {
     console.error(`Error fetching holidays from Nager.Date API for ${countryCode}:`, error)
     return []
   }
+}
+
+// Simple date parser: treat YYYY-MM-DD as midnight UTC
+// This ensures consistency and prevents timezone-related date shifts
+function parseHolidayDate(dateString: string): Date {
+  // Add T00:00:00.000Z to ensure it's parsed as UTC midnight
+  return new Date(`${dateString}T00:00:00.000Z`)
 }
 
 export default defineEventHandler(async (event) => {
@@ -85,9 +95,6 @@ export default defineEventHandler(async (event) => {
     let holidaysToSave: NagerHoliday[] = allHolidays
 
     if (data.subdivision) {
-      // If subdivision is specified, only include:
-      // 1. Global holidays (apply to entire country)
-      // 2. Holidays specific to this subdivision
       holidaysToSave = allHolidays.filter(holiday => 
         holiday.global || 
         (holiday.counties && holiday.counties.includes(data.subdivision!))
@@ -109,7 +116,7 @@ export default defineEventHandler(async (event) => {
             organizationId: decoded.organizationId,
             country: data.country,
             name: holiday.name,
-            date: new Date(holiday.date),
+            date: parseHolidayDate(holiday.date),
             isRecurring: holiday.fixed === false,
             region: data.subdivision || (holiday.counties?.join(', ') || null),
             affectedDepartments: [],
@@ -125,7 +132,7 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      message: `Added ${createdHolidays.length} holidays for ${locationName}`,
+      message: `Added ${createdHolidays.length} public holidays for ${locationName}`,
       count: createdHolidays.length,
     }
   } catch (error: any) {

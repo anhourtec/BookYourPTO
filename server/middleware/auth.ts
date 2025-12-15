@@ -28,11 +28,10 @@ export default defineEventHandler(async (event) => {
     '/api/auth/verify-email',
     '/api/auth/reset-password',
     '/api/auth/forgot-password',
-
-    // Reset Routes for Passwords
     '/api/auth/verify-reset-token',
     '/api/_nuxt_icon',
     '/api/test-db',
+    '/api/github-stars', // ✅ Added GitHub stars endpoint
   ]
 
   if (publicRoutes.some(route => path.startsWith(route))) {

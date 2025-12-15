@@ -23,6 +23,7 @@ export default defineEventHandler(async (event) => {
         name: true,
         timezone: true,
         leaveYearStartMonth: true,
+        businessDays: true,
         defaultLeaveAllowance: true,
         weekStartDay: true,
         calendarViewRestricted: true,

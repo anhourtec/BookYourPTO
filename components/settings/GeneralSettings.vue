@@ -24,29 +24,59 @@
             />
           </div>
 
-          <!-- Time Zone -->
+          <!-- Time Zone Selector -->
           <div>
             <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
               Time zone
             </label>
-            <select
-              v-model="form.timezone"
-              :disabled="!canEditSettings()"
-              class="w-full px-4 py-2.5 bg-[rgb(var(--muted))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] focus:ring-2 focus:ring-[rgb(var(--primary))] focus:border-transparent outline-none transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <option value="UTC">UTC</option>
-              <option value="Europe/London">UK (Dublin, Edinburgh, Lisbon, London)</option>
-              <option value="America/New_York">US Eastern</option>
-              <option value="America/Chicago">US Central</option>
-              <option value="America/Denver">US Mountain</option>
-              <option value="America/Los_Angeles">US Pacific</option>
-              <option value="America/Toronto">Canada (Toronto)</option>
-              <option value="America/Vancouver">Canada (Vancouver)</option>
-              <option value="Australia/Sydney">Australia (Sydney)</option>
-              <option value="Asia/Tokyo">Asia (Tokyo)</option>
-              <option value="Asia/Singapore">Asia (Singapore)</option>
-              <option value="Asia/Dubai">Asia (Dubai)</option>
-            </select>
+            <div class="relative" ref="timezoneContainerRef">
+              <!-- Display/Search Input -->
+              <div class="relative">
+                <input
+                  v-model="timezoneSearchQuery"
+                  type="text"
+                  placeholder="Search timezone..."
+                  :disabled="!canEditSettings()"
+                  @focus="openDropdown"
+                  @click="openDropdown"
+                  class="w-full px-4 py-2.5 pr-10 bg-[rgb(var(--muted))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] focus:ring-2 focus:ring-[rgb(var(--primary))] focus:border-transparent outline-none transition disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                <Icon 
+                  name="lucide:chevron-down" 
+                  class="absolute right-3 top-3 w-5 h-5 text-[rgb(var(--muted-foreground))] pointer-events-none transition-transform"
+                  :class="{ 'rotate-180': isDropdownOpen }"
+                />
+              </div>
+              
+              <!-- Dropdown Menu -->
+              <div 
+                v-show="isDropdownOpen"
+                class="absolute z-50 w-full mt-1 bg-[rgb(var(--card))] border border-[rgb(var(--border))] rounded-lg shadow-lg overflow-hidden"
+              >
+                <div class="max-h-64 overflow-y-auto">
+                  <div
+                    v-for="tz in displayedTimezones"
+                    :key="tz.value"
+                    @click="selectTimezone(tz)"
+                    class="px-4 py-2.5 hover:bg-[rgb(var(--muted))] cursor-pointer transition"
+                    :class="{ 'bg-[rgb(var(--primary))]/10': form.timezone === tz.value }"
+                  >
+                    <div class="text-sm font-medium text-[rgb(var(--foreground))]">
+                      {{ tz.label }}
+                    </div>
+                    <div class="text-xs text-[rgb(var(--muted-foreground))] mt-0.5">
+                      {{ tz.offset }}
+                    </div>
+                  </div>
+                  <div v-if="displayedTimezones.length === 0" class="px-4 py-6 text-center text-sm text-[rgb(var(--muted-foreground))]">
+                    No timezones found
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p class="text-xs text-[rgb(var(--muted-foreground))] mt-2">
+              Selected: <span class="font-medium">{{ currentTimezoneDisplay }}</span>
+            </p>
           </div>
 
           <!-- Business Hours -->
@@ -229,31 +259,51 @@
 </template>
 
 <script setup lang="ts">
+interface TimezoneOption {
+  value: string
+  label: string
+  offset: string
+  searchText: string
+}
+
+interface FormData {
+  companyName: string
+  timezone: string
+  businessDays: string[]
+  weekStartDay: number
+  leaveYearStart: number
+  defaultLeaveAllowance: number
+  calendarViewHidden: boolean
+  otherDepartmentsHidden: boolean
+}
+
 const api = useApi()
 const { getUser, canAccessSettings } = usePermissions()
 
 const currentUser = computed(() => getUser())
 
-// Check if user can edit settings (ADMINISTRATOR or EXECUTIVE only)
-const canEditSettings = () => {
+const canEditSettings = (): boolean => {
   return canAccessSettings()
 }
 
-const form = ref({
+const form = ref<FormData>({
   companyName: '',
   timezone: 'UTC',
   businessDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
   weekStartDay: 1,
   leaveYearStart: 1,
   defaultLeaveAllowance: 25,
-  calendarViewHidden: false, // false = Visible (gray), true = Hidden (blue)
-  otherDepartmentsHidden: false, // false = Visible (gray), true = Hidden (blue)
+  calendarViewHidden: false,
+  otherDepartmentsHidden: false,
 })
 
-const loading = ref(true)
-const saving = ref(false)
-const error = ref('')
-const successMessage = ref('')
+const loading = ref<boolean>(true)
+const saving = ref<boolean>(false)
+const error = ref<string>('')
+const successMessage = ref<string>('')
+const timezoneSearchQuery = ref<string>('')
+const isDropdownOpen = ref<boolean>(false)
+const timezoneContainerRef = ref<HTMLDivElement | null>(null)
 
 const weekDays = [
   { label: 'Mon', value: 'mon' },
@@ -280,12 +330,113 @@ const months = [
   { value: 12, label: 'December' },
 ]
 
-// Fetch settings on mount
-onMounted(async () => {
-  await fetchSettings()
+// Generate all timezones once and cache them
+const allTimezones = computed<TimezoneOption[]>(() => {
+  const zones: string[] = typeof (Intl as any).supportedValuesOf === 'function' 
+    ? (Intl as any).supportedValuesOf('timeZone') 
+    : [
+      'UTC',
+      'America/New_York',
+      'America/Chicago',
+      'America/Denver',
+      'America/Los_Angeles',
+      'America/Toronto',
+      'America/Vancouver',
+      'Europe/London',
+      'Europe/Paris',
+      'Europe/Berlin',
+      'Asia/Tokyo',
+      'Asia/Shanghai',
+      'Asia/Dubai',
+      'Asia/Singapore',
+      'Australia/Sydney',
+    ]
+  
+  const now = new Date()
+  
+  return zones.map((tz: string): TimezoneOption | null => {
+    try {
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz,
+        timeZoneName: 'shortOffset'
+      })
+      
+      const parts = formatter.formatToParts(now)
+      const offsetPart = parts.find(part => part.type === 'timeZoneName')
+      const offset = offsetPart?.value || ''
+      
+      const label = `${offset} ${tz.replace(/_/g, ' ')}`
+      
+      return {
+        value: tz,
+        label,
+        offset,
+        searchText: `${tz} ${offset}`.toLowerCase()
+      }
+    } catch {
+      return null
+    }
+  })
+  .filter((tz): tz is TimezoneOption => tz !== null)
+  .sort((a: TimezoneOption, b: TimezoneOption): number => {
+    const offsetA = a.offset.replace(/[^\d.+-]/g, '')
+    const offsetB = b.offset.replace(/[^\d.+-]/g, '')
+    return offsetA.localeCompare(offsetB) || a.value.localeCompare(b.value)
+  })
 })
 
-const fetchSettings = async () => {
+// Filter timezones based on search query
+const displayedTimezones = computed<TimezoneOption[]>(() => {
+  const query = timezoneSearchQuery.value.toLowerCase().trim()
+  
+  if (!query) {
+    return allTimezones.value.slice(0, 100)
+  }
+  
+  return allTimezones.value
+    .filter(tz => tz.searchText.includes(query))
+    .slice(0, 100)
+})
+
+// Get current timezone display label
+const currentTimezoneDisplay = computed<string>(() => {
+  const selected = allTimezones.value.find(tz => tz.value === form.value.timezone)
+  return selected ? selected.label : form.value.timezone
+})
+
+// Open dropdown
+const openDropdown = (): void => {
+  if (!canEditSettings()) return
+  isDropdownOpen.value = true
+  timezoneSearchQuery.value = ''
+}
+
+// Select a timezone
+const selectTimezone = (tz: TimezoneOption): void => {
+  form.value.timezone = tz.value
+  timezoneSearchQuery.value = tz.label
+  isDropdownOpen.value = false
+}
+
+// Close dropdown when clicking outside
+const handleClickOutside = (event: MouseEvent): void => {
+  if (timezoneContainerRef.value && !timezoneContainerRef.value.contains(event.target as Node)) {
+    isDropdownOpen.value = false
+    timezoneSearchQuery.value = currentTimezoneDisplay.value
+  }
+}
+
+onMounted(async () => {
+  await fetchSettings()
+  timezoneSearchQuery.value = currentTimezoneDisplay.value
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
+
+const fetchSettings = async (): Promise<void> => {
   loading.value = true
   error.value = ''
   
@@ -295,10 +446,10 @@ const fetchSettings = async () => {
     if (data) {
       form.value.companyName = data.name || ''
       form.value.timezone = data.timezone || 'UTC'
+      form.value.businessDays = data.businessDays || ['mon', 'tue', 'wed', 'thu', 'fri'] // ✅ Load business days
       form.value.weekStartDay = data.weekStartDay ?? 1
       form.value.leaveYearStart = data.leaveYearStartMonth || 1
       form.value.defaultLeaveAllowance = data.defaultLeaveAllowance || 25
-      // Database stores "restricted" - we display as "hidden"
       form.value.calendarViewHidden = data.calendarViewRestricted || false
       form.value.otherDepartmentsHidden = data.departmentViewRestricted || false
     }
@@ -309,10 +460,15 @@ const fetchSettings = async () => {
     loading.value = false
   }
 }
-
-const saveSettings = async () => {
+const saveSettings = async (): Promise<void> => {
   if (!canEditSettings()) {
     error.value = 'You do not have permission to update settings'
+    return
+  }
+
+  // ✅ Validate that at least one business day is selected
+  if (form.value.businessDays.length === 0) {
+    error.value = 'Please select at least one business day'
     return
   }
 
@@ -324,55 +480,40 @@ const saveSettings = async () => {
     const payload = {
       name: form.value.companyName,
       timezone: form.value.timezone,
+      businessDays: form.value.businessDays, // ✅ Include business days
       weekStartDay: form.value.weekStartDay,
       leaveYearStartMonth: form.value.leaveYearStart,
       defaultLeaveAllowance: form.value.defaultLeaveAllowance,
     }
     
-    console.log('💾 Saving settings:', payload)
-    
-    const result = await api.updateSettings(payload)
-    
-    console.log('✅ Settings saved successfully:', result)
+    await api.updateSettings(payload)
 
     successMessage.value = 'Settings saved successfully!'
-    // Clear success message after 3 seconds
     setTimeout(() => {
       successMessage.value = ''
     }, 3000)
   } catch (err: any) {
-    console.error('❌ Error saving settings:', err)
-    console.error('Error details:', {
-      message: err.message,
-      data: err.data,
-      statusCode: err.statusCode,
-    })
+    console.error('Error saving settings:', err)
     error.value = err.data?.message || err.message || 'Failed to save settings'
   } finally {
     saving.value = false
   }
 }
 
-// NEW: Auto-save privacy settings when toggles change
-const savePrivacySettings = async () => {
+const savePrivacySettings = async (): Promise<void> => {
   if (!canEditSettings()) {
     return
   }
 
   try {
     const payload = {
-      calendarViewRestricted: form.value.calendarViewHidden, // Direct mapping
-      departmentViewRestricted: form.value.otherDepartmentsHidden, // Direct mapping
+      calendarViewRestricted: form.value.calendarViewHidden,
+      departmentViewRestricted: form.value.otherDepartmentsHidden,
     }
     
-    console.log('🔒 Auto-saving privacy settings:', payload)
-    
     await api.updateSettings(payload)
-    
-    console.log('✅ Privacy settings saved')
   } catch (err: any) {
-    console.error('❌ Error saving privacy settings:', err)
-    // Revert the toggle on error
+    console.error('Error saving privacy settings:', err)
     await fetchSettings()
   }
 }

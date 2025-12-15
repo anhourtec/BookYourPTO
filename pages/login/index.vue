@@ -113,15 +113,13 @@ const handleLogin = async () => {
       body: form.value,
     })
 
-    // ============================================
-    // UPDATED: Store both access and refresh tokens
-    // ============================================
+    // Store both access and refresh tokens
     localStorage.setItem('auth_token', response.accessToken)
     localStorage.setItem('refresh_token', response.refreshToken)
     localStorage.setItem('user', JSON.stringify(response.user))
 
     // Navigate to dashboard
-    navigateTo('/users')
+    navigateTo('/dashboard')
   } catch (err: any) {
     error.value = err.data?.message || 'Login failed. Please try again.'
   } finally {

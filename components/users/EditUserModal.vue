@@ -357,13 +357,13 @@
 
               <div>
                 <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
-                  Reports To (Manager)
+                  Reports To (Department Head)
                 </label>
                 <select
                   v-model="form.reportsToId"
                   class="w-full px-3 py-2 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--primary))] text-[rgb(var(--foreground))]"
                 >
-                  <option value="">No manager</option>
+                  <option value="">No Department Head</option>
                   <option v-for="manager in potentialManagers" :key="manager.id" :value="manager.id">
                     {{ manager.firstName }} {{ manager.lastName }} ({{ manager.jobTitle || 'No title' }})
                   </option>
@@ -416,7 +416,7 @@
                   </option>
                 </select>
                 <p v-if="form.role" class="text-xs text-[rgb(var(--muted-foreground))] mt-1.5">
-                  {{ userRoles.find((r: { value: any; }) => r.value === form.role)?.description }}
+                  {{ userRoles.find((r: { value: any }) => r.value === form.role)?.description }}
                 </p>
               </div>
 
@@ -450,20 +450,20 @@
                       {{ form.isActive ? 'User can log in and access the system' : 'User is deactivated and cannot log in' }}
                     </p>
                     <p v-if="cannotDeactivate && form.isActive" class="text-xs text-amber-600 mt-1">
-                        {{ cannotDeactivateReason }}
-                      </p>
+                      {{ cannotDeactivateReason }}
+                    </p>
                   </div>
                 </div>
-              <SwitchToggle 
-                v-model="form.isActive" 
-                :disabled="cannotDeactivate && form.isActive"
-                :class="{ 'opacity-50 cursor-not-allowed': cannotDeactivate && form.isActive }"
-              />             
-             </div>
+                <SwitchToggle 
+                  v-model="form.isActive" 
+                  :disabled="cannotDeactivate && form.isActive"
+                  :class="{ 'opacity-50 cursor-not-allowed': cannotDeactivate && form.isActive }"
+                />             
+              </div>
             </div>
           </div>
 
-          <!-- Leave Allowance Tab -->
+          <!-- Leave Allowance Tab - IMPROVED with Carry Forward -->
           <div v-show="activeTab === 'allowance'" class="space-y-4">
             <h3 class="text-lg font-semibold text-[rgb(var(--foreground))]">Leave Balances</h3>
             
@@ -471,66 +471,248 @@
               <div class="flex gap-2">
                 <Icon name="lucide:info" class="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
                 <p class="text-xs text-blue-600">
-                  These are the current leave balances. Leave requests will automatically deduct from these balances.
+                  Current balances are calculated from approved/pending leaves. Configure carry forward and custom allowances below.
                 </p>
               </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
-                  Annual Leave Balance (Days)
-                </label>
-                <input
-                  v-model.number="form.annualLeaveBalance"
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  class="w-full px-3 py-2 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--primary))] text-[rgb(var(--foreground))]"
-                />
-              </div>
+            <!-- Loading Balance -->
+            <div v-if="loadingBalance" class="flex items-center justify-center py-8">
+              <Icon name="lucide:loader-2" class="w-6 h-6 animate-spin text-[rgb(var(--primary))]" />
+            </div>
 
-              <div>
-                <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
-                  Sick Leave Balance (Days)
-                </label>
-                <input
-                  v-model.number="form.sickLeaveBalance"
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  class="w-full px-3 py-2 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--primary))] text-[rgb(var(--foreground))]"
-                />
+            <!-- Current Balance Summary -->
+            <div v-else-if="balanceData" class="mb-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 border border-green-200 dark:border-green-800 rounded-lg">
+              <p class="text-xs text-[rgb(var(--muted-foreground))] mb-2 font-semibold">Current Year Balance</p>
+              <div class="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <p class="text-xs text-[rgb(var(--muted-foreground))]">Total Allowance</p>
+                  <div class="flex items-center justify-center gap-2">
+                    <p class="text-2xl font-bold text-green-600">{{ effectiveAllowance }}</p>
+                    <span 
+                      v-if="effectiveAllowance !== balanceData.totalAllowance"
+                      class="text-xs text-amber-600 font-semibold"
+                    >
+                      (was {{ balanceData.totalAllowance }})
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <p class="text-xs text-[rgb(var(--muted-foreground))]">Used</p>
+                  <p class="text-2xl font-bold text-orange-600">{{ balanceData.totalUsed }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-[rgb(var(--muted-foreground))]">Remaining</p>
+                  <div class="flex items-center justify-center gap-2">
+                    <p class="text-2xl font-bold text-blue-600">{{ effectiveRemaining }}</p>
+                    <span 
+                      v-if="effectiveRemaining !== balanceData.totalRemaining"
+                      class="text-xs text-amber-600 font-semibold"
+                    >
+                      (was {{ balanceData.totalRemaining }})
+                    </span>
+                  </div>
+                </div>
               </div>
-
-              <div>
-                <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
-                  Carry Over Balance (Days)
-                </label>
-                <input
-                  v-model.number="form.carryOverBalance"
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  class="w-full px-3 py-2 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--primary))] text-[rgb(var(--foreground))]"
-                />
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
-                  Custom Leave Allowance (Override)
-                </label>
-                <input
-                  v-model.number="form.customLeaveAllowance"
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  class="w-full px-3 py-2 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--primary))] text-[rgb(var(--foreground))]"
-                  placeholder="Leave empty for default"
-                />
-                <p class="text-xs text-[rgb(var(--muted-foreground))] mt-1.5">
-                  Override the organization's default leave allowance for this user
+              <div 
+                v-if="effectiveAllowance !== balanceData.totalAllowance" 
+                class="mt-3 p-2 bg-amber-50 dark:bg-amber-950/30 rounded border border-amber-200 dark:border-amber-800"
+              >
+                <p class="text-xs text-amber-700 dark:text-amber-400 text-center">
+                  💡 Preview: Values will update after saving changes
                 </p>
+              </div>
+            </div>
+
+            <!-- Balance Configuration -->
+            <div class="space-y-6">
+              <!-- Custom Leave Allowance -->
+              <div class="p-4 bg-[rgb(var(--muted))]/30 rounded-lg border border-[rgb(var(--border))]">
+                <h4 class="text-sm font-semibold text-[rgb(var(--foreground))] mb-3 flex items-center gap-2">
+                  <Icon name="lucide:calendar-check" class="w-4 h-4" />
+                  Annual Leave Allowance
+                </h4>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
+                      Organization Default
+                    </label>
+                    <input
+                      :value="organizationDefaultAllowance"
+                      type="number"
+                      readonly
+                      class="w-full px-3 py-2 bg-[rgb(var(--muted))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] cursor-not-allowed"
+                    />
+                    <p class="text-xs text-[rgb(var(--muted-foreground))] mt-1.5">
+                      Default allowance for all employees
+                    </p>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
+                      Custom Allowance (Override)
+                    </label>
+                    <input
+                      v-model.number="form.customLeaveAllowance"
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      class="w-full px-3 py-2 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--primary))] text-[rgb(var(--foreground))]"
+                      placeholder="Leave empty to use default"
+                    />
+                    <p class="text-xs text-[rgb(var(--muted-foreground))] mt-1.5">
+                      Set custom allowance for this user (optional)
+                    </p>
+                  </div>
+                </div>
+
+                <div class="mt-3 p-3 bg-blue-50 dark:bg-blue-950/30 rounded border border-blue-200 dark:border-blue-800">
+                  <p class="text-xs text-blue-600 dark:text-blue-400">
+                    <strong>Effective Allowance:</strong> {{ form.customLeaveAllowance || organizationDefaultAllowance }} days per year
+                  </p>
+                </div>
+              </div>
+
+              <!-- Carry Forward Settings -->
+              <div class="p-4 bg-[rgb(var(--muted))]/30 rounded-lg border border-[rgb(var(--border))]">
+                <h4 class="text-sm font-semibold text-[rgb(var(--foreground))] mb-3 flex items-center gap-2">
+                  <Icon name="lucide:arrow-right-circle" class="w-4 h-4" />
+                  Carry Forward Settings
+                </h4>
+
+                <!-- Toggle Carry Forward -->
+                <div class="mb-4 p-3 bg-[rgb(var(--background))] rounded-lg border border-[rgb(var(--border))]">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-start gap-3">
+                      <Icon 
+                        :name="form.allowCarryForward ? 'lucide:check-circle' : 'lucide:x-circle'" 
+                        class="w-5 h-5 flex-shrink-0 mt-0.5"
+                        :class="form.allowCarryForward ? 'text-green-600' : 'text-[rgb(var(--muted-foreground))]'"
+                      />
+                      <div>
+                        <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-1">
+                          Allow Carry Forward
+                        </label>
+                        <p class="text-xs text-[rgb(var(--muted-foreground))]">
+                          {{ form.allowCarryForward 
+                            ? 'User can carry forward unused leave to next year' 
+                            : 'Unused leave will not carry forward (use it or lose it)' 
+                          }}
+                        </p>
+                      </div>
+                    </div>
+                    <SwitchToggle v-model="form.allowCarryForward" />
+                  </div>
+                </div>
+
+                <!-- Carry Forward Limit (only shown if enabled) -->
+                <div v-if="form.allowCarryForward" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
+                      Organization Default Carry Forward
+                    </label>
+                    <input
+                      :value="organizationCarryForwardDays"
+                      type="number"
+                      readonly
+                      class="w-full px-3 py-2 bg-[rgb(var(--muted))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] cursor-not-allowed"
+                    />
+                    <p class="text-xs text-[rgb(var(--muted-foreground))] mt-1.5">
+                      Maximum days all employees can carry forward
+                    </p>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
+                      Custom Carry Forward Limit (Override)
+                    </label>
+                    <input
+                      v-model.number="form.maxCarryForwardDays"
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      class="w-full px-3 py-2 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--primary))] text-[rgb(var(--foreground))]"
+                      placeholder="Leave empty to use default"
+                    />
+                    <p class="text-xs text-[rgb(var(--muted-foreground))] mt-1.5">
+                      Set custom carry forward limit (optional)
+                    </p>
+                  </div>
+                </div>
+
+                <div v-if="form.allowCarryForward" class="mt-3 p-3 bg-amber-50 dark:bg-amber-950/30 rounded border border-amber-200 dark:border-amber-800">
+                  <p class="text-xs text-amber-700 dark:text-amber-400">
+                    <strong>Max Carry Forward:</strong> {{ form.maxCarryForwardDays || organizationCarryForwardDays }} days
+                    <span v-if="organizationCarryForwardExpires"> 
+                      (expires after {{ organizationCarryForwardExpiryMonths }} months)
+                    </span>
+                  </p>
+                </div>
+              </div>
+
+              <!-- Current Carry Over -->
+              <div class="p-4 bg-[rgb(var(--muted))]/30 rounded-lg border border-[rgb(var(--border))]">
+                <h4 class="text-sm font-semibold text-[rgb(var(--foreground))] mb-3 flex items-center gap-2">
+                  <Icon name="lucide:calendar-arrow-down" class="w-4 h-4" />
+                  Current Carried Over Balance
+                </h4>
+
+                <div>
+                  <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
+                    Days Carried From Previous Year
+                  </label>
+                  <input
+                    v-model.number="form.carryOverBalance"
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    class="w-full px-3 py-2 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--primary))] text-[rgb(var(--foreground))]"
+                  />
+                  <p class="text-xs text-[rgb(var(--muted-foreground))] mt-1.5">
+                    Days this user carried over from last year (manual adjustment)
+                  </p>
+                </div>
+              </div>
+
+              <!-- Read-Only Calculated Balances -->
+              <div class="p-4 bg-[rgb(var(--muted))]/30 rounded-lg border border-[rgb(var(--border))]">
+                <h4 class="text-sm font-semibold text-[rgb(var(--foreground))] mb-3 flex items-center gap-2">
+                  <Icon name="lucide:calculator" class="w-4 h-4" />
+                  Current Balance Breakdown
+                </h4>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
+                      Annual Leave Remaining
+                    </label>
+                    <input
+                      :value="balanceData?.totalRemaining ?? 0"
+                      type="number"
+                      readonly
+                      class="w-full px-3 py-2 bg-[rgb(var(--muted))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] cursor-not-allowed font-semibold"
+                    />
+                    <p class="text-xs text-[rgb(var(--muted-foreground))] mt-1.5">
+                      Calculated: {{ balanceData?.totalAllowance ?? 0 }} allowance - {{ balanceData?.totalUsed ?? 0 }} used
+                    </p>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
+                      Sick Leave Remaining
+                    </label>
+                    <input
+                      :value="getSickLeaveRemaining"
+                      type="number"
+                      readonly
+                      class="w-full px-3 py-2 bg-[rgb(var(--muted))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] cursor-not-allowed font-semibold"
+                    />
+                    <p class="text-xs text-[rgb(var(--muted-foreground))] mt-1.5">
+                      Based on sick leave type configuration
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -566,17 +748,31 @@
     </div>
   </CustomModal>
 </template>
+
 <script setup lang="ts">
 import type { User } from '~/types/user'
 
-// ============================================
-// USE API COMPOSABLE WITH AUTO-REFRESH
-// ============================================
 const { fetchUser, updateUser } = useApi()
 
 interface Department {
   id: string
   name: string
+}
+
+interface BalanceData {
+  totalAllowance: number
+  totalUsed: number
+  totalRemaining: number
+  balances: Array<{
+    leaveType: {
+      id: string
+      name: string
+      color: string
+    }
+    allowance: number
+    used: number
+    remaining: number
+  }>
 }
 
 const props = defineProps<{
@@ -591,7 +787,6 @@ const emit = defineEmits<{
   'userUpdated': [user: User]
 }>()
 
-// Use the composable
 const { roles: userRoles } = useUserRoles()
 const { getUser } = usePermissions()
 const currentUser = computed(() => getUser())
@@ -601,16 +796,9 @@ const isOpen = computed({
   set: (value) => emit('update:modelValue', value),
 })
 
-// Computed to check if user can be deactivated
 const cannotDeactivate = computed(() => {
-  // Can't deactivate yourself
-  if (props.userId === currentUser.value?.id) {
-    return true
-  }
-  // Can't deactivate executives
-  if (form.value.role === 'EXECUTIVE') {
-    return true
-  }
+  if (props.userId === currentUser.value?.id) return true
+  if (form.value.role === 'EXECUTIVE') return true
   return false
 })
 
@@ -624,7 +812,6 @@ const cannotDeactivateReason = computed(() => {
   return ''
 })
 
-// Tabs
 const tabs = [
   { id: 'profile', label: 'Profile', icon: 'lucide:user' },
   { id: 'contact', label: 'Contact', icon: 'lucide:phone' },
@@ -634,14 +821,34 @@ const tabs = [
 
 const activeTab = ref('profile')
 
-// Sort departments alphabetically
 const sortedDepartments = computed(() => {
   return [...props.departments].sort((a, b) => a.name.localeCompare(b.name))
 })
 
-// Potential managers (exclude the current user being edited)
 const potentialManagers = computed(() => {
   return props.allUsers.filter(u => u.id !== props.userId)
+})
+
+// Get sick leave remaining from balance data
+const getSickLeaveRemaining = computed(() => {
+  if (!balanceData.value?.balances) return 0
+  
+  const sickLeave = balanceData.value.balances.find(b => 
+    b.leaveType.name.toLowerCase().includes('sick')
+  )
+  
+  return sickLeave ? sickLeave.remaining : 0
+})
+
+// ✅ NEW: Calculate effective allowance (what it will be after save)
+const effectiveAllowance = computed(() => {
+  return form.value.customLeaveAllowance || organizationDefaultAllowance.value
+})
+
+// ✅ NEW: Calculate effective remaining (preview)
+const effectiveRemaining = computed(() => {
+  if (!balanceData.value) return 0
+  return effectiveAllowance.value - balanceData.value.totalUsed
 })
 
 const form = ref<any>({
@@ -669,11 +876,17 @@ const form = ref<any>({
   state: '',
   postalCode: '',
   country: '',
-  annualLeaveBalance: 0,
-  sickLeaveBalance: 0,
   carryOverBalance: 0,
   customLeaveAllowance: null,
+  allowCarryForward: true,
+  maxCarryForwardDays: null,
 })
+
+// Organization defaults (fetched from org settings)
+const organizationDefaultAllowance = ref(25)
+const organizationCarryForwardDays = ref(5)
+const organizationCarryForwardExpires = ref(false)
+const organizationCarryForwardExpiryMonths = ref(12)
 
 const emergencyContact = ref({
   name: '',
@@ -682,32 +895,56 @@ const emergencyContact = ref({
   phoneSecondary: '',
 })
 
+const balanceData = ref<BalanceData | null>(null)
 const loading = ref(false)
 const loadingUser = ref(false)
+const loadingBalance = ref(false)
 const error = ref('')
 const successMessage = ref('')
 
-// Fetch user data when modal opens OR when userId changes
+// Fetch balance data from API
+const fetchBalanceData = async (userId: string) => {
+  loadingBalance.value = true
+  try {
+    const token = localStorage.getItem('auth_token')
+    const data = await $fetch<BalanceData>(`/api/leaves/balance?userId=${userId}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    })
+    balanceData.value = data
+  } catch (err) {
+    console.error('Failed to fetch balance:', err)
+  } finally {
+    loadingBalance.value = false
+  }
+}
+
 watch([() => props.userId, () => props.modelValue], async ([newUserId, isOpen]) => {
   if (newUserId && isOpen) {
-    // Reset form first to show loading state
     resetForm()
     await fetchUserData(newUserId)
+    await fetchBalanceData(newUserId)
   }
 }, { immediate: true })
 
-// ============================================
-// FETCH USER DATA - WITH AUTO TOKEN REFRESH
-// ============================================
 const fetchUserData = async (userId: string) => {
   loadingUser.value = true
   error.value = ''
 
   try {
-    // ✅ Use API composable - automatically handles token refresh
     const user = await fetchUser(userId)
 
-    // Populate form
+    // Fetch organization settings for defaults
+    const token = localStorage.getItem('auth_token')
+    const orgSettings = await $fetch('/api/organization/settings', {
+      headers: { 'Authorization': `Bearer ${token}` },
+    }) as any
+
+    // Update organization defaults
+    organizationDefaultAllowance.value = orgSettings.defaultLeaveAllowance || 25
+    organizationCarryForwardDays.value = orgSettings.carryForwardDays || 5
+    organizationCarryForwardExpires.value = orgSettings.carryForwardExpires || false
+    organizationCarryForwardExpiryMonths.value = orgSettings.carryForwardExpiryMonths || 12
+
     form.value = {
       firstName: user.firstName || '',
       lastName: user.lastName || '',
@@ -733,13 +970,12 @@ const fetchUserData = async (userId: string) => {
       state: user.state || '',
       postalCode: user.postalCode || '',
       country: user.country || '',
-      annualLeaveBalance: user.annualLeaveBalance || 0,
-      sickLeaveBalance: user.sickLeaveBalance || 0,
       carryOverBalance: user.carryOverBalance || 0,
       customLeaveAllowance: user.customLeaveAllowance || null,
+      allowCarryForward: user.allowCarryForward !== undefined ? user.allowCarryForward : true,
+      maxCarryForwardDays: user.maxCarryForwardDays || null,
     }
 
-    // Populate emergency contact
     if (user.emergencyContact) {
       const ec = user.emergencyContact as any
       emergencyContact.value = {
@@ -749,7 +985,6 @@ const fetchUserData = async (userId: string) => {
         phoneSecondary: ec.phoneSecondary || '',
       }
     } else {
-      // Reset emergency contact if none exists
       emergencyContact.value = {
         name: '',
         relationship: '',
@@ -765,9 +1000,6 @@ const fetchUserData = async (userId: string) => {
   }
 }
 
-// ============================================
-// SUBMIT FORM - WITH AUTO TOKEN REFRESH
-// ============================================
 const handleSubmit = async () => {
   if (!props.userId) return
 
@@ -776,13 +1008,12 @@ const handleSubmit = async () => {
   successMessage.value = ''
 
   try {
-    // Prepare update payload
     const updateData: any = {
       firstName: form.value.firstName,
       lastName: form.value.lastName,
       middleName: form.value.middleName || null,
       preferredName: form.value.preferredName || null,
-  dateOfBirth: form.value.dateOfBirth || undefined, // Changed from null
+      dateOfBirth: form.value.dateOfBirth || undefined,
       gender: form.value.gender || null,
       jobTitle: form.value.jobTitle || null,
       employeeId: form.value.employeeId || null,
@@ -801,22 +1032,22 @@ const handleSubmit = async () => {
       state: form.value.state || null,
       postalCode: form.value.postalCode || null,
       country: form.value.country || null,
-      annualLeaveBalance: form.value.annualLeaveBalance,
-      sickLeaveBalance: form.value.sickLeaveBalance,
       carryOverBalance: form.value.carryOverBalance,
       customLeaveAllowance: form.value.customLeaveAllowance || null,
+      allowCarryForward: form.value.allowCarryForward,
+      maxCarryForwardDays: form.value.maxCarryForwardDays || null,
       emergencyContact: emergencyContact.value.name ? emergencyContact.value : null,
     }
 
-    // ✅ Use API composable - automatically handles token refresh
     const updatedUser = await updateUser(props.userId, updateData)
 
     successMessage.value = 'User updated successfully!'
     
-    // Emit event so parent can refresh
     emit('userUpdated', updatedUser)
 
-    // Close modal after 1.5 seconds
+    // Refresh balance after update
+    await fetchBalanceData(props.userId)
+
     setTimeout(() => {
       closeModal()
     }, 1500)
@@ -839,6 +1070,7 @@ const resetForm = () => {
   activeTab.value = 'profile'
   error.value = ''
   successMessage.value = ''
+  balanceData.value = null
   form.value = {
     firstName: '',
     lastName: '',
@@ -864,10 +1096,10 @@ const resetForm = () => {
     state: '',
     postalCode: '',
     country: '',
-    annualLeaveBalance: 0,
-    sickLeaveBalance: 0,
     carryOverBalance: 0,
     customLeaveAllowance: null,
+    allowCarryForward: true,
+    maxCarryForwardDays: null,
   }
   emergencyContact.value = {
     name: '',

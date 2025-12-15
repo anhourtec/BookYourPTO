@@ -181,11 +181,17 @@ export default defineEventHandler(async (event) => {
       state: body.state || null,
       postalCode: body.postalCode || null,
       country: body.country || null,
-      annualLeaveBalance: body.annualLeaveBalance ?? 0,
-      sickLeaveBalance: body.sickLeaveBalance ?? 0,
       carryOverBalance: body.carryOverBalance ?? 0,
       customLeaveAllowance: body.customLeaveAllowance || null,
       emergencyContact: body.emergencyContact || null,
+    }
+
+    // ✅ NEW: Add carry forward settings if provided
+    if (body.allowCarryForward !== undefined) {
+      updateData.allowCarryForward = body.allowCarryForward
+    }
+    if (body.maxCarryForwardDays !== undefined) {
+      updateData.maxCarryForwardDays = body.maxCarryForwardDays
     }
 
     // Only add dates if they're valid
@@ -244,7 +250,7 @@ export default defineEventHandler(async (event) => {
       throw error
     }
     
-    console.error('Error updating user:', error)
+    console.error('❌ Error updating user:', error)
     throw createError({
       statusCode: 500,
       message: 'Failed to update user',
