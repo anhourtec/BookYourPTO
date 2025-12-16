@@ -1,4 +1,5 @@
 import { prisma } from '~/server/utils/db'
+import { sendLeaveRejectionNotification } from '~/server/utils/send-leave-notification'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -23,6 +24,8 @@ export default defineEventHandler(async (event) => {
     // Get request body for rejection reason
     const body = await readBody(event)
     const rejectionReason = body?.reason || 'No reason provided'
+
+    console.log(`🔴 Rejecting leave ${leaveId}, reason:`, rejectionReason)
 
     // Get current user
     const currentUser = await prisma.user.findUnique({
@@ -144,10 +147,21 @@ export default defineEventHandler(async (event) => {
       },
     })
 
-    console.log(`❌ Leave rejected: ${leaveId} by ${currentUser.firstName} ${currentUser.lastName}`)
+    console.log(`✅ Leave rejected: ${leaveId} by ${currentUser.firstName} ${currentUser.lastName}`)
 
-    // TODO: Send notification email to the user
-    // await sendLeaveRejectedEmail(leave.user.email, updatedLeave, rejectionReason)
+    // Send notification email to the user
+    console.log(`📧 Sending rejection notification...`)
+    sendLeaveRejectionNotification(leaveId, auth.organizationId, auth.userId, rejectionReason)
+      .then((sent) => {
+        if (sent) {
+          console.log(`Leave rejection notification sent to ${leave.user.email}`)
+        } else {
+          console.log('Failed to send leave rejection notification')
+        }
+      })
+      .catch((error) => {
+        console.error('Error sending leave rejection notification:', error)
+      })
 
     return updatedLeave
   } catch (error: any) {
@@ -158,7 +172,7 @@ export default defineEventHandler(async (event) => {
     console.error('❌ Error rejecting leave:', error)
     throw createError({
       statusCode: 500,
-      message: 'Failed to reject leave request',
+      message: `Failed to reject leave request: ${error.message}`,
     })
   }
 })

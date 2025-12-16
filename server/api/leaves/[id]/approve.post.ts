@@ -1,4 +1,5 @@
 import { prisma } from '~/server/utils/db'
+import { sendLeaveApprovalNotification } from '~/server/utils/send-leave-notification'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -139,10 +140,20 @@ export default defineEventHandler(async (event) => {
       },
     })
 
-    console.log(`✅ Leave approved: ${leaveId} by ${currentUser.firstName} ${currentUser.lastName}`)
+    console.log(`Leave approved: ${leaveId} by ${currentUser.firstName} ${currentUser.lastName}`)
 
-    // TODO: Send notification email to the user
-    // await sendLeaveApprovedEmail(leave.user.email, updatedLeave)
+    // Send notification email to the user
+    sendLeaveApprovalNotification(leaveId, auth.organizationId, auth.userId)
+      .then((sent) => {
+        if (sent) {
+          console.log(`Leave approval notification sent to ${leave.user.email}`)
+        } else {
+          console.log('Failed to send leave approval notification')
+        }
+      })
+      .catch((error) => {
+        console.error('Error sending leave approval notification:', error)
+      })
 
     return updatedLeave
   } catch (error: any) {
@@ -150,7 +161,7 @@ export default defineEventHandler(async (event) => {
       throw error
     }
 
-    console.error('❌ Error approving leave:', error)
+    console.error('Error approving leave:', error)
     throw createError({
       statusCode: 500,
       message: 'Failed to approve leave request',

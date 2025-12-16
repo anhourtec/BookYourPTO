@@ -52,7 +52,7 @@ export function generateForgotPasswordEmail(
               <a href="${resetUrl}" class="button">Reset Password</a>
             </div>
             <div class="warning">
-              <strong>⚠️ Security Notice:</strong>
+              <strong>Security Notice:</strong>
               <ul style="margin: 10px 0 0 0; padding-left: 20px;">
                 <li>This link expires in 15 minutes</li>
                 <li>If you didn't request this, please ignore this email</li>
@@ -83,7 +83,7 @@ Your reset code: ${resetCode}
 
 Or use this link: ${resetUrl}
 
-⚠️ This link expires in 15 minutes.
+This link expires in 15 minutes.
 
 If you didn't request this, please ignore this email and contact your administrator.
 
