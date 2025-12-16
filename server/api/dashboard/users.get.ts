@@ -49,7 +49,7 @@ export default defineEventHandler(async (event) => {
       },
     })
 
-    console.log('📊 Organization settings:', {
+    console.log('Organization settings:', {
       defaultLeaveAllowance: organization?.defaultLeaveAllowance,
       leaveYearStartMonth: organization?.leaveYearStartMonth,
     })
@@ -207,7 +207,7 @@ export default defineEventHandler(async (event) => {
     const fiscalPeriodStart = new Date(fiscalYear, fiscalStartMonth - 1, 1)
     const fiscalPeriodEnd = new Date(fiscalYear + 1, fiscalStartMonth - 1, 0)
 
-    console.log('📊 Dashboard balance calculation:', {
+    console.log('Dashboard balance calculation:', {
       fiscalStartMonth,
       fiscalYear,
       fiscalPeriodStart: fiscalPeriodStart.toISOString(),
@@ -256,7 +256,7 @@ export default defineEventHandler(async (event) => {
       const totalRemaining = totalAllowance - totalUsed
 
       if (totalUsed > 0 || totalAllowance > 0) {
-        console.log(`📊 User ${user.firstName} ${user.lastName} balance:`, {
+        console.log(`User ${user.firstName} ${user.lastName} balance:`, {
           baseAllowance,
           carriedOver,
           totalAllowance,

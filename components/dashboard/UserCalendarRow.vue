@@ -179,12 +179,14 @@ interface Props {
   weekStartDay?: number
   isMobile?: boolean
   today?: Date
+  mobileStartDate?: Date
 }
 
 const props = withDefaults(defineProps<Props>(), {
   weekStartDay: 0,
   isMobile: false,
   today: () => new Date(),
+  mobileStartDate: () => new Date(),
 })
 
 const emit = defineEmits<{
@@ -225,27 +227,27 @@ const displayDays = computed(() => {
     return props.visibleDays.slice(0, 30)
   }
 
-  // Mobile: show 7 days starting from today
-  const today = new Date(props.today)
-  today.setHours(0, 0, 0, 0)
-  
-  // Find today's index
-  const todayIndex = props.visibleDays.findIndex(day => {
+  // Mobile: show 7 days starting from mobileStartDate
+  const startDate = new Date(props.mobileStartDate)
+  startDate.setHours(0, 0, 0, 0)
+
+  // Find start date's index in visible days
+  const startIndex = props.visibleDays.findIndex(day => {
     const dayDate = new Date(day.date)
     dayDate.setHours(0, 0, 0, 0)
-    return dayDate.getTime() === today.getTime()
+    return dayDate.getTime() === startDate.getTime()
   })
-  
-  // If today is found, show 7 days starting from today
-  if (todayIndex >= 0 && todayIndex + 7 <= props.visibleDays.length) {
-    return props.visibleDays.slice(todayIndex, todayIndex + 7)
+
+  // If start date is found, show 7 days from that point
+  if (startIndex >= 0 && startIndex + 7 <= props.visibleDays.length) {
+    return props.visibleDays.slice(startIndex, startIndex + 7)
   }
-  
-  // If today is near the end, show last 7 days
-  if (todayIndex >= 0) {
-    return props.visibleDays.slice(Math.max(0, todayIndex), Math.min(props.visibleDays.length, todayIndex + 7))
+
+  // If start date is near the end, show remaining days
+  if (startIndex >= 0) {
+    return props.visibleDays.slice(startIndex, Math.min(props.visibleDays.length, startIndex + 7))
   }
-  
+
   // Fallback: show first 7 days of visible days
   return props.visibleDays.slice(0, Math.min(7, props.visibleDays.length))
 })
