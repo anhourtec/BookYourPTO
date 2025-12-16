@@ -1,10 +1,15 @@
 import { prisma } from '~/server/utils/db'
 import bcrypt from 'bcrypt'
 import { generateAccessToken, generateRefreshToken } from '~/server/utils/jwt'
+import { logSignInAttempt } from '~/server/utils/signin-logger'
 
 export default defineEventHandler(async (event) => {
+  let attemptEmail = ''
+  let attemptOrgId = ''
+
   try {
     const { email, password } = await readBody(event)
+    attemptEmail = email
 
     // Validation
     if (!email || !password) {
@@ -32,15 +37,46 @@ export default defineEventHandler(async (event) => {
     })
 
     if (!user) {
+      // Get organization for logging (if possible)
+      const userWithOrg = await prisma.user.findFirst({
+        where: { email: email.toLowerCase() },
+        select: { organizationId: true },
+      })
+
+      if (userWithOrg) {
+        attemptOrgId = userWithOrg.organizationId
+        // Log failed attempt - invalid email or inactive account
+        await logSignInAttempt(
+          event,
+          email,
+          userWithOrg.organizationId,
+          null,
+          false,
+          'Invalid email or inactive account'
+        )
+      }
+
       throw createError({
         statusCode: 401,
         message: 'Invalid email or password',
       })
     }
 
+    attemptOrgId = user.organizationId
+
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password)
     if (!isValidPassword) {
+      // Log failed attempt - invalid password
+      await logSignInAttempt(
+        event,
+        email,
+        user.organizationId,
+        user.id,
+        false,
+        'Invalid password'
+      )
+
       throw createError({
         statusCode: 401,
         message: 'Invalid email or password',
@@ -80,6 +116,15 @@ export default defineEventHandler(async (event) => {
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
     })
+
+    // Log successful sign-in
+    await logSignInAttempt(
+      event,
+      email,
+      user.organizationId,
+      user.id,
+      true
+    )
 
     // Return both tokens + user info
     return {

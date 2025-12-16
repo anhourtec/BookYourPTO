@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
     const token = authHeader.replace('Bearer ', '')
     const decoded = verifyJWT(token)
     
-    // ✅ Check if user is ADMINISTRATOR or EXECUTIVE
+    // Check if user is ADMINISTRATOR or EXECUTIVE
     const currentUser = await prisma.user.findUnique({
       where: { id: decoded.userId },
       select: { role: true },

@@ -41,7 +41,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 404, message: 'Department not found' })
     }
 
-    // ✅ Use transaction to handle manager assignment changes
+    // Use transaction to handle manager assignment changes
     const department = await prisma.$transaction(async (tx) => {
       // Update the department
       const updatedDept = await tx.department.update({
@@ -71,7 +71,7 @@ export default defineEventHandler(async (event) => {
         },
       })
 
-      // ✅ Handle manager changes
+      // Handle manager changes
       if (data.headOfDepartmentId !== undefined) {
         // If the old manager was only in this department, keep them or handle as needed
         // (Optional: you might want to unassign the old manager)

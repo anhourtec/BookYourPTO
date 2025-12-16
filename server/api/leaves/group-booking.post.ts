@@ -208,7 +208,7 @@ export default defineEventHandler(async (event) => {
       holidayDates
     )
 
-    console.log('📊 Calculated total days:', totalDays)
+    console.log('Calculated total days:', totalDays)
 
     if (totalDays === 0) {
       throw createError({
@@ -226,7 +226,7 @@ export default defineEventHandler(async (event) => {
     const errors = []
     const skipped = []
 
-    console.log(`📋 Creating leave requests for ${department.users.length} users`)
+    console.log(`Creating leave requests for ${department.users.length} users`)
 
     for (const user of department.users) {
       try {
@@ -263,7 +263,7 @@ export default defineEventHandler(async (event) => {
             name: `${user.firstName} ${user.lastName}`,
             reason: 'Has overlapping leave'
           })
-          console.log(`⚠️ Skipping ${user.firstName} ${user.lastName}: overlapping leave`)
+          console.log(`Skipping ${user.firstName} ${user.lastName}: overlapping leave`)
           continue
         }
 
@@ -312,7 +312,7 @@ export default defineEventHandler(async (event) => {
               name: `${user.firstName} ${user.lastName}`,
               reason: `Insufficient balance (${remaining} days remaining)`
             })
-            console.log(`⚠️ Skipping ${user.firstName} ${user.lastName}: insufficient balance`)
+            console.log(`Skipping ${user.firstName} ${user.lastName}: insufficient balance`)
             continue
           }
         }
@@ -371,10 +371,10 @@ export default defineEventHandler(async (event) => {
           }
         })
 
-        console.log(`✅ Created leave for ${user.firstName} ${user.lastName}`)
+        console.log(`Created leave for ${user.firstName} ${user.lastName}`)
 
       } catch (error: any) {
-        console.error(`❌ Error creating leave for ${user.firstName} ${user.lastName}:`, error.message)
+        console.error(`Error creating leave for ${user.firstName} ${user.lastName}:`, error.message)
         errors.push({
           userId: user.id,
           name: `${user.firstName} ${user.lastName}`,
@@ -383,7 +383,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    console.log('✅ Group booking complete:', {
+    console.log('Group booking complete:', {
       total: department.users.length,
       created: createdLeaves.length,
       skipped: skipped.length,
@@ -410,14 +410,14 @@ export default defineEventHandler(async (event) => {
     }
     
     if (error.issues) {
-      console.error('❌ Validation error:', error.issues)
+      console.error('Validation error:', error.issues)
       throw createError({
         statusCode: 400,
         message: `Validation failed: ${error.issues[0].message}`
       })
     }
     
-    console.error('❌ Error creating group booking:', error)
+    console.error('Error creating group booking:', error)
     throw createError({
       statusCode: 500,
       message: 'Failed to create group booking'

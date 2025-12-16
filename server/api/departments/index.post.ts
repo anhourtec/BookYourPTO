@@ -68,7 +68,7 @@ export default defineEventHandler(async (event) => {
 
     const uniqueCode = await generateUniqueCode(data.name, decoded.organizationId, data.code)
 
-    // ✅ Use a transaction to ensure manager is assigned to department
+    // Use a transaction to ensure manager is assigned to department
     const department = await prisma.$transaction(async (tx) => {
       // Create the department
       const newDept = await tx.department.create({
@@ -98,7 +98,7 @@ export default defineEventHandler(async (event) => {
         },
       })
 
-      // ✅ If a manager is assigned, update their departmentId
+      // If a manager is assigned, update their departmentId
       if (data.headOfDepartmentId) {
         await tx.user.update({
           where: { id: data.headOfDepartmentId },

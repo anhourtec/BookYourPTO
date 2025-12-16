@@ -63,23 +63,23 @@ export default defineEventHandler(async (event) => {
 
     // Can only cancel pending or approved leaves
     if (!['PENDING', 'APPROVED'].includes(leave.status)) {
+      console.error(`Cannot cancel leave ${leaveId}: status is ${leave.status}`)
       throw createError({
         statusCode: 400,
-        message: 'This leave request cannot be cancelled',
+        message: `Cannot cancel leave with status: ${leave.status}. Only PENDING or APPROVED leaves can be cancelled.`,
       })
     }
 
-    // Check if leave has already started
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const leaveStartDate = new Date(leave.startDate)
-    leaveStartDate.setHours(0, 0, 0, 0)
+    // Check if leave has already started (use ISO date strings to avoid timezone issues)
+    const todayStr = new Date().toISOString().split('T')[0]
+    const leaveStartStr = new Date(leave.startDate).toISOString().split('T')[0]
 
     // FIXED: Owners cannot cancel leaves that have already started; admins CAN
-    if (!isAdmin && leaveStartDate < today) {
+    if (!isAdmin && leaveStartStr < todayStr) {
+      console.error(`Cannot cancel leave ${leaveId}: leave started on ${leaveStartStr}, today is ${todayStr}`)
       throw createError({
         statusCode: 400,
-        message: 'Cannot cancel a leave that has already started',
+        message: `Cannot cancel a leave that has already started (start date: ${leaveStartStr})`,
       })
     }
 

@@ -7,8 +7,21 @@
 
     <div class="w-full max-w-md relative z-10">
       <div class="text-center mb-8">
-        <h1 class="text-4xl font-bold text-foreground mb-2">Welcome Back</h1>
-        <p class="text-muted-foreground">Sign in to your account</p>
+        <!-- Logo -->
+        <div v-if="logoUrl" class="mb-4 flex justify-center">
+          <img
+            :src="logoUrl"
+            :alt="brandName"
+            class="h-16 w-auto object-contain"
+          />
+        </div>
+
+        <h1 class="text-4xl font-bold text-foreground mb-2">
+          Welcome to {{ brandName }}
+        </h1>
+        <p class="text-muted-foreground">
+          {{ tagline || 'Sign in to your account' }}
+        </p>
       </div>
 
       <div class="bg-card border border-border rounded-2xl shadow-xl p-8">
@@ -94,6 +107,8 @@
 </template>
 
 <script setup lang="ts">
+const { logoUrl, brandName, tagline } = useWhitelabel()
+
 const form = ref({
   email: '',
   password: '',

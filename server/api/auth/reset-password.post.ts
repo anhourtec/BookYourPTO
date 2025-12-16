@@ -46,7 +46,7 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
     const data = resetPasswordSchema.parse(body)
 
-    console.log('🔍 Resetting password with token:', data.token)
+    console.log('Resetting password with token:', data.token)
 
     // Get all active users with non-expired reset tokens
     const users = await prisma.user.findMany({
@@ -69,7 +69,7 @@ export default defineEventHandler(async (event) => {
       },
     })
 
-    console.log(`📋 Found ${users.length} users with active reset tokens`)
+    console.log(`Found ${users.length} users with active reset tokens`)
 
     // Find user by matching token (handle both formats)
     const user = users.find(u => {
@@ -83,7 +83,7 @@ export default defineEventHandler(async (event) => {
         // Match either the 6-digit code OR the full token
         const matches = data.token === code || data.token === fullToken
         if (matches) {
-          console.log(`✅ Token matched for user: ${u.email}`)
+          console.log(`Token matched for user: ${u.email}`)
         }
         return matches
       }
@@ -91,13 +91,13 @@ export default defineEventHandler(async (event) => {
       // Direct match (backward compatibility)
       const matches = storedToken === data.token
       if (matches) {
-        console.log(`✅ Token matched for user: ${u.email}`)
+        console.log(`Token matched for user: ${u.email}`)
       }
       return matches
     })
 
     if (!user) {
-      console.log('❌ No matching user found')
+      console.log('No matching user found')
       throw createError({
         statusCode: 400,
         message: 'Invalid or expired reset token',
@@ -117,14 +117,14 @@ export default defineEventHandler(async (event) => {
       },
     })
 
-    console.log('✅ Password updated for user:', user.email)
+    console.log('Password updated for user:', user.email)
 
     // Delete all refresh tokens (force re-login on all devices)
     await prisma.refreshToken.deleteMany({
       where: { userId: user.id },
     })
 
-    console.log('✅ Refresh tokens cleared')
+    console.log('Refresh tokens cleared')
 
     // Send password changed confirmation email
     try {
@@ -148,10 +148,10 @@ export default defineEventHandler(async (event) => {
           text: emailContent.text,
         })
 
-        console.log('✅ Password changed confirmation email sent')
+        console.log('Password changed confirmation email sent')
       }
     } catch (emailErr) {
-      console.error('❌ Failed to send password changed email:', emailErr)
+      console.error('Failed to send password changed email:', emailErr)
     }
 
     return {
@@ -159,7 +159,7 @@ export default defineEventHandler(async (event) => {
       message: 'Password reset successfully. Please login with your new password.',
     }
   } catch (error: any) {
-    console.error('❌ Password reset error:', error.message)
+    console.error('Password reset error:', error.message)
 
     if (error.statusCode) {
       throw error

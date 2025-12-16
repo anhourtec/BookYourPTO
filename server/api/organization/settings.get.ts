@@ -31,9 +31,6 @@ export default defineEventHandler(async (event) => {
         currency: true,
         fiscalYearStart: true,
         country: true,
-        primaryColor: true,
-        secondaryColor: true,
-        accentColor: true,
       },
     })
 
@@ -50,7 +47,7 @@ export default defineEventHandler(async (event) => {
       throw error
     }
 
-    console.error('❌ Error fetching organization settings:', error)
+    console.error('Error fetching organization settings:', error)
     throw createError({
       statusCode: 500,
       message: 'Failed to fetch organization settings',
