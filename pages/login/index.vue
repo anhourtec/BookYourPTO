@@ -20,7 +20,7 @@
           Welcome to {{ brandName }}
         </h1>
         <p class="text-muted-foreground">
-          {{ tagline || 'Sign in to your account' }}
+          {{ 'Sign in to your account' }}
         </p>
       </div>
 
@@ -107,7 +107,7 @@
 </template>
 
 <script setup lang="ts">
-const { logoUrl, brandName, tagline } = useWhitelabel()
+const { logoUrl, brandName } = useWhitelabel()
 
 const form = ref({
   email: '',
