@@ -7,8 +7,8 @@ export default defineNuxtPlugin(async (nuxtApp) => {
   // Initialize branding on app load
   try {
     await initializeBranding()
-    console.log(`✅ Whitelabel initialized: ${brandName.value}`)
+   // console.log(`✅ Whitelabel initialized: ${brandName.value}`)
   } catch (error) {
-    console.error('❌ Failed to initialize whitelabel:', error)
+    // console.error('❌ Failed to initialize whitelabel:', error)
   }
 })

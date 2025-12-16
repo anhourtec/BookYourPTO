@@ -43,7 +43,7 @@ export const useWhitelabel = () => {
       Object.assign(branding.value, response)
       isLoaded.value = true
 
-      console.log('Whitelabel branding loaded:', branding.value.brandName)
+      // console.log('Whitelabel branding loaded:', branding.value.brandName)
     } catch (error: any) {
       console.error('Failed to load branding:', error)
       // Keep default branding on error
