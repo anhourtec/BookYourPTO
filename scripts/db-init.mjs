@@ -1,8 +1,16 @@
 #!/usr/bin/env node
 
 /**
- * Database Initialization Script
- * Handles Prisma client generation and migrations
+ * BookYourPTO – Database Initialization Script
+ *
+ * Responsibilities:
+ * - Generate Prisma Client
+ * - Apply migrations safely in production
+ * - Allow db push ONLY in development
+ *
+ * Production rules:
+ * - ❌ Never run prisma db push
+ * - ✅ Only prisma migrate deploy (if migrations exist)
  */
 
 import 'dotenv/config';
@@ -28,7 +36,6 @@ function execCommand(command, description) {
     log(`\n${colors.blue}► ${description}...${colors.reset}`);
     execSync(command, { stdio: 'inherit' });
     log(`${colors.green}✓ ${description} completed${colors.reset}`);
-    return true;
   } catch (error) {
     log(`${colors.red}✗ ${description} failed${colors.reset}`, colors.red);
     throw error;
@@ -41,62 +48,102 @@ async function main() {
   log(`========================================${colors.reset}`, colors.blue);
 
   try {
-    // Check if DATABASE_URL is set
+    // ------------------------------------------------------------------
+    // Environment validation
+    // ------------------------------------------------------------------
     if (!process.env.DATABASE_URL) {
-      log('⚠️  DATABASE_URL not found in environment variables', colors.yellow);
-      log('Please make sure your .env file is properly configured', colors.yellow);
+      log('✗ DATABASE_URL is not set', colors.red);
       process.exit(1);
     }
 
-    log(`\nDatabase URL: ${process.env.DATABASE_URL.replace(/:[^:@]+@/, ':***@')}`, colors.blue);
+    const nodeEnv = process.env.NODE_ENV || 'development';
 
+    log(`\nEnvironment: ${nodeEnv}`, colors.blue);
+    log(
+      `Database URL: ${process.env.DATABASE_URL.replace(/:[^:@]+@/, ':***@')}`,
+      colors.blue
+    );
+
+    // ------------------------------------------------------------------
     // Step 1: Generate Prisma Client
+    // ------------------------------------------------------------------
     execCommand(
       'npx prisma generate',
       'Generating Prisma Client'
     );
 
-    // Step 2: Run migrations or push schema
+    // ------------------------------------------------------------------
+    // Step 2: Database schema handling
+    // ------------------------------------------------------------------
     const migrationsDir = join(process.cwd(), 'prisma', 'migrations');
     const migrationLock = join(migrationsDir, 'migration_lock.toml');
-    const prismaConfig = join(process.cwd(), 'prisma.config.ts');
-    
-    const hasMigrations = existsSync(migrationsDir) && existsSync(migrationLock);
-    const hasConfig = existsSync(prismaConfig);
-    
-    // Use migrations only if we have both migrations AND config file
-    if (hasMigrations && hasConfig) {
-      log('\n✓ Migrations and config found. Applying migrations...', colors.blue);
-      execCommand(
-        'npx prisma migrate deploy',
-        'Applying database migrations'
-      );
-    } else {
-      // Otherwise use db push (better for development)
-      if (!hasConfig) {
-        log('\n⚠️  No prisma.config.ts found. Using db push...', colors.yellow);
+
+    const hasMigrations =
+      existsSync(migrationsDir) && existsSync(migrationLock);
+
+    if (nodeEnv === 'production') {
+      // ============================
+      // PRODUCTION BEHAVIOR
+      // ============================
+      if (hasMigrations) {
+        log('\n✓ Production mode: applying migrations', colors.blue);
+        execCommand(
+          'npx prisma migrate deploy',
+          'Applying database migrations'
+        );
       } else {
-        log('\n⚠️  No migrations found. Using db push...', colors.yellow);
+        log(
+          '\n✓ Production mode: no migrations found, skipping schema changes',
+          colors.green
+        );
       }
-      
-      execCommand(
-        'npx prisma db push --accept-data-loss',
-        'Pushing schema to database'
-      );
+    } else {
+      // ============================
+      // DEVELOPMENT BEHAVIOR
+      // ============================
+      if (hasMigrations) {
+        log('\n✓ Development mode: applying migrations', colors.blue);
+        execCommand(
+          'npx prisma migrate deploy',
+          'Applying database migrations'
+        );
+      } else {
+        log(
+          '\n⚠️  Development mode: using db push (no migrations found)',
+          colors.yellow
+        );
+        execCommand(
+          'npx prisma db push --accept-data-loss',
+          'Pushing schema to database'
+        );
+      }
     }
 
-    // Step 3: Optional seed (if seed file exists)
+    // ------------------------------------------------------------------
+    // Step 3: Optional seed notice
+    // ------------------------------------------------------------------
     const seedFile = join(process.cwd(), 'prisma', 'seed.ts');
     if (existsSync(seedFile)) {
-      log('\n📦 Seed file found. Run "npm run db:seed" to populate initial data.', colors.blue);
+      log(
+        '\n📦 Seed file detected. Run `npm run db:seed` if needed.',
+        colors.blue
+      );
     }
 
-    log(`\n${colors.green}${colors.bright}✓ Database initialization completed successfully!${colors.reset}`);
-    log(`${colors.green}✓ Your application is ready to start.${colors.reset}\n`);
+    // ------------------------------------------------------------------
+    // Done
+    // ------------------------------------------------------------------
+    log(
+      `\n${colors.green}${colors.bright}✓ Database initialization completed successfully!${colors.reset}`
+    );
+    log(`${colors.green}✓ Application is ready to start.${colors.reset}\n`);
 
   } catch (error) {
-    log(`\n${colors.red}${colors.bright}✗ Database initialization failed${colors.reset}`, colors.red);
-    log(`${colors.red}Error: ${error.message}${colors.reset}`, colors.red);
+    log(
+      `\n${colors.red}${colors.bright}✗ Database initialization failed${colors.reset}`,
+      colors.red
+    );
+    log(`${colors.red}${error.message}${colors.reset}`, colors.red);
     process.exit(1);
   }
 }
