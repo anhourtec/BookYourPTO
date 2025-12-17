@@ -37,6 +37,7 @@
           :week-start-day="weekStartDay"
           :is-mobile="isMobile"
           :today="todayDate"
+          :mobile-start-date="mobileStartDate"
           @day-click="$emit('day-click', $event)"
         />
       </template>
@@ -98,6 +99,7 @@ interface Props {
   canAddUsers?: boolean
   isMobile?: boolean
   today?: Date
+  mobileStartDate?: Date
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -105,6 +107,7 @@ const props = withDefaults(defineProps<Props>(), {
   canAddUsers: false,
   isMobile: false,
   today: () => new Date(),
+  mobileStartDate: () => new Date(),
 })
 
 defineEmits<{
@@ -134,15 +137,16 @@ const todayDate = computed(() => {
 // Generate all visible days for the header
 const headerDays = computed(() => {
   const days: DayInfo[] = []
-  
+
   if (props.isMobile) {
-    // Mobile: Show 7 days starting from today
-    const startDate = new Date(todayDate.value)
-    
+    // Mobile: Show 7 days starting from mobileStartDate
+    const startDate = new Date(props.mobileStartDate)
+    startDate.setHours(0, 0, 0, 0)
+
     for (let i = 0; i < 7; i++) {
       const date = new Date(startDate)
       date.setDate(startDate.getDate() + i)
-      
+
       const dayOfWeek = date.getDay()
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
       const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
@@ -205,23 +209,6 @@ const getDayHeaderClass = (day: DayInfo): string => {
   return 'text-[rgb(var(--muted-foreground))]'
 }
 
-// Get date number classes
-const getDateNumberClass = (day: DayInfo): string => {
-  const classes: string[] = []
-  
-  if (day.isToday) {
-    classes.push('text-[rgb(var(--primary))] font-bold')
-  } else if (!day.isCurrentMonth) {
-    classes.push('text-[rgb(var(--muted-foreground))]/40')
-  } else if (day.isWeekend) {
-    classes.push('text-[rgb(var(--muted-foreground))]/60')
-  } else {
-    classes.push('text-[rgb(var(--foreground))]')
-  }
-  
-  return classes.join(' ')
-}
-
 // Check if a date is a holiday
 const isHoliday = (date: Date): PublicHoliday | undefined => {
   const dateStr = date.toISOString().split('T')[0]
@@ -233,16 +220,14 @@ const isHoliday = (date: Date): PublicHoliday | undefined => {
 
 // Check if a date falls within a leave period
 const getLeaveForDate = (user: User, date: Date): Leave | undefined => {
-  const dateTime = date.getTime()
-  
+  // Use ISO date strings to avoid timezone issues (same approach as isHoliday)
+  const dateStr = date.toISOString().split('T')[0]
+
   return user.leaves.find(leave => {
-    const startDate = new Date(leave.startDate)
-    startDate.setHours(0, 0, 0, 0)
-    
-    const endDate = new Date(leave.endDate)
-    endDate.setHours(23, 59, 59, 999)
-    
-    return dateTime >= startDate.getTime() && dateTime <= endDate.getTime()
+    const leaveStart = new Date(leave.startDate).toISOString().split('T')[0]
+    const leaveEnd = new Date(leave.endDate).toISOString().split('T')[0]
+
+    return dateStr >= leaveStart && dateStr <= leaveEnd
   })
 }
 

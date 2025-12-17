@@ -82,7 +82,7 @@ export default defineEventHandler(async (event) => {
       },
     })
 
-    console.log('✅ Password changed for user:', user.email)
+    console.log('Password changed for user:', user.email)
 
     // ============================================
     // DELETE ALL REFRESH TOKENS (Force logout on all devices)
@@ -91,14 +91,14 @@ export default defineEventHandler(async (event) => {
       where: { userId: user.id },
     })
 
-    console.log('✅ All refresh tokens cleared for security')
+    console.log('All refresh tokens cleared for security')
 
     return {
       success: true,
       message: 'Password changed successfully. Please login with your new password.',
     }
   } catch (error: any) {
-    console.error('❌ Password change error:', error)
+    console.error('Password change error:', error)
 
     if (error.statusCode) {
       throw error

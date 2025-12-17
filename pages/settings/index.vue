@@ -95,6 +95,12 @@
             <PublicHolidaysSettings v-if="activeSection === 'holidays'" />
             <EmailSettings v-if="activeSection === 'email'" />
             <ReportsSettings v-if="activeSection === 'reports'" />
+          </template>
+
+          <!-- Executive-only sections -->
+          <template v-if="isExecutive">
+            <BrandingSettings v-if="activeSection === 'branding'" />
+            <SecuritySettings v-if="activeSection === 'security'" />
             <DeleteOrganizationSettings v-if="activeSection === 'dangerzone'" />
           </template>
         </main>
@@ -105,6 +111,8 @@
 
 <script setup lang="ts">
 import GeneralSettings from '../../components/settings/GeneralSettings.vue'
+import BrandingSettings from '../../components/settings/BrandingSettings.vue'
+import SecuritySettings from '../../components/settings/SecuritySettings.vue'
 import ChangePasswordSettings from '../../components/settings/ChangePasswordSettings.vue'
 import CarryForwardSettings from '../../components/settings/CarryForwardSettings.vue'
 import LeaveTypesSettings from '../../components/settings/LeaveTypesSettings.vue'
@@ -173,7 +181,7 @@ onUnmounted(() => {
 const navigationItems = [
   // Change Password - Available to ALL users (placed first for employees)
   { id: 'password', label: 'Change Password', icon: 'lucide:key-round', isDanger: false, adminOnly: false },
-  
+
   // Admin-only sections
   { id: 'general', label: 'General', icon: 'lucide:settings', isDanger: false, adminOnly: true },
   { id: 'carryforward', label: 'Carry forward', icon: 'lucide:calendar-arrow-up', isDanger: false, adminOnly: true },
@@ -182,6 +190,10 @@ const navigationItems = [
   { id: 'holidays', label: 'Public holidays', icon: 'lucide:calendar', isDanger: false, adminOnly: true },
   { id: 'email', label: 'Email', icon: 'lucide:mail', isDanger: false, adminOnly: true },
   { id: 'reports', label: 'Reports', icon: 'lucide:file-bar-chart-2', isDanger: false, adminOnly: true },
+
+  // Executive-only sections
+  { id: 'branding', label: 'Branding', icon: 'lucide:palette', isDanger: false, executiveOnly: true, adminOnly: true },
+  { id: 'security', label: 'Security & Compliance', icon: 'lucide:shield-check', isDanger: false, executiveOnly: true, adminOnly: true },
   { id: 'dangerzone', label: 'Danger zone', icon: 'lucide:alert-triangle', isDanger: true, executiveOnly: true, adminOnly: true },
 ]
 

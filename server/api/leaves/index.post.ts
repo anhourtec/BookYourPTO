@@ -1,5 +1,6 @@
 import { prisma } from '~/server/utils/db'
 import { z } from 'zod'
+import { sendLeaveSubmissionNotification } from '~/server/utils/send-leave-notification'
 
 const createLeaveSchema = z.object({
   userId: z.string(),
@@ -21,7 +22,7 @@ function getDayString(dayOfWeek: number): string {
 }
 
 /**
- * ✅ ENHANCED: Calculate business days excluding non-business days and public holidays
+ * ENHANCED: Calculate business days excluding non-business days and public holidays
  * Now respects organization's business days configuration
  */
 function calculateBusinessDays(
@@ -86,7 +87,7 @@ function calculateBusinessDays(
     current.setUTCDate(current.getUTCDate() + 1)
   }
   
-  console.log('📊 Base business days:', days)
+  console.log('Base business days:', days)
   
   // Adjust for half days
   let adjustments = 0
@@ -100,7 +101,7 @@ function calculateBusinessDays(
   }
   
   const finalDays = days - adjustments
-  console.log('✅ Final calculated days:', finalDays, `(${days} - ${adjustments})`)
+  console.log('Final calculated days:', finalDays, `(${days} - ${adjustments})`)
   
   // Return 0 if no business days
   if (finalDays <= 0) {
@@ -126,7 +127,7 @@ export default defineEventHandler(async (event) => {
     
     const data = createLeaveSchema.parse(body)
 
-    // ✅ Get organization settings including business days
+    // Get organization settings including business days
     const organization = await prisma.organization.findUnique({
       where: { id: auth.organizationId },
       select: { 
@@ -149,7 +150,7 @@ export default defineEventHandler(async (event) => {
       : ['mon', 'tue', 'wed', 'thu', 'fri']
     console.log('💼 Organization business days:', businessDays)
 
-    // ✅ Get current user with role information
+    // Get current user with role information
     const currentUser = await prisma.user.findUnique({
       where: { id: auth.userId },
       select: { role: true }
@@ -162,7 +163,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ Get target user's role (the person the leave is being created for)
+    // Get target user's role (the person the leave is being created for)
     const targetUser = await prisma.user.findUnique({
       where: { id: data.userId },
       select: { role: true }
@@ -186,7 +187,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // ✅ Normalize dates to midnight UTC to avoid timezone issues
+    // Normalize dates to midnight UTC to avoid timezone issues
     const startDate = new Date(data.startDate)
     startDate.setUTCHours(0, 0, 0, 0)
     
@@ -251,7 +252,7 @@ export default defineEventHandler(async (event) => {
     console.log(`🗓️ Found ${publicHolidays.length} public holidays in date range`)
     const holidayDates = publicHolidays.map(h => new Date(h.date))
 
-    // ✅ Calculate total days with business days awareness
+    // Calculate total days with business days awareness
     const totalDays = calculateBusinessDays(
       startDate,
       endDate,
@@ -261,9 +262,9 @@ export default defineEventHandler(async (event) => {
       businessDays
     )
 
-    console.log('📊 Calculated total days:', totalDays)
+    console.log('Calculated total days:', totalDays)
 
-    // ✅ Check if booking non-business days/holidays only
+    // Check if booking non-business days/holidays only
     const isNonBusinessDayOrHolidayOnly = totalDays === 0
     
     if (isNonBusinessDayOrHolidayOnly) {
@@ -277,10 +278,10 @@ export default defineEventHandler(async (event) => {
       }
       
       // For executives/admins, allow booking on non-business days/holidays
-      console.log('⚠️ Admin/Executive booking non-business day/holiday - allowing')
+      console.log('Admin/Executive booking non-business day/holiday - allowing')
     }
     
-    // ✅ Calculate final total days for non-business day/holiday bookings
+    // Calculate final total days for non-business day/holiday bookings
     let finalTotalDays = totalDays
     
     if (isNonBusinessDayOrHolidayOnly) {
@@ -295,7 +296,7 @@ export default defineEventHandler(async (event) => {
       
       finalTotalDays = Math.max(adjustedDays, 0.5)
       
-      console.log('📊 Non-business day/holiday calculation:', {
+      console.log('Non-business day/holiday calculation:', {
         calendarDays,
         startHalf: data.startHalf,
         endHalf: data.endHalf,
@@ -311,8 +312,8 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ Check for overlapping leaves - only PENDING and APPROVED
-    console.log('🔍 Checking for overlaps...')
+    // Check for overlapping leaves - only PENDING and APPROVED
+    console.log('Checking for overlaps...')
 
     const existingLeaves = await prisma.leave.findMany({
       where: {
@@ -327,7 +328,7 @@ export default defineEventHandler(async (event) => {
       }
     })
 
-    console.log(`🔍 Found ${existingLeaves.length} active leaves to check`)
+    console.log(`Found ${existingLeaves.length} active leaves to check`)
 
     // Filter overlapping leaves
     const overlappingLeaves = existingLeaves.filter(existing => {
@@ -346,7 +347,7 @@ export default defineEventHandler(async (event) => {
       const overlaps = reqStartTime <= existEndTime && reqEndTime >= existStartTime
 
       if (overlaps) {
-        console.log('⚠️ OVERLAP DETECTED:', {
+        console.log('OVERLAP DETECTED:', {
           existingId: existing.id,
           existingType: existing.leaveType?.name,
           existingRange: `${existingStart.toISOString().split('T')[0]} to ${existingEnd.toISOString().split('T')[0]}`,
@@ -376,7 +377,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('✅ No overlaps found')
+    console.log('No overlaps found')
 
     // Check leave balance only for deductible leave types
     if (leaveType.annualAllowance && leaveType.annualAllowance > 0) {
@@ -427,12 +428,12 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // ✅ Determine approval requirements
+    // Determine approval requirements
     const isExecutiveOrAdmin = ['ADMINISTRATOR', 'EXECUTIVE'].includes(targetUser.role)
     const requiresApproval = leaveType.requiresApproval && !isExecutiveOrAdmin
     const initialStatus = requiresApproval ? 'PENDING' : 'APPROVED'
 
-    console.log('📝 Creating leave with status:', {
+    console.log('Creating leave with status:', {
       status: initialStatus,
       targetUserRole: targetUser.role,
       isExecutiveOrAdmin,
@@ -454,7 +455,7 @@ export default defineEventHandler(async (event) => {
         notes: data.notes,
         status: initialStatus,
         submittedAt: new Date(),
-        // ✅ Auto-set approval fields if auto-approved
+        // Auto-set approval fields if auto-approved
         ...(initialStatus === 'APPROVED' && {
           firstLevelApproverId: auth.userId,
           firstLevelApprovedAt: new Date()
@@ -501,7 +502,7 @@ export default defineEventHandler(async (event) => {
       }
     })
 
-    console.log('✅ Leave created successfully:', {
+    console.log('Leave created successfully:', {
       id: leave.id,
       leaveType: leave.leaveType?.name,
       startDate: startDate.toISOString().split('T')[0],
@@ -511,6 +512,21 @@ export default defineEventHandler(async (event) => {
       autoApproved: isExecutiveOrAdmin
     })
 
+    // Send email notifications to approvers if leave requires approval
+    if (initialStatus === 'PENDING') {
+      // Send notifications asynchronously (don't wait for completion)
+      sendLeaveSubmissionNotification(leave.id, auth.organizationId)
+        .then((result) => {
+          console.log(`Leave submission notifications: ${result.sent} sent, ${result.failed} failed`)
+          if (result.errors.length > 0) {
+            console.error('Email notification errors:', result.errors)
+          }
+        })
+        .catch((error) => {
+          console.error('Failed to send leave submission notifications:', error)
+        })
+    }
+
     return leave
   } catch (error: any) {
     if (error.statusCode) {
@@ -518,14 +534,14 @@ export default defineEventHandler(async (event) => {
     }
     
     if (error.issues) {
-      console.error('❌ Validation error:', error.issues)
+      console.error('Validation error:', error.issues)
       throw createError({
         statusCode: 400,
         message: `Validation failed: ${error.issues[0].message}`
       })
     }
     
-    console.error('❌ Error creating leave request:', error)
+    console.error('Error creating leave request:', error)
     throw createError({
       statusCode: 500,
       message: 'Failed to create leave request'

@@ -16,7 +16,7 @@
           {{ activeFilterCount }}
         </span>
       </button>
-      
+
       <span class="text-xs sm:text-sm text-[rgb(var(--muted-foreground))]">
         {{ totalUsers }} user{{ totalUsers === 1 ? '' : 's' }}
       </span>
@@ -32,13 +32,13 @@
       >
         <Icon name="lucide:chevron-left" class="w-4 h-4 sm:w-5 sm:h-5" />
       </button>
-      
+
       <div class="min-w-[140px] sm:min-w-[180px] text-center">
         <span class="text-xs sm:text-sm font-semibold text-[rgb(var(--foreground))]">
           {{ dateRangeText }}
         </span>
       </div>
-      
+
       <button
         type="button"
         class="p-1.5 sm:p-2 rounded-lg hover:bg-[rgb(var(--muted))] text-[rgb(var(--muted-foreground))] transition-colors"
@@ -62,10 +62,14 @@ interface Props {
   month: number
   totalUsers: number
   activeFilterCount?: number
+  isMobile?: boolean
+  mobileStartDate?: Date
 }
 
 const props = withDefaults(defineProps<Props>(), {
   activeFilterCount: 0,
+  isMobile: false,
+  mobileStartDate: () => new Date(),
 })
 
 defineEmits<{
@@ -80,17 +84,45 @@ const monthNames = [
 ]
 
 const dateRangeText = computed(() => {
+  // Mobile: Show 7-day range
+  if (props.isMobile && props.mobileStartDate) {
+    const startDate = new Date(props.mobileStartDate)
+    const endDate = new Date(startDate)
+    endDate.setDate(startDate.getDate() + 6)
+
+    const startDay = startDate.getDate()
+    const endDay = endDate.getDate()
+    const startMonth = monthNames[startDate.getMonth()]
+    const endMonth = monthNames[endDate.getMonth()]
+    const startYear = startDate.getFullYear()
+    const endYear = endDate.getFullYear()
+
+    // Same month and year
+    if (startMonth === endMonth && startYear === endYear) {
+      return `${startDay}–${endDay} ${startMonth} ${startYear}`
+    }
+    // Different months, same year
+    else if (startYear === endYear) {
+      return `${startDay} ${startMonth} – ${endDay} ${endMonth} ${startYear}`
+    }
+    // Different years
+    else {
+      return `${startDay} ${startMonth} ${startYear} – ${endDay} ${endMonth} ${endYear}`
+    }
+  }
+
+  // Desktop: Show month range
   const currentMonth = monthNames[props.month]
   const currentYear = props.year
-  
+
   // Calculate next month
   const nextMonth = props.month === 11 ? 0 : props.month + 1
   const nextYear = props.month === 11 ? props.year + 1 : props.year
-  
+
   if (nextYear !== currentYear) {
     return `${currentMonth} ${currentYear} — ${monthNames[nextMonth]} ${nextYear}`
   }
-  
+
   return `${currentMonth} — ${monthNames[nextMonth]} ${currentYear}`
 })
 </script>

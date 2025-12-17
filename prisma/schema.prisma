@@ -24,12 +24,12 @@ model Organization {
   domain String? // Custom domain for white-labeling
 
   // White-labeling & Branding
-  logoUrl        String? // Path to logo file
-  faviconUrl     String?
-  primaryColor   String  @default("#3b82f6") // Blue
-  secondaryColor String  @default("#8b5cf6") // Purple
-  accentColor    String  @default("#10b981") // Green
-  customCSS      Json? // Custom styling overrides
+  brandName      String  @default("BookYourPTO") // Application name for white-labeling
+  logoLightUrl   String? // Logo for light mode
+  logoDarkUrl    String? // Logo for dark mode
+  faviconUrl     String? // Main favicon
+  faviconDarkUrl String? // Dark mode favicon
+  customCSS      Json?   // Custom styling overrides
 
   // Privacy Settings
   calendarViewRestricted   Boolean @default(false)
@@ -90,6 +90,7 @@ model Organization {
   approvalWorkflows ApprovalWorkflow[]
   notifications    Notification[]
   auditLogs        AuditLog[]
+  signInLogs       SignInLog[]
   emailTemplates   EmailTemplate[]
 
   @@index([slug])
@@ -564,6 +565,42 @@ model AuditLog {
   @@index([userId])
   @@index([entityType, entityId])
   @@index([timestamp])
+}
+
+// Sign-in Logs (Security & Compliance)
+model SignInLog {
+  id             String @id @default(cuid())
+  organizationId String
+  userId         String?
+  email          String
+
+  // Sign-in Details
+  success        Boolean
+  failureReason  String? // Invalid password, account locked, etc.
+
+  // Device & Location Information
+  ipAddress      String
+  userAgent      String
+  deviceType     String? // mobile, desktop, tablet
+  browser        String? // Chrome, Firefox, Safari, etc.
+  os             String? // Windows, macOS, Linux, iOS, Android
+  country        String?
+  city           String?
+
+  // Session Information
+  sessionId      String?
+
+  timestamp      DateTime @default(now())
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([email])
+  @@index([success])
+  @@index([timestamp])
+  @@index([ipAddress])
 }
 
 // Email Templates (Customizable)

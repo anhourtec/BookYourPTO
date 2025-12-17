@@ -77,7 +77,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ Get user-specific settings (custom allowances and carry-over)
+    // Get user-specific settings (custom allowances and carry-over)
     const targetUser = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -100,7 +100,7 @@ export default defineEventHandler(async (event) => {
     const fiscalPeriodStart = new Date(year, fiscalStartMonth - 1, 1)
     const fiscalPeriodEnd = new Date(year + 1, fiscalStartMonth - 1, 0)
 
-    console.log(`📊 Calculating balance for fiscal period:`, {
+    console.log(`Calculating balance for fiscal period:`, {
       start: fiscalPeriodStart.toISOString(),
       end: fiscalPeriodEnd.toISOString(),
       userId,
@@ -117,7 +117,7 @@ export default defineEventHandler(async (event) => {
       },
     })
 
-    // ✅ Used leaves in fiscal period - ONLY APPROVED and PENDING
+    // Used leaves in fiscal period - ONLY APPROVED and PENDING
     // Cancelled, rejected, and withdrawn leaves do NOT count toward usage
     const usedLeaves = await prisma.leave.findMany({
       where: {
@@ -136,7 +136,7 @@ export default defineEventHandler(async (event) => {
       },
     })
 
-    console.log(`📊 Found ${usedLeaves.length} used leaves (APPROVED/PENDING only)`)
+    console.log(`Found ${usedLeaves.length} used leaves (APPROVED/PENDING only)`)
 
     // Separate deductible from non-deductible based on annualAllowance field
     const deductibleLeaves = usedLeaves.filter(
@@ -146,10 +146,10 @@ export default defineEventHandler(async (event) => {
       (l) => l.leaveType && (l.leaveType.annualAllowance == null || l.leaveType.annualAllowance === 0)
     )
 
-    // ✅ Calculate totals using user-specific or organization default allowance
+    // Calculate totals using user-specific or organization default allowance
     const baseAllowance = targetUser.customLeaveAllowance ?? organization.defaultLeaveAllowance
     
-    // ✅ Calculate carry-over based on user settings
+    // Calculate carry-over based on user settings
     let carriedOver = 0
     if (targetUser.allowCarryForward !== false) {
       // Use user's manual carry-over balance if set, otherwise 0
@@ -160,7 +160,7 @@ export default defineEventHandler(async (event) => {
     const totalAllowance = baseAllowance + carriedOver
     const totalRemaining = totalAllowance - totalUsed
 
-    console.log(`📊 Balance summary:`, {
+    console.log(`Balance summary:`, {
       baseAllowance,
       carriedOver,
       totalAllowance,
@@ -234,7 +234,7 @@ export default defineEventHandler(async (event) => {
       throw error
     }
 
-    console.error('❌ Error fetching leave balance:', error)
+    console.error('Error fetching leave balance:', error)
     throw createError({
       statusCode: 500,
       message: 'Failed to fetch leave balance',

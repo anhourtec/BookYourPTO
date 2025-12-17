@@ -48,7 +48,7 @@ export const useApi = () => {
 
     // If already refreshing, wait for the existing promise
     if (isRefreshing && refreshPromise) {
-      console.log('⏳ Already refreshing token, waiting...')
+      console.log('Already refreshing token, waiting...')
       return refreshPromise
     }
 
@@ -58,12 +58,12 @@ export const useApi = () => {
         const refreshToken = localStorage.getItem('refresh_token')
         
         if (!refreshToken) {
-          console.log('❌ No refresh token found')
+          console.log('No refresh token found')
           isRefreshing = false
           return false
         }
 
-        console.log('🔄 Refreshing access token...')
+        console.log('Refreshing access token...')
         
         const response = await $fetch<RefreshTokenResponse>('/api/auth/refresh', {
           method: 'POST',
@@ -74,11 +74,11 @@ export const useApi = () => {
         localStorage.setItem('auth_token', response.accessToken)
         localStorage.setItem('refresh_token', response.refreshToken)
         
-        console.log('✅ Access token refreshed successfully')
+        console.log('Access token refreshed successfully')
         isRefreshing = false
         return true
       } catch (error) {
-        console.error('❌ Failed to refresh token:', error)
+        console.error('Failed to refresh token:', error)
         isRefreshing = false
         return false
       }
@@ -109,14 +109,14 @@ export const useApi = () => {
     } catch (error: any) {
       // If 401 error, try to refresh token and retry
       if (error?.statusCode === 401 || error?.response?.status === 401) {
-        console.log('❌ 401 error - attempting to refresh token...')
+        console.log('401 error - attempting to refresh token...')
         
         const refreshed = await refreshAccessToken()
         
         if (refreshed) {
           // Retry the original request with new token
           try {
-            console.log('🔄 Retrying request with new token...')
+            console.log('Retrying request with new token...')
             const retryResponse = await $fetch(url, {
               ...options,
               headers: {
@@ -126,7 +126,7 @@ export const useApi = () => {
             })
             return retryResponse as T
           } catch (retryError) {
-            console.error('❌ Retry failed after token refresh')
+            console.error('Retry failed after token refresh')
             throw retryError
           }
         } else {

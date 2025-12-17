@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
     const data = verifyTokenSchema.parse(body)
 
-    console.log('🔍 Verifying token:', data.token)
+    console.log('Verifying token:', data.token)
 
     // Get all active users with non-expired reset tokens
     const users = await prisma.user.findMany({
@@ -32,7 +32,7 @@ export default defineEventHandler(async (event) => {
       },
     })
 
-    console.log(`📋 Found ${users.length} users with active reset tokens`)
+    console.log(`Found ${users.length} users with active reset tokens`)
 
     // Check if token matches either:
     // 1. The 6-digit code (e.g., "525897")
@@ -49,7 +49,7 @@ export default defineEventHandler(async (event) => {
         // Match either the 6-digit code OR the full token
         const matches = data.token === code || data.token === fullToken
         if (matches) {
-          console.log(`✅ Token matched for user: ${u.email}`)
+          console.log(`Token matched for user: ${u.email}`)
         }
         return matches
       }
@@ -57,13 +57,13 @@ export default defineEventHandler(async (event) => {
       // Direct match (backward compatibility)
       const matches = storedToken === data.token
       if (matches) {
-        console.log(`✅ Token matched for user: ${u.email}`)
+        console.log(`Token matched for user: ${u.email}`)
       }
       return matches
     })
 
     if (!user) {
-      console.log('❌ No matching user found')
+      console.log('No matching user found')
       throw createError({
         statusCode: 400,
         message: 'Invalid or expired reset token',
@@ -78,7 +78,7 @@ export default defineEventHandler(async (event) => {
       },
     }
   } catch (error: any) {
-    console.error('❌ Token verification error:', error.message)
+    console.error('Token verification error:', error.message)
     
     if (error.statusCode) {
       throw error

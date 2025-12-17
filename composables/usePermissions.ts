@@ -138,6 +138,13 @@ export const usePermissions = () => {
     return hasRole(['EMPLOYEE'])
   }
 
+  /**
+   * ✅ Check if user is an executive (for branding & security settings)
+   */
+  const isExecutive = computed(() => {
+    return hasRole(['EXECUTIVE'])
+  })
+
   return {
     getUser,
     hasRole,
@@ -160,5 +167,6 @@ export const usePermissions = () => {
     canCancelOwnLeave,
     canCancelLeave,
     isEmployee,
+    isExecutive,
   }
 }

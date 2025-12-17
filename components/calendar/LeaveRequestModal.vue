@@ -2,18 +2,18 @@
   <Transition name="fade">
     <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-2 sm:px-0">
       <div class="w-full max-w-2xl rounded-2xl bg-white dark:bg-gray-950 shadow-xl border border-gray-200 dark:border-gray-800 p-4 sm:p-6 space-y-5 max-h-[90vh] overflow-y-auto">
-        <!-- Header with user -->
+        <!-- Header with user (only show for other users' leaves) -->
         <div class="flex items-start justify-between gap-4">
-          <div class="flex items-center gap-3">
+          <div v-if="isViewingOtherUserLeave" class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-sm font-semibold text-slate-700 dark:text-slate-200">
               {{ userInitials }}
             </div>
             <div>
               <div class="text-sm font-semibold text-gray-900 dark:text-white">
-                {{ userName || 'My time off' }}
+                {{ userName }}
               </div>
-              <div class="text-xs text-gray-500 dark:text-gray-400">
-                {{ userJobTitle || 'Time off request' }}
+              <div v-if="userJobTitle" class="text-xs text-gray-500 dark:text-gray-400">
+                {{ userJobTitle }}
               </div>
             </div>
           </div>
@@ -21,6 +21,7 @@
           <button
             type="button"
             class="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            :class="{ 'ml-auto': !isViewingOtherUserLeave }"
             @click="handleClose"
           >
             <Icon name="lucide:x" class="w-4 h-4 text-gray-500" />
@@ -123,8 +124,9 @@
                 name="lucide:loader-2"
                 class="w-4 h-4 animate-spin"
               />
+              <Icon v-else-if="isAdminRejectingOthersLeave" name="lucide:x-circle" class="w-4 h-4" />
               <Icon v-else name="lucide:trash-2" class="w-4 h-4" />
-              <span>{{ cancelling ? 'Cancelling...' : 'Cancel Leave' }}</span>
+              <span>{{ cancelButtonText }}</span>
             </button>
           </div>
         </div>
@@ -349,22 +351,41 @@ const isPaidLeave = computed(() => {
   return !!selectedLeaveType.value?.paidLeave
 })
 
+const isViewingOtherUserLeave = computed(() => {
+  return props.mode === 'view' && props.userId !== props.currentUserId
+})
+
 const userInitials = computed(() => {
   if (!props.userName) return 'U'
-  const parts = props.userName.split(' ')
+  const parts = props.userName.trim().split(/\s+/).filter(p => p.length > 0)
+  if (parts.length === 0) return 'U'
   const first = parts[0]?.[0] ?? ''
-  const last = parts[1]?.[0] ?? ''
-  return (first + last).toUpperCase() || 'U'
+  const last = parts[parts.length - 1]?.[0] ?? ''
+  return (first + (parts.length > 1 ? last : '')).toUpperCase() || 'U'
 })
 
 const canCancelLeave = computed(() => {
   if (!props.existingLeave) return false
-  
+
   return permissions.canCancelLeave(
     props.existingLeave.status,
     props.existingLeave.startDate,
     props.existingLeave.userId
   )
+})
+
+// Check if admin is rejecting someone else's leave
+const isAdminRejectingOthersLeave = computed(() => {
+  if (!props.existingLeave || !props.currentUserId || !props.currentUserRole) return false
+  const isAdmin = ['ADMINISTRATOR', 'EXECUTIVE', 'DEPARTMENT_HEAD'].includes(props.currentUserRole)
+  const isOwnLeave = props.existingLeave.userId === props.currentUserId
+  return isAdmin && !isOwnLeave
+})
+
+// Button text based on who is cancelling/rejecting
+const cancelButtonText = computed(() => {
+  if (cancelling.value) return 'Processing...'
+  return isAdminRejectingOthersLeave.value ? 'Reject Request' : 'Cancel Leave'
 })
 
 const startDateInput = ref('')
@@ -489,28 +510,20 @@ const handleSubmit = async () => {
   }
 }
 
-const handleCancelLeave = async () => {
+const handleCancelLeave = () => {
   if (!props.existingLeave) return
-  
+
   const confirmMessage = 'Are you sure you want to cancel this leave request? This will restore the leave balance.'
   if (!confirm(confirmMessage)) return
-  
+
   if (cancelling.value) return // Prevent double submission
-  
+
   cancelling.value = true
-  
-  try {
-    await api.cancelLeaveRequest(props.existingLeave.id)
-    
-    emit('cancel', props.existingLeave.id)
-    emit('close')
-    
-    // ✅ NOTE: Don't reset cancelling here - the watcher will do it when modal closes
-  } catch (error: any) {
-    console.error('❌ Failed to cancel leave:', error)
-    alert(error.data?.message || error.message || 'Failed to cancel leave request')
-    cancelling.value = false // Only reset on error
-  }
+
+  // Emit event to parent - parent will handle the API call
+  emit('cancel', props.existingLeave.id)
+
+  // Note: Parent is responsible for closing the modal and refreshing data
 }
 </script>
 

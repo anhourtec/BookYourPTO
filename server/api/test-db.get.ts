@@ -8,7 +8,7 @@ export default defineEventHandler(async () => {
 
     return {
       success: true,
-      message: '✅ Prisma 7 + PostgreSQL Connected!',
+      message: 'Prisma 7 + PostgreSQL Connected!',
       data: {
         organizations: orgCount,
         users: userCount,

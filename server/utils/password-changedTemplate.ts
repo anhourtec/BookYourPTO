@@ -55,7 +55,7 @@ export function generatePasswordChangedEmail(
             </div>
             
             <div class="warning">
-              <strong>💡 Security Tips:</strong>
+              <strong>Security Tips:</strong>
               <ul style="margin: 10px 0 0 0; padding-left: 20px;">
                 <li>Don't share your password with anyone</li>
                 <li>Use a unique password for this account</li>
@@ -81,13 +81,13 @@ Password Changed Successfully
 
 Hello ${user.firstName},
 
-✅ Your password for ${organization.name} has been successfully updated.
+Your password for ${organization.name} has been successfully updated.
 
 You can now login with your new password.
 
 Login: ${origin}/login
 
-💡 Security Tips:
+Security Tips:
 • Don't share your password with anyone
 • Use a unique password for this account
 • Enable 2FA when available

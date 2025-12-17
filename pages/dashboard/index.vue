@@ -22,6 +22,8 @@
         :month="month"
         :total-users="users.length"
         :active-filter-count="activeFilterCount"
+        :is-mobile="isMobile"
+        :mobile-start-date="mobileStartDate"
         @toggle-filter="filterModalOpen = true"
         @prev-period="navigatePeriod(-1)"
         @next-period="navigatePeriod(1)"
@@ -63,6 +65,7 @@
         :can-add-users="false"
         :is-mobile="isMobile"
         :today="todayInOrgTz"
+        :mobile-start-date="mobileStartDate"
         @day-click="onDayClick"
         @add-user="navigateToAddUser"
       />
@@ -104,6 +107,65 @@
         @close="groupBookingModalOpen = false"
         @submit="handleGroupBooking"
       />
+
+      <!-- Reject Modal (for admins rejecting others' leaves) -->
+      <CustomModal v-model="rejectModalOpen" max-width="md">
+        <div class="p-4 sm:p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg sm:text-xl font-bold text-[rgb(var(--foreground))]">
+              Reject Leave Request
+            </h2>
+            <button
+              @click="rejectModalOpen = false"
+              class="text-[rgb(var(--muted-foreground))] hover:text-[rgb(var(--foreground))]"
+            >
+              <Icon name="lucide:x" class="w-5 h-5" />
+            </button>
+          </div>
+
+          <div v-if="leaveToReject" class="space-y-4">
+            <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+              <p class="text-sm text-amber-800 dark:text-amber-200">
+                You are about to reject the leave request from
+                <strong>{{ selectedUserName }}</strong>.
+              </p>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
+                Rejection Reason <span class="text-[rgb(var(--destructive))]">*</span>
+              </label>
+              <textarea
+                v-model="rejectionReason"
+                rows="4"
+                placeholder="Please provide a reason for rejection..."
+                class="w-full px-3 py-2 border border-[rgb(var(--border))] rounded-lg bg-[rgb(var(--background))] text-[rgb(var(--foreground))] placeholder:text-[rgb(var(--muted-foreground))] focus:ring-2 focus:ring-[rgb(var(--destructive))] focus:border-transparent resize-none"
+              ></textarea>
+            </div>
+
+            <div class="flex gap-3">
+              <button
+                @click="rejectModalOpen = false"
+                class="flex-1 px-4 py-2.5 border border-[rgb(var(--border))] rounded-lg hover:bg-[rgb(var(--muted))] text-[rgb(var(--foreground))] font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                @click="confirmReject"
+                :disabled="!rejectionReason.trim() || rejecting"
+                class="flex-1 px-4 py-2.5 bg-[rgb(var(--destructive))] hover:bg-[rgb(var(--destructive))]/90 text-[rgb(var(--destructive-foreground))] rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <Icon
+                  v-if="rejecting"
+                  name="lucide:loader-2"
+                  class="w-4 h-4 animate-spin"
+                />
+                <span>{{ rejecting ? 'Rejecting...' : 'Confirm Rejection' }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </CustomModal>
     </div>
 
     <!-- Floating Action Button -->
@@ -226,6 +288,9 @@ const fabOpen = ref(false)
 // Timezone-aware today
 const todayInOrgTz = ref<Date>(new Date())
 
+// Mobile view: Track the start date for the 7-day window
+const mobileStartDate = ref<Date>(new Date())
+
 // State
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -264,6 +329,12 @@ const selectedUserJobTitle = ref('')
 // Group booking modal state
 const groupBookingModalOpen = ref(false)
 
+// Reject modal state (for admins rejecting others' leaves)
+const rejectModalOpen = ref(false)
+const leaveToReject = ref<Leave | null>(null)
+const rejectionReason = ref('')
+const rejecting = ref(false)
+
 // Current user
 const currentUser = computed(() => getUser() as User | null)
 
@@ -294,6 +365,12 @@ const loadDashboard = async () => {
     // Load organization timezone first
     await loadOrgTimezone()
     todayInOrgTz.value = getTodayInOrgTimezone()
+
+    // Initialize mobile start date to today if not set
+    if (!mobileStartDate.value || mobileStartDate.value.getTime() === new Date(0).getTime()) {
+      mobileStartDate.value = new Date(todayInOrgTz.value)
+      mobileStartDate.value.setHours(0, 0, 0, 0)
+    }
 
     // Ensure valid token before making API calls
     const isValid = await ensureValidToken()
@@ -363,19 +440,37 @@ const loadDashboard = async () => {
 
 // Navigate to previous/next period
 const navigatePeriod = (delta: number) => {
-  let newMonth = month.value + delta
-  let newYear = year.value
+  if (isMobile.value) {
+    // Mobile: Navigate by 7 days
+    const newStartDate = new Date(mobileStartDate.value)
+    newStartDate.setDate(newStartDate.getDate() + (delta * 7))
+    mobileStartDate.value = newStartDate
 
-  if (newMonth < 0) {
-    newMonth = 11
-    newYear--
-  } else if (newMonth > 11) {
-    newMonth = 0
-    newYear++
+    // Update year and month based on the new start date for data fetching
+    // We need to fetch data for the month range that covers these 7 days
+    const endDate = new Date(newStartDate)
+    endDate.setDate(newStartDate.getDate() + 6)
+
+    // Fetch data for both months if the 7-day range spans two months
+    year.value = newStartDate.getFullYear()
+    month.value = newStartDate.getMonth()
+  } else {
+    // Desktop: Navigate by month
+    let newMonth = month.value + delta
+    let newYear = year.value
+
+    if (newMonth < 0) {
+      newMonth = 11
+      newYear--
+    } else if (newMonth > 11) {
+      newMonth = 0
+      newYear++
+    }
+
+    month.value = newMonth
+    year.value = newYear
   }
 
-  month.value = newMonth
-  year.value = newYear
   loadDashboard()
 }
 
@@ -442,13 +537,59 @@ const handleCreateLeave = async (payload: {
 
 // Handle leave cancellation
 const handleCancelLeave = async (leaveId: string) => {
+  // Check if current user is admin/executive/dept head and viewing someone else's leave
+  const isAdmin = ['ADMINISTRATOR', 'EXECUTIVE', 'DEPARTMENT_HEAD'].includes(currentUser.value?.role || '')
+  const isOwnLeave = selectedLeave.value?.userId === currentUser.value?.id
+
+  // If admin rejecting someone else's leave, open reject modal
+  if (isAdmin && !isOwnLeave) {
+    leaveToReject.value = selectedLeave.value
+    leaveModalOpen.value = false
+    rejectModalOpen.value = true
+    return
+  }
+
+  // Otherwise, proceed with regular cancellation (for own leaves)
   try {
     await api.cancelLeaveRequest(leaveId)
     leaveModalOpen.value = false
     await loadDashboard()
   } catch (err: any) {
     console.error('Failed to cancel leave:', err)
-    alert(err.data?.message || err.message || 'Failed to cancel leave request')
+    // Extract error message from various possible locations
+    const errorMessage = err.data?.message || err.response?.data?.message || err.message || 'Failed to cancel leave request'
+    alert(errorMessage)
+    // Keep modal open on error so user can see the issue
+  }
+}
+
+// Confirm reject (for admins rejecting others' leaves)
+const confirmReject = async () => {
+  if (!leaveToReject.value || !rejectionReason.value.trim()) return
+
+  rejecting.value = true
+
+  try {
+    const token = localStorage.getItem('auth_token')
+    await $fetch(`/api/leaves/${leaveToReject.value.id}/reject`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: { reason: rejectionReason.value },
+    })
+
+    // Close modal and reload dashboard
+    rejectModalOpen.value = false
+    leaveToReject.value = null
+    rejectionReason.value = ''
+    await loadDashboard()
+
+    alert('Leave request rejected successfully')
+  } catch (err: any) {
+    console.error('Failed to reject leave:', err)
+    const errorMessage = err.data?.message || err.response?.data?.message || err.message || 'Failed to reject leave request'
+    alert(errorMessage)
+  } finally {
+    rejecting.value = false
   }
 }
 

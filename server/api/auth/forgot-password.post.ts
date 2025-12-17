@@ -66,22 +66,22 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // ✅ Generate 6-digit code (this will be used for BOTH manual entry AND URL)
+    // Generate 6-digit code (this will be used for BOTH manual entry AND URL)
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString()
     
-    // ✅ Generate long token for URL-based reset (more secure)
+    // Generate long token for URL-based reset (more secure)
     const resetToken = crypto.randomBytes(32).toString('hex')
     
     const resetTokenExpiry = new Date(Date.now() + 15 * 60 * 1000)
 
-    // ✅ Store BOTH: code in passwordResetToken, full token in a combined format
+    // Store BOTH: code in passwordResetToken, full token in a combined format
     // Format: "CODE:FULLTOKEN" - this way we can verify both
     const combinedToken = `${resetCode}:${resetToken}`
     
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        passwordResetToken: combinedToken,  // ✅ Store combined token
+        passwordResetToken: combinedToken,  // Store combined token
         passwordResetExpiry: resetTokenExpiry,
       },
     })

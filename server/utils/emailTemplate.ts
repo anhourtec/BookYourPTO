@@ -1,41 +1,76 @@
+/**
+ * Adjust color brightness (positive = lighter, negative = darker)
+ */
+function adjustColor(hex: string, percent: number): string {
+  const num = parseInt(hex.replace('#', ''), 16)
+  const amt = Math.round(2.55 * percent)
+  const R = (num >> 16) + amt
+  const G = ((num >> 8) & 0x00ff) + amt
+  const B = (num & 0x0000ff) + amt
+  return (
+    '#' +
+    (
+      0x1000000 +
+      (R < 255 ? (R < 1 ? 0 : R) : 255) * 0x10000 +
+      (G < 255 ? (G < 1 ? 0 : G) : 255) * 0x100 +
+      (B < 255 ? (B < 1 ? 0 : B) : 255)
+    )
+      .toString(16)
+      .slice(1)
+  )
+}
+
 export function generateWelcomeEmail(
   userData: { firstName: string; lastName: string; email: string },
-  organization: { name: string },
+  organization: {
+    name: string
+    brandName?: string
+    logoLightUrl?: string | null
+    unused_primaryColor?: string
+  },
   plainPassword: string
 ) {
   const APP_URL = process.env.APP_URL || 'http://localhost:3000'
-  
+  const brandName = organization.brandName || organization.name || 'BookYourPTO'
+  const unused_primaryColor = organization.unused_primaryColor || '#3b82f6'
+  const hasLogo = !!organization.logoLightUrl
+
   const emailHtml = `
     <!DOCTYPE html>
     <html>
       <head>
         <style>
-          body { 
+          body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-            line-height: 1.6; 
+            line-height: 1.6;
             color: #1f2937;
             margin: 0;
             padding: 0;
             background-color: #f9fafb;
           }
-          .container { 
-            max-width: 600px; 
-            margin: 40px auto; 
+          .container {
+            max-width: 600px;
+            margin: 40px auto;
             background: white;
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
           }
-          .header { 
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            color: white; 
-            padding: 40px 30px; 
+          .header {
+            background: linear-gradient(135deg, ${unused_primaryColor} 0%, ${adjustColor(unused_primaryColor, -20)} 100%);
+            color: white;
+            padding: 40px 30px;
             text-align: center;
           }
           .header h1 {
             margin: 0;
             font-size: 28px;
             font-weight: 700;
+          }
+          .logo {
+            max-width: 200px;
+            max-height: 60px;
+            margin-bottom: 20px;
           }
           .content { 
             padding: 40px 30px;
@@ -97,14 +132,15 @@ export function generateWelcomeEmail(
       <body>
         <div class="container">
           <div class="header">
-            <h1>Welcome to ${organization.name}!</h1>
+            ${hasLogo ? `<img src="${organization.logoLightUrl}" alt="${brandName}" class="logo" />` : ''}
+            <h1>Welcome to ${brandName}!</h1>
           </div>
           
           <div class="content">
             <div class="welcome-message">
-              <h2 style="margin-top: 0; color: #1e40af;">Hello ${userData.firstName}!</h2>
+              <h2 style="margin-top: 0; color: ${unused_primaryColor};">Hello ${userData.firstName}!</h2>
               <p style="margin-bottom: 0; color: #1e3a8a;">
-                Your account has been created for ${organization.name}'s leave management system.
+                Your account has been created for ${brandName}'s leave management system.
               </p>
             </div>
             
@@ -130,8 +166,8 @@ export function generateWelcomeEmail(
           </div>
           
           <div class="footer">
-            <p><strong>${organization.name}</strong></p>
-            <p>© ${new Date().getFullYear()} BookYourPTO. All rights reserved.</p>
+            <p><strong>${brandName}</strong></p>
+            <p>© ${new Date().getFullYear()} ${brandName}. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -139,11 +175,11 @@ export function generateWelcomeEmail(
   `
 
   const emailText = `
-Welcome to ${organization.name}!
+Welcome to ${brandName}!
 
 Hello ${userData.firstName}!
 
-Your account has been created for ${organization.name}'s leave management system.
+Your account has been created for ${brandName}'s leave management system.
 
 LOGIN CREDENTIALS:
 Email: ${userData.email}
@@ -154,12 +190,12 @@ Log in at: ${APP_URL}/login
 Please change your password after your first login.
 
 ---
-${organization.name}
-© ${new Date().getFullYear()} BookYourPTO. All rights reserved.
+${brandName}
+© ${new Date().getFullYear()} ${brandName}. All rights reserved.
   `
 
   return {
-    subject: `Welcome to ${organization.name} - Your Account Details`,
+    subject: `Welcome to ${brandName} - Your Account Details`,
     html: emailHtml,
     text: emailText,
   }
