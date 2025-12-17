@@ -18,7 +18,7 @@ BookYourPTO is a comprehensive PTO (Paid Time Off) management platform designed 
 - Document management with e-signature support
 - Real-time notifications and updates
 - Advanced filtering and search capabilities
-- Role-based access control (Employee, Manager, Department Head, HR, Administrator, Executive)
+- Role-based access control (Employee, Department Head, HR, Administrator, Executive)
 
 ### Security & Authentication
 - JWT-based authentication with refresh token rotation
