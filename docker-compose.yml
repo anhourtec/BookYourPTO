@@ -21,21 +21,29 @@ services:
     networks:
       - bookyourpto-network
 
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: bookyourpto-app
-    restart: unless-stopped
-    ports:
-      - "3010:3000"
-    env_file:
-      - .env.production
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - bookyourpto-network
+  # Uncomment when ready to deploy the app
+  # app:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: bookyourpto-app
+  #   restart: unless-stopped
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/bookyourpto
+  #     - JWT_SECRET=${JWT_SECRET}
+  #     - NODE_ENV=production
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   networks:
+  #     - bookyourpto-network
+
+
+  # We'll add Redis later
+  # redis:
+  #   image: redis:7-alpine
 
 volumes:
   postgres_data:

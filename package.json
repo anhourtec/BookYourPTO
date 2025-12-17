@@ -3,7 +3,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "nuxt build",
+    "build": "node scripts/db-init.mjs && nuxt build",
     "dev": "node scripts/dev-start.mjs",
     "start": "node scripts/docker-deploy.mjs",
     "generate": "node scripts/db-init.mjs && nuxt generate",
