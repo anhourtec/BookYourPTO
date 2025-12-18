@@ -1,11 +1,9 @@
+// server/api/users/index.get.ts
 import { prisma } from '~/server/utils/db'
 
 export default defineEventHandler(async (event) => {
   try {
-    // ============================================
-    // FIXED: Get auth from middleware (already verified)
-    // No need to manually verify token!
-    // ============================================
+    // Get auth from middleware (already verified)
     const auth = event.context.auth
     
     if (!auth) {
@@ -15,18 +13,33 @@ export default defineEventHandler(async (event) => {
       })
     }
     
-    // Fetch users for the authenticated user's organization
+    // Fetch users with department and department head information
     const users = await prisma.user.findMany({
       where: {
         organizationId: auth.organizationId,
       },
       include: {
-        department: true,
+        department: {
+          include: {
+            // This fetches the department head (the user who heads this department)
+            headOfDept: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                jobTitle: true,
+              }
+            }
+          }
+        },
         manager: {
           select: {
             id: true,
             firstName: true,
             lastName: true,
+            email: true,
+            jobTitle: true,
           },
         },
       },
