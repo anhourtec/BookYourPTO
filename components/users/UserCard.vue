@@ -66,7 +66,7 @@
           </span>
         </div>
 
-        <!-- Department & Role Tags -->
+        <!-- Department, Reports To & Role Tags -->
         <div class="flex flex-wrap gap-2">
           <span
             v-if="user.department"
@@ -80,6 +80,15 @@
             class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-[rgb(var(--muted))]/50 text-[rgb(var(--muted-foreground))] italic"
           >
             No department
+          </span>
+
+          <!-- Reports To Badge (NEW) -->
+          <span
+            v-if="departmentHeadName"
+            class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+          >
+            <Icon name="lucide:user-check" class="w-3 h-3 mr-1" />
+            Reports to {{ departmentHeadName }}
           </span>
           
           <span
@@ -109,6 +118,11 @@ interface User {
   department?: {
     id: string
     name: string
+    headOfDept?: {
+      id: string
+      firstName: string
+      lastName: string
+    } | null
   }
   updatedAt: string
 }
@@ -130,6 +144,15 @@ const userInitials = computed(() =>
   `${props.user.firstName[0]}${props.user.lastName[0]}`.toUpperCase()
 )
 
+const departmentHeadName = computed(() => {
+  if (!props.user.department?.headOfDept) {
+    return null
+  }
+  
+  const head = props.user.department.headOfDept
+  return `${head.firstName} ${head.lastName}`
+})
+
 const formatRole = (role: string) =>
   role
     .split('_')
@@ -145,7 +168,6 @@ const formatDate = (date: string) =>
 
 const actionButton = ref<HTMLElement | null>(null)
 
-// Handle menu click and pass the button element directly
 const handleMenuClick = (event: MouseEvent) => {
   const target = event.currentTarget as HTMLElement
   emit('toggle-menu', props.user.id, target)

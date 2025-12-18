@@ -3,8 +3,8 @@
     class="grid grid-cols-12 gap-4 px-6 py-4 hover:bg-[rgb(var(--muted))]/30 transition-colors"
     :class="{ 'opacity-50': !user.isActive }"
   >
-    <!-- Name with Avatar -->
-    <div class="col-span-3 flex items-center gap-3">
+    <!-- Name with Avatar (reduced from col-span-3 to col-span-2) -->
+    <div class="col-span-2 flex items-center gap-3">
       <div class="relative">
         <div
           class="w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm flex-shrink-0"
@@ -44,8 +44,8 @@
       </div>
     </div>
 
-    <!-- Email -->
-    <div class="col-span-3">
+    <!-- Email (reduced from col-span-3 to col-span-2) -->
+    <div class="col-span-2">
       <p class="text-sm text-[rgb(var(--muted-foreground))] truncate">
         {{ user.email }}
       </p>
@@ -78,6 +78,20 @@
       </span>
     </div>
 
+    <!-- Reports To -->
+    <div class="col-span-2 flex items-center">
+      <div v-if="departmentHeadName" class="flex items-center gap-1.5">
+        <Icon name="lucide:user-check" class="w-3.5 h-3.5 text-[rgb(var(--muted-foreground))]" />
+        <span class="text-sm text-[rgb(var(--foreground))] truncate">
+          {{ departmentHeadName }}
+        </span>
+      </div>
+      <span v-else class="text-xs text-[rgb(var(--muted-foreground))] italic flex items-center gap-1.5">
+        <Icon name="lucide:minus" class="w-3.5 h-3.5" />
+        No manager
+      </span>
+    </div>
+
     <!-- Actions -->
     <div class="col-span-2 flex items-center justify-end">
       <button
@@ -103,6 +117,11 @@ interface User {
   department?: {
     id: string
     name: string
+    headOfDept?: {
+      id: string
+      firstName: string
+      lastName: string
+    } | null
   }
   updatedAt: string
 }
@@ -124,6 +143,15 @@ const userInitials = computed(() =>
   `${props.user.firstName[0]}${props.user.lastName[0]}`.toUpperCase()
 )
 
+const departmentHeadName = computed(() => {
+  if (!props.user.department?.headOfDept) {
+    return null
+  }
+  
+  const head = props.user.department.headOfDept
+  return `${head.firstName} ${head.lastName}`
+})
+
 const formatRole = (role: string) =>
   role
     .split('_')
@@ -139,7 +167,6 @@ const formatDate = (date: string) =>
 
 const actionButton = ref<HTMLElement | null>(null)
 
-// Handle menu click and pass the button element directly
 const handleMenuClick = (event: MouseEvent) => {
   const target = event.currentTarget as HTMLElement
   emit('toggle-menu', props.user.id, target)
