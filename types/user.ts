@@ -58,7 +58,7 @@ export interface User {
   carryOverBalance: number
   customLeaveAllowance?: number
   
-  // ✅ NEW: Carry Forward Settings
+  // Carry Forward Settings
   allowCarryForward?: boolean
   maxCarryForwardDays?: number
   
@@ -67,6 +67,13 @@ export interface User {
     id: string
     name: string
     code?: string
+    headOfDept?: {
+      id: string
+      firstName: string
+      lastName: string
+      email?: string
+      jobTitle?: string
+    } | null
   }
   manager?: {
     id: string
