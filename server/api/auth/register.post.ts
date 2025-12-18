@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { generateAccessToken, generateRefreshToken, generateTokenId } from '~/server/utils/jwt'
 
 const registerSchema = z.object({
-  email: z.string().email('Invalid email address'),
+  email: z.string().email('Invalid email address').transform(val => val.toLowerCase()),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
@@ -18,10 +18,10 @@ function generateDepartmentCode(name: string): string {
     .trim()
     .split(/\s+/)
     .filter(word => word.length > 0)
-  
+
   if (words.length === 0) return 'EXEC'
   if (words.length === 1) return words[0].substring(0, 4).toUpperCase()
-  
+
   return words
     .slice(0, 4)
     .map(word => word[0])
@@ -32,7 +32,7 @@ function generateDepartmentCode(name: string): string {
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    const data = registerSchema.parse(body)
+    const data = registerSchema.parse(body) // Email is now lowercase
 
     const existingOrg = await prisma.organization.findUnique({
       where: { slug: data.organizationSlug },
@@ -45,6 +45,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // Check for existing user with lowercase email
     const existingUser = await prisma.user.findFirst({
       where: { email: data.email },
     })
@@ -80,7 +81,7 @@ export default defineEventHandler(async (event) => {
 
       const user = await tx.user.create({
         data: {
-          email: data.email,
+          email: data.email, // Already lowercase from schema transform
           password: hashedPassword,
           firstName: data.firstName,
           lastName: data.lastName,
@@ -103,9 +104,6 @@ export default defineEventHandler(async (event) => {
       return { organization, department, user }
     })
 
-    // ============================================
-    // GENERATE TOKENS
-    // ============================================
     const accessToken = generateAccessToken({
       userId: result.user.id,
       organizationId: result.organization.id,
@@ -116,7 +114,6 @@ export default defineEventHandler(async (event) => {
     const tokenId = generateTokenId()
     const refreshToken = generateRefreshToken(result.user.id, tokenId)
 
-    // Store refresh token
     await prisma.refreshToken.create({
       data: {
         id: tokenId,
