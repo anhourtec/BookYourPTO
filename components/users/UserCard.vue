@@ -82,13 +82,13 @@
             No department
           </span>
 
-          <!-- Reports To Badge (NEW) -->
+          <!-- Reports To Badge - Shows direct manager -->
           <span
-            v-if="departmentHeadName"
+            v-if="reportsToName"
             class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
           >
             <Icon name="lucide:user-check" class="w-3 h-3 mr-1" />
-            Reports to {{ departmentHeadName }}
+            Reports to {{ reportsToName }}
           </span>
           
           <span
@@ -122,7 +122,14 @@ interface User {
       id: string
       firstName: string
       lastName: string
+      role?: string
     } | null
+  }
+  manager?: {
+    id: string
+    firstName: string
+    lastName: string
+    role?: string
   }
   updatedAt: string
 }
@@ -144,13 +151,41 @@ const userInitials = computed(() =>
   `${props.user.firstName[0]}${props.user.lastName[0]}`.toUpperCase()
 )
 
-const departmentHeadName = computed(() => {
-  if (!props.user.department?.headOfDept) {
+// Compute the "Reports To" name based on role hierarchy
+const reportsToName = computed(() => {
+  // If user has a direct manager assigned, use that
+  if (props.user.manager) {
+    return `${props.user.manager.firstName} ${props.user.manager.lastName}`
+  }
+  
+  // Otherwise, use role-based fallback logic
+  const userRole = props.user.role
+  
+  // Executives don't report to anyone (or report to board/CEO which isn't in system)
+  if (userRole === 'EXECUTIVE') {
     return null
   }
   
-  const head = props.user.department.headOfDept
-  return `${head.firstName} ${head.lastName}`
+  // Administrators report to Executives (but we don't have that data without manager field)
+  if (userRole === 'ADMINISTRATOR') {
+    return null // Or show "Executive Team" as text
+  }
+  
+  // Department Heads report to Administrators/Executives (use manager if set)
+  if (userRole === 'DEPARTMENT_HEAD') {
+    return null // Or show "Management Team"
+  }
+  
+  // Regular employees: try department head first, then manager
+  if (props.user.department?.headOfDept) {
+    const head = props.user.department.headOfDept
+    // Don't show if the department head is the user themselves
+    if (head.id !== props.user.id) {
+      return `${head.firstName} ${head.lastName}`
+    }
+  }
+  
+  return null
 })
 
 const formatRole = (role: string) =>

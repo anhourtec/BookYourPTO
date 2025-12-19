@@ -339,37 +339,52 @@
             </div>
 
             <!-- Department & Manager -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
-                  Department
-                </label>
-                <select
-                  v-model="form.departmentId"
-                  class="w-full px-3 py-2 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--primary))] text-[rgb(var(--foreground))]"
-                >
-                  <option value="">No department</option>
-                  <option v-for="dept in sortedDepartments" :key="dept.id" :value="dept.id">
-                    {{ dept.name }}
-                  </option>
-                </select>
-              </div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <div>
+    <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
+      Department
+    </label>
+    <select
+      v-model="form.departmentId"
+      class="w-full px-3 py-2 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--primary))] text-[rgb(var(--foreground))]"
+    >
+      <option value="">No department</option>
+      <option v-for="dept in sortedDepartments" :key="dept.id" :value="dept.id">
+        {{ dept.name }}
+      </option>
+    </select>
+  </div>
 
-              <div>
-                <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
-                  Reports To (Department Head)
-                </label>
-                <select
-                  v-model="form.reportsToId"
-                  class="w-full px-3 py-2 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--primary))] text-[rgb(var(--foreground))]"
-                >
-                  <option value="">No Department Head</option>
-                  <option v-for="manager in potentialManagers" :key="manager.id" :value="manager.id">
-                    {{ manager.firstName }} {{ manager.lastName }} ({{ manager.jobTitle || 'No title' }})
-                  </option>
-                </select>
-              </div>
-            </div>
+  <div>
+    <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
+      Reports To (Manager)
+      <Icon 
+        v-if="!canManageReportsTo()" 
+        name="lucide:lock" 
+        class="w-3 h-3 inline ml-1 text-[rgb(var(--muted-foreground))]" 
+      />
+    </label>
+    <select
+      v-model="form.reportsToId"
+      :disabled="!canManageReportsTo()"
+      class="w-full px-3 py-2 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--primary))] text-[rgb(var(--foreground))] disabled:bg-[rgb(var(--muted))] disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      <option value="">No manager</option>
+      <option v-for="manager in potentialManagers" :key="manager.id" :value="manager.id">
+        {{ manager.firstName }} {{ manager.lastName }}
+        <template v-if="manager.jobTitle"> ({{ manager.jobTitle }})</template>
+        <template v-else> (No title)</template>
+      </option>
+    </select>
+    <p v-if="!canManageReportsTo()" class="text-xs text-[rgb(var(--muted-foreground))] mt-1.5 flex items-center gap-1">
+      <Icon name="lucide:info" class="w-3 h-3" />
+      Only administrators can modify reporting structure
+    </p>
+    <p v-else class="text-xs text-[rgb(var(--muted-foreground))] mt-1.5">
+      Select the person this user reports to directly
+    </p>
+  </div>
+</div>
 
             <!-- Employment Type & Dates -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -788,7 +803,7 @@ const emit = defineEmits<{
 }>()
 
 const { roles: userRoles } = useUserRoles()
-const { getUser } = usePermissions()
+const { getUser, canManageReportsTo } = usePermissions() // Add canManageReportsTo here
 const currentUser = computed(() => getUser())
 
 const isOpen = computed({
@@ -1018,7 +1033,6 @@ const handleSubmit = async () => {
       jobTitle: form.value.jobTitle || null,
       employeeId: form.value.employeeId || null,
       departmentId: form.value.departmentId || null,
-      reportsToId: form.value.reportsToId || null,
       employmentType: form.value.employmentType,
       employmentStartDate: form.value.employmentStartDate || null,
       role: form.value.role,
@@ -1037,6 +1051,11 @@ const handleSubmit = async () => {
       allowCarryForward: form.value.allowCarryForward,
       maxCarryForwardDays: form.value.maxCarryForwardDays || null,
       emergencyContact: emergencyContact.value.name ? emergencyContact.value : null,
+    }
+
+    // ✅ Only include reportsToId if user has permission to change it
+    if (canManageReportsTo()) {
+      updateData.reportsToId = form.value.reportsToId || null
     }
 
     const updatedUser = await updateUser(props.userId, updateData)

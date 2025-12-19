@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
       })
     }
     
-    // Fetch users with department and department head information
+    // Fetch users with department, department head, AND direct manager information
     const users = await prisma.user.findMany({
       where: {
         organizationId: auth.organizationId,
@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
       include: {
         department: {
           include: {
-            // This fetches the department head (the user who heads this department)
+            // Department head (the user who heads this department)
             headOfDept: {
               select: {
                 id: true,
@@ -29,10 +29,12 @@ export default defineEventHandler(async (event) => {
                 lastName: true,
                 email: true,
                 jobTitle: true,
+                role: true,
               }
             }
           }
         },
+        // Direct manager (reportsTo relationship)
         manager: {
           select: {
             id: true,
@@ -40,6 +42,7 @@ export default defineEventHandler(async (event) => {
             lastName: true,
             email: true,
             jobTitle: true,
+            role: true,
           },
         },
       },

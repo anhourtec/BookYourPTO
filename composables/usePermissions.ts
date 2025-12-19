@@ -78,6 +78,14 @@ export const usePermissions = () => {
   }
 
   /**
+   * ✅ NEW: Can manage reporting structure (reportsToId)
+   * Only ADMINISTRATOR and EXECUTIVE can modify who reports to whom
+   */
+  const canManageReportsTo = () => {
+    return hasRole(['ADMINISTRATOR', 'EXECUTIVE'])
+  }
+
+  /**
    * ✅ Can create group bookings
    * ADMINISTRATOR, EXECUTIVE can create for any department
    * DEPARTMENT_HEAD can create for their own department
@@ -153,13 +161,14 @@ export const usePermissions = () => {
     canManageDepartments,
     canDeleteDepartments,
     canAccessSettings,
-    canAccessAdminSettings, // NEW: Separate permission for admin settings
+    canAccessAdminSettings,
     canManageOrganization,
     canManageLeaveTypes,
     canManageCarryForward,
     canApproveRequests,
     isAdmin,
     canEditUser,
+    canManageReportsTo, // NEW: For managing reporting structure
     // Leave cancellation and group booking permissions
     canCreateGroupBooking,
     canLockDates,

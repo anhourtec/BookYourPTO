@@ -73,6 +73,7 @@ export interface User {
       lastName: string
       email?: string
       jobTitle?: string
+      role?: string
     } | null
   }
   manager?: {
@@ -81,6 +82,7 @@ export interface User {
     lastName: string
     email?: string
     jobTitle?: string
+    role?: string
   }
   
   // Status
@@ -100,6 +102,7 @@ export interface CreateUserInput {
   password: string
   jobTitle?: string
   departmentId?: string
+  reportsToId?: string
   role?: User['role']
 }
 

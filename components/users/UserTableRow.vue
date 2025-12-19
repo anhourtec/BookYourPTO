@@ -80,15 +80,15 @@
 
     <!-- Reports To -->
     <div class="col-span-2 flex items-center">
-      <div v-if="departmentHeadName" class="flex items-center gap-1.5">
+      <div v-if="reportsToName" class="flex items-center gap-1.5">
         <Icon name="lucide:user-check" class="w-3.5 h-3.5 text-[rgb(var(--muted-foreground))]" />
         <span class="text-sm text-[rgb(var(--foreground))] truncate">
-          {{ departmentHeadName }}
+          {{ reportsToName }}
         </span>
       </div>
       <span v-else class="text-xs text-[rgb(var(--muted-foreground))] italic flex items-center gap-1.5">
         <Icon name="lucide:minus" class="w-3.5 h-3.5" />
-        No manager
+        {{ noManagerText }}
       </span>
     </div>
 
@@ -121,7 +121,14 @@ interface User {
       id: string
       firstName: string
       lastName: string
+      role?: string
     } | null
+  }
+  manager?: {
+    id: string
+    firstName: string
+    lastName: string
+    role?: string
   }
   updatedAt: string
 }
@@ -143,13 +150,52 @@ const userInitials = computed(() =>
   `${props.user.firstName[0]}${props.user.lastName[0]}`.toUpperCase()
 )
 
-const departmentHeadName = computed(() => {
-  if (!props.user.department?.headOfDept) {
+// Compute the "Reports To" name based on role hierarchy
+const reportsToName = computed(() => {
+  // If user has a direct manager assigned, use that
+  if (props.user.manager) {
+    return `${props.user.manager.firstName} ${props.user.manager.lastName}`
+  }
+  
+  // Otherwise, use role-based fallback logic
+  const userRole = props.user.role
+  
+  // Executives don't report to anyone
+  if (userRole === 'EXECUTIVE') {
     return null
   }
   
-  const head = props.user.department.headOfDept
-  return `${head.firstName} ${head.lastName}`
+  // Administrators report to Executives (but we don't have that data)
+  if (userRole === 'ADMINISTRATOR') {
+    return null
+  }
+  
+  // Department Heads report to Administrators/Executives
+  if (userRole === 'DEPARTMENT_HEAD') {
+    return null
+  }
+  
+  // Regular employees: try department head
+  if (props.user.department?.headOfDept) {
+    const head = props.user.department.headOfDept
+    // Don't show if the department head is the user themselves
+    if (head.id !== props.user.id) {
+      return `${head.firstName} ${head.lastName}`
+    }
+  }
+  
+  return null
+})
+
+// Contextual "no manager" text based on role
+const noManagerText = computed(() => {
+  const role = props.user.role
+  
+  if (role === 'EXECUTIVE') return 'Board/CEO'
+  if (role === 'ADMINISTRATOR') return 'Executive team'
+  if (role === 'DEPARTMENT_HEAD') return 'Management'
+  
+  return 'No manager'
 })
 
 const formatRole = (role: string) =>
