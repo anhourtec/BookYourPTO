@@ -25,6 +25,7 @@ export default defineEventHandler(async (event) => {
         leaveYearStartMonth: true,
         businessDays: true,
         defaultLeaveAllowance: true,
+        defaultSickLeaveAllowance: true,
         weekStartDay: true,
         calendarViewRestricted: true,
         departmentViewRestricted: true,

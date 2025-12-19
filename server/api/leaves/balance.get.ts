@@ -64,6 +64,7 @@ export default defineEventHandler(async (event) => {
       select: {
         leaveYearStartMonth: true,
         defaultLeaveAllowance: true,
+        defaultSickLeaveAllowance: true,
         carryForwardDays: true,
         carryForwardExpires: true,
         carryForwardExpiryMonths: true,
@@ -138,61 +139,92 @@ export default defineEventHandler(async (event) => {
 
     console.log(`Found ${usedLeaves.length} used leaves (APPROVED/PENDING only)`)
 
-    // Separate deductible from non-deductible based on annualAllowance field
-    const deductibleLeaves = usedLeaves.filter(
-      (l) => l.leaveType && l.leaveType.annualAllowance != null && l.leaveType.annualAllowance > 0
+    // Separate leaves by deduction bucket
+    const annualBucketLeaves = usedLeaves.filter(
+      (l) => l.leaveType && (l.leaveType.deductionBucket === 'ANNUAL' ||
+        // Backward compatibility: if no deductionBucket but has annualAllowance and not SICK_PAID
+        (!l.leaveType.deductionBucket && l.leaveType.annualAllowance != null && l.leaveType.annualAllowance > 0 && l.leaveType.code !== 'SICK_PAID'))
+    )
+    const sickBucketLeaves = usedLeaves.filter(
+      (l) => l.leaveType && (l.leaveType.deductionBucket === 'SICK' ||
+        // Backward compatibility: SICK_PAID with annualAllowance set
+        (!l.leaveType.deductionBucket && l.leaveType.code === 'SICK_PAID' && l.leaveType.annualAllowance != null && l.leaveType.annualAllowance > 0))
     )
     const nonDeductibleLeaves = usedLeaves.filter(
-      (l) => l.leaveType && (l.leaveType.annualAllowance == null || l.leaveType.annualAllowance === 0)
+      (l) => l.leaveType && (l.leaveType.deductionBucket === 'NONE' ||
+        // Backward compatibility: no deductionBucket and no annualAllowance
+        (!l.leaveType.deductionBucket && (l.leaveType.annualAllowance == null || l.leaveType.annualAllowance === 0)))
     )
 
-    // Calculate totals using user-specific or organization default allowance
-    const baseAllowance = targetUser.customLeaveAllowance ?? organization.defaultLeaveAllowance
-    
-    // Calculate carry-over based on user settings
-    let carriedOver = 0
+    // Calculate Annual bucket totals
+    const annualBaseAllowance = targetUser.customLeaveAllowance ?? organization.defaultLeaveAllowance
+    let annualCarriedOver = 0
     if (targetUser.allowCarryForward !== false) {
-      // Use user's manual carry-over balance if set, otherwise 0
-      carriedOver = targetUser.carryOverBalance || 0
+      annualCarriedOver = targetUser.carryOverBalance || 0
     }
-    
-    const totalUsed = deductibleLeaves.reduce((sum, leave) => sum + (leave.totalDays || 0), 0)
-    const totalAllowance = baseAllowance + carriedOver
-    const totalRemaining = totalAllowance - totalUsed
+    const annualUsed = annualBucketLeaves.reduce((sum, leave) => sum + (leave.totalDays || 0), 0)
+    const annualTotalAllowance = annualBaseAllowance + annualCarriedOver
+    const annualRemaining = annualTotalAllowance - annualUsed
+
+    // Calculate Sick bucket totals (using organization sick leave allowance)
+    const sickUsed = sickBucketLeaves.reduce((sum, leave) => sum + (leave.totalDays || 0), 0)
+    const sickBaseAllowance = organization.defaultSickLeaveAllowance ?? 0
+    const sickRemaining = sickBaseAllowance - sickUsed
+
+    // Legacy total (for backward compatibility - combines annual + sick)
+    const totalAllowance = annualTotalAllowance
+    const totalUsed = annualUsed
+    const totalRemaining = annualRemaining
 
     console.log(`Balance summary:`, {
-      baseAllowance,
-      carriedOver,
-      totalAllowance,
-      totalUsed,
-      totalRemaining,
-      deductibleCount: deductibleLeaves.length,
+      annual: {
+        baseAllowance: annualBaseAllowance,
+        carriedOver: annualCarriedOver,
+        totalAllowance: annualTotalAllowance,
+        used: annualUsed,
+        remaining: annualRemaining,
+      },
+      sick: {
+        baseAllowance: sickBaseAllowance,
+        used: sickUsed,
+        remaining: sickRemaining,
+      },
+      annualBucketCount: annualBucketLeaves.length,
+      sickBucketCount: sickBucketLeaves.length,
       nonDeductibleCount: nonDeductibleLeaves.length
     })
 
-    // Deductible breakdown (by leave type)
-    const deductibleMap: Record<string, { leaveType: any; days: number }> = {}
+    // Deductible breakdown by bucket (annual + sick combined for now)
+    const allDeductibleLeaves = [...annualBucketLeaves, ...sickBucketLeaves]
+    const deductibleMap: Record<string, { leaveType: any; days: number; bucket: string }> = {}
 
-    for (const l of deductibleLeaves) {
+    for (const l of allDeductibleLeaves) {
       const lt = l.leaveType
       if (!lt) continue
       if (!deductibleMap[lt.id]) {
-        deductibleMap[lt.id] = { leaveType: lt, days: 0 }
+        const bucket = lt.deductionBucket || (lt.code === 'SICK_PAID' ? 'SICK' : 'ANNUAL')
+        deductibleMap[lt.id] = { leaveType: lt, days: 0, bucket }
       }
       deductibleMap[lt.id].days += l.totalDays || 0
     }
 
     const deductible = Object.values(deductibleMap)
 
-    // Balance breakdown (allowance/used/remaining per deductible type)
+    // Balance breakdown (allowance/used/remaining per leave type with bucket info)
     const balanceBreakdown = leaveTypes
-      .filter((lt) => lt.annualAllowance != null && lt.annualAllowance > 0)
+      .filter((lt) => {
+        // Include if deductionBucket is set to ANNUAL or SICK
+        if (lt.deductionBucket && lt.deductionBucket !== 'NONE') return true
+        // Backward compatibility: include if annualAllowance is set
+        return lt.annualAllowance != null && lt.annualAllowance > 0
+      })
       .map((leaveType) => {
-        const used = deductibleLeaves
+        const used = allDeductibleLeaves
           .filter((l) => l.leaveTypeId === leaveType.id)
           .reduce((sum, l) => sum + (l.totalDays || 0), 0)
 
         const allowance = leaveType.annualAllowance || 0
+        const bucket = leaveType.deductionBucket || (leaveType.code === 'SICK_PAID' ? 'SICK' : 'ANNUAL')
         const remaining = allowance - used
 
         return {
@@ -200,12 +232,19 @@ export default defineEventHandler(async (event) => {
           allowance,
           used,
           remaining,
+          bucket, // Add bucket info
         }
       })
 
     // Non-deductible breakdown
     const nonDeductibleBreakdown = leaveTypes
-      .filter((lt) => lt.annualAllowance == null || lt.annualAllowance === 0)
+      .filter((lt) => {
+        // Check if leave type uses a deduction bucket
+        if (lt.deductionBucket && lt.deductionBucket !== 'NONE') return false
+        // Backward compatibility: check annualAllowance
+        if (lt.annualAllowance != null && lt.annualAllowance > 0) return false
+        return true
+      })
       .map((leaveType) => {
         const leaves = nonDeductibleLeaves.filter((l) => l.leaveTypeId === leaveType.id)
         const days = leaves.reduce((sum, l) => sum + (l.totalDays || 0), 0)
@@ -221,10 +260,23 @@ export default defineEventHandler(async (event) => {
       year,
       fiscalPeriodStart: fiscalPeriodStart.toISOString(),
       fiscalPeriodEnd: fiscalPeriodEnd.toISOString(),
+      // Legacy fields (annual bucket only for backward compatibility)
       totalAllowance,
       totalUsed,
       totalRemaining,
-      carriedOver,
+      carriedOver: annualCarriedOver,
+      // New bucket-specific fields
+      annual: {
+        allowance: annualTotalAllowance,
+        used: annualUsed,
+        remaining: annualRemaining,
+        carriedOver: annualCarriedOver,
+      },
+      sick: {
+        allowance: sickBaseAllowance,
+        used: sickUsed,
+        remaining: sickRemaining,
+      },
       balances: balanceBreakdown,
       deductible,
       nonDeductible: nonDeductibleBreakdown,
