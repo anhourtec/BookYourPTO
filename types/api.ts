@@ -53,7 +53,7 @@ export interface OrganizationSettings {
   id: string
   name: string
   slug: string
-  
+
   // Regional Settings
   timezone: string
   dateFormat?: string
@@ -62,21 +62,22 @@ export interface OrganizationSettings {
   currency?: string
   businessDays?: string[]
   country?: string
-  
+
   // Leave Settings
   leaveYearStartMonth: number
   defaultLeaveAllowance: number
-  
+  defaultSickLeaveAllowance?: number
+
   // Privacy Settings
   calendarViewRestricted: boolean
   departmentViewRestricted: boolean
-  
+
   // Carry Forward Settings
   carryForwardDays: number
   carryForwardHours: number
   carryForwardExpires: boolean
   carryForwardExpiryMonths?: number | null
-  
+
   // Timestamps
   createdAt: string
   updatedAt: string
@@ -88,6 +89,7 @@ export interface UpdateSettingsInput {
   weekStartDay?: number
   leaveYearStartMonth?: number
   defaultLeaveAllowance?: number
+  defaultSickLeaveAllowance?: number
   calendarViewRestricted?: boolean
   departmentViewRestricted?: boolean
   carryForwardDays?: number
@@ -99,6 +101,8 @@ export interface UpdateSettingsInput {
 // ============================================
 // LEAVE MANAGEMENT TYPES
 // ============================================
+
+export type DeductionBucket = 'NONE' | 'ANNUAL' | 'SICK'
 
 export interface LeaveType {
   id: string
@@ -117,6 +121,7 @@ export interface LeaveType {
   allowHourly: boolean
   paidLeave: boolean
   annualAllowance?: number
+  deductionBucket?: DeductionBucket  // Which bucket this leave type deducts from
   hasAccrual: boolean
   accrualRate?: number
   carryOverAllowed: boolean
@@ -244,25 +249,41 @@ export interface LeaveBalanceSummary {
   year: number
   fiscalPeriodStart: string
   fiscalPeriodEnd: string
+  // Legacy fields (for backward compatibility - annual bucket only)
   totalAllowance: number
   totalUsed: number
   totalRemaining: number
   carriedOver: number
-  
+
+  // New bucket-specific fields
+  annual?: {
+    allowance: number
+    used: number
+    remaining: number
+    carriedOver: number
+  }
+  sick?: {
+    allowance: number
+    used: number
+    remaining: number
+  }
+
   // Breakdown by leave type
   balances: {
     leaveType: LeaveType
     allowance: number
     used: number
     remaining: number
+    bucket?: string  // 'ANNUAL' | 'SICK' | 'NONE'
   }[]
-  
+
   // Deductible leaves breakdown
   deductible: {
     leaveType: LeaveType
     days: number
+    bucket?: string
   }[]
-  
+
   // Non-deductible leaves (for display only)
   nonDeductible: {
     leaveType: LeaveType
