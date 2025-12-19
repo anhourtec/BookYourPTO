@@ -20,7 +20,7 @@ export interface RefreshTokenPayload {
 // ACCESS TOKEN (Short-lived: 15 minutes)
 // ============================================
 export function generateAccessToken(payload: JWTPayload): string {
- return jwt.sign(payload, JWT_SECRET, { expiresIn: '2m' })
+ return jwt.sign(payload, JWT_SECRET, { expiresIn: '15m' })
 }
 
 export function verifyAccessToken(token: string): JWTPayload {
