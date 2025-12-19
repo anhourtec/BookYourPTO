@@ -221,19 +221,21 @@
 
           <!-- Footer -->
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-            <div class="text-[11px] text-gray-500 dark:text-gray-400 flex flex-col sm:flex-row sm:items-center gap-1.5">
-              <span v-if="estimatedDays > 0 && deductsFromAllowance">
-                Takes
-                <span class="font-semibold text-gray-900 dark:text-white">{{ estimatedDays }}</span>
-                day{{ estimatedDays === 1 ? '' : 's' }} from allowance
-              </span>
-              <span v-else-if="estimatedDays > 0">
-                Does not deduct from annual allowance
-              </span>
+            <div class="text-[11px] flex flex-col gap-1.5">
+              <div class="text-gray-500 dark:text-gray-400 flex flex-col sm:flex-row sm:items-center gap-1.5">
+                <span v-if="estimatedDays > 0 && deductsFromAllowance">
+                  Takes
+                  <span class="font-semibold text-gray-900 dark:text-white">{{ estimatedDays }}</span>
+                  day{{ estimatedDays === 1 ? '' : 's' }} from {{ deductionBucketName }}
+                </span>
+                <span v-else-if="estimatedDays > 0">
+                  Does not deduct from any allowance
+                </span>
 
-              <span v-if="selectedLeaveType" class="sm:ml-1.5">
-                • {{ isPaidLeave ? 'Paid leave' : 'Unpaid leave' }}
-              </span>
+                <span v-if="selectedLeaveType" class="sm:ml-1.5">
+                  • {{ isPaidLeave ? 'Paid leave' : 'Unpaid leave' }}
+                </span>
+              </div>
             </div>
 
             <div class="flex items-center justify-end gap-2">
@@ -344,7 +346,24 @@ const selectedLeaveType = computed(() =>
 )
 
 const deductsFromAllowance = computed(() => {
-  return !!selectedLeaveType.value?.annualAllowance
+  if (!selectedLeaveType.value) return false
+  const bucket = selectedLeaveType.value.deductionBucket ||
+    (selectedLeaveType.value.annualAllowance && selectedLeaveType.value.annualAllowance > 0
+      ? (selectedLeaveType.value.code === 'SICK_PAID' ? 'SICK' : 'ANNUAL')
+      : 'NONE')
+  return bucket !== 'NONE'
+})
+
+const deductionBucketName = computed(() => {
+  if (!selectedLeaveType.value) return ''
+  const bucket = selectedLeaveType.value.deductionBucket ||
+    (selectedLeaveType.value.annualAllowance && selectedLeaveType.value.annualAllowance > 0
+      ? (selectedLeaveType.value.code === 'SICK_PAID' ? 'SICK' : 'ANNUAL')
+      : 'NONE')
+
+  if (bucket === 'ANNUAL') return 'annual leave allowance'
+  if (bucket === 'SICK') return 'sick leave allowance'
+  return ''
 })
 
 const isPaidLeave = computed(() => {

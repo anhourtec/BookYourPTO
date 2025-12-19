@@ -497,45 +497,99 @@
             </div>
 
             <!-- Current Balance Summary -->
-            <div v-else-if="balanceData" class="mb-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 border border-green-200 dark:border-green-800 rounded-lg">
-              <p class="text-xs text-[rgb(var(--muted-foreground))] mb-2 font-semibold">Current Year Balance</p>
-              <div class="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <p class="text-xs text-[rgb(var(--muted-foreground))]">Total Allowance</p>
-                  <div class="flex items-center justify-center gap-2">
-                    <p class="text-2xl font-bold text-green-600">{{ effectiveAllowance }}</p>
-                    <span 
-                      v-if="effectiveAllowance !== balanceData.totalAllowance"
-                      class="text-xs text-amber-600 font-semibold"
-                    >
-                      (was {{ balanceData.totalAllowance }})
-                    </span>
+            <div v-else-if="balanceData" class="mb-6 space-y-4">
+              <!-- Annual Leave Balance -->
+              <div v-if="balanceData.annual" class="p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div class="flex items-center gap-2 mb-3">
+                  <div class="w-1 h-4 bg-blue-500 rounded-full"></div>
+                  <p class="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">Annual Leave Balance</p>
+                </div>
+                <div class="grid grid-cols-4 gap-3 text-center">
+                  <div>
+                    <p class="text-[10px] text-blue-600 dark:text-blue-400 uppercase">Allowance</p>
+                    <div class="flex items-center justify-center gap-1">
+                      <p class="text-xl font-bold text-blue-700 dark:text-blue-300">{{ effectiveAllowance }}</p>
+                      <span
+                        v-if="effectiveAllowance !== balanceData.annual.allowance"
+                        class="text-[10px] text-amber-600 font-semibold"
+                      >
+                        (was {{ balanceData.annual.allowance }})
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <p class="text-[10px] text-blue-600 dark:text-blue-400 uppercase">Used</p>
+                    <p class="text-xl font-bold text-rose-600">{{ balanceData.annual.used }}</p>
+                  </div>
+                  <div>
+                    <p class="text-[10px] text-blue-600 dark:text-blue-400 uppercase">Carried</p>
+                    <p class="text-xl font-bold text-amber-600">{{ balanceData.annual.carriedOver }}</p>
+                  </div>
+                  <div>
+                    <p class="text-[10px] text-blue-600 dark:text-blue-400 uppercase">Remaining</p>
+                    <div class="flex items-center justify-center gap-1">
+                      <p class="text-xl font-bold text-green-600">{{ effectiveRemaining }}</p>
+                      <span
+                        v-if="effectiveRemaining !== balanceData.annual.remaining"
+                        class="text-[10px] text-amber-600 font-semibold"
+                      >
+                        (was {{ balanceData.annual.remaining }})
+                      </span>
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <p class="text-xs text-[rgb(var(--muted-foreground))]">Used</p>
-                  <p class="text-2xl font-bold text-orange-600">{{ balanceData.totalUsed }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-[rgb(var(--muted-foreground))]">Remaining</p>
-                  <div class="flex items-center justify-center gap-2">
-                    <p class="text-2xl font-bold text-blue-600">{{ effectiveRemaining }}</p>
-                    <span 
-                      v-if="effectiveRemaining !== balanceData.totalRemaining"
-                      class="text-xs text-amber-600 font-semibold"
-                    >
-                      (was {{ balanceData.totalRemaining }})
-                    </span>
-                  </div>
+                <div
+                  v-if="effectiveAllowance !== balanceData.annual.allowance"
+                  class="mt-3 p-2 bg-amber-50 dark:bg-amber-950/30 rounded border border-amber-200 dark:border-amber-800"
+                >
+                  <p class="text-xs text-amber-700 dark:text-amber-400 text-center">
+                    💡 Preview: Values will update after saving changes
+                  </p>
                 </div>
               </div>
-              <div 
-                v-if="effectiveAllowance !== balanceData.totalAllowance" 
-                class="mt-3 p-2 bg-amber-50 dark:bg-amber-950/30 rounded border border-amber-200 dark:border-amber-800"
-              >
-                <p class="text-xs text-amber-700 dark:text-amber-400 text-center">
-                  💡 Preview: Values will update after saving changes
+
+              <!-- Sick Leave Balance -->
+              <div v-if="balanceData.sick && balanceData.sick.allowance > 0" class="p-4 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                <div class="flex items-center gap-2 mb-3">
+                  <div class="w-1 h-4 bg-green-500 rounded-full"></div>
+                  <p class="text-xs font-bold text-green-700 dark:text-green-300 uppercase tracking-wider">Sick Leave Balance</p>
+                </div>
+                <div class="grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <p class="text-[10px] text-green-600 dark:text-green-400 uppercase">Allowance</p>
+                    <p class="text-xl font-bold text-green-700 dark:text-green-300">{{ balanceData.sick.allowance }}</p>
+                  </div>
+                  <div>
+                    <p class="text-[10px] text-green-600 dark:text-green-400 uppercase">Used</p>
+                    <p class="text-xl font-bold text-rose-600">{{ balanceData.sick.used }}</p>
+                  </div>
+                  <div>
+                    <p class="text-[10px] text-green-600 dark:text-green-400 uppercase">Remaining</p>
+                    <p class="text-xl font-bold text-green-700 dark:text-green-300">{{ balanceData.sick.remaining }}</p>
+                  </div>
+                </div>
+                <p class="text-xs text-green-600 dark:text-green-400 mt-2 text-center">
+                  Sick leave allowance is set organization-wide in General Settings
                 </p>
+              </div>
+
+              <!-- Fallback for legacy data -->
+              <div v-if="!balanceData.annual && !balanceData.sick" class="p-4 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 border border-green-200 dark:border-green-800 rounded-lg">
+                <p class="text-xs text-[rgb(var(--muted-foreground))] mb-2 font-semibold">Current Year Balance</p>
+                <div class="grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <p class="text-xs text-[rgb(var(--muted-foreground))]">Total Allowance</p>
+                    <p class="text-2xl font-bold text-green-600">{{ effectiveAllowance }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-[rgb(var(--muted-foreground))]">Used</p>
+                    <p class="text-2xl font-bold text-orange-600">{{ balanceData.totalUsed }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-[rgb(var(--muted-foreground))]">Remaining</p>
+                    <p class="text-2xl font-bold text-blue-600">{{ effectiveRemaining }}</p>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -778,6 +832,17 @@ interface BalanceData {
   totalAllowance: number
   totalUsed: number
   totalRemaining: number
+  annual?: {
+    allowance: number
+    used: number
+    remaining: number
+    carriedOver: number
+  }
+  sick?: {
+    allowance: number
+    used: number
+    remaining: number
+  }
   balances: Array<{
     leaveType: {
       id: string
@@ -863,7 +928,10 @@ const effectiveAllowance = computed(() => {
 // ✅ NEW: Calculate effective remaining (preview)
 const effectiveRemaining = computed(() => {
   if (!balanceData.value) return 0
-  return effectiveAllowance.value - balanceData.value.totalUsed
+  // Use annual bucket if available, otherwise use legacy totalUsed
+  const usedDays = balanceData.value.annual?.used ?? balanceData.value.totalUsed
+  const carriedOver = balanceData.value.annual?.carriedOver ?? 0
+  return effectiveAllowance.value + carriedOver - usedDays
 })
 
 const form = ref<any>({
