@@ -49,7 +49,8 @@ model Organization {
 
   // Onboarding
   leaveYearStartMonth    Int     @default(1) // 1-12 (January - December)
-  defaultLeaveAllowance  Float   @default(25) // Default days per year
+  defaultLeaveAllowance  Float   @default(14) // Default days per year
+  defaultSickLeaveAllowance Float @default(10)  // ADD THIS LINE
   onboardingCompleted    Boolean @default(false)
 
   // Email Configuration
@@ -281,6 +282,8 @@ model LeaveType {
   carryOverAllowed Boolean  @default(false)
   maxCarryOverDays Float?
   expiryMonths     Int?     // Months until carried over days expire
+
+  deductionBucket DeductionBucket @default(NONE)  // Which bucket this leave type deducts from
 
   // Approval Workflow
   requiresFirstLevelApproval  Boolean @default(true) // Manager
@@ -637,6 +640,12 @@ enum EmploymentType {
   SEASONAL
 }
 
+enum DeductionBucket {
+    NONE       // Doesn't deduct from any bucket
+    ANNUAL     // Deducts from annual leave bucket
+    SICK       // Deducts from sick leave bucket
+  }
+  
 enum UserRole {
   EMPLOYEE
   DEPARTMENT_HEAD
@@ -779,3 +788,4 @@ enum EmailTemplateType {
   BALANCE_UPDATED
   POLICY_UPDATE
 }
+
