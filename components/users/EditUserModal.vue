@@ -486,7 +486,12 @@
               <div class="flex gap-2">
                 <Icon name="lucide:info" class="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
                 <p class="text-xs text-blue-600">
-                  Current balances are calculated from approved/pending leaves. Configure carry forward and custom allowances below.
+                  <template v-if="canManageLeaveSettings">
+                    Current balances are calculated from approved/pending leaves. Configure carry forward and custom allowances below.
+                  </template>
+                  <template v-else>
+                    Current balances are calculated from approved/pending leaves.
+                  </template>
                 </p>
               </div>
             </div>
@@ -594,7 +599,7 @@
             </div>
 
             <!-- Balance Configuration -->
-            <div class="space-y-6">
+            <div v-if="canManageLeaveSettings" class="space-y-6">
               <!-- Custom Leave Allowance -->
               <div class="p-4 bg-[rgb(var(--muted))]/30 rounded-lg border border-[rgb(var(--border))]">
                 <h4 class="text-sm font-semibold text-[rgb(var(--foreground))] mb-3 flex items-center gap-2">
@@ -1087,6 +1092,11 @@ const emit = defineEmits<{
 const { roles: userRoles } = useUserRoles()
 const { getUser, canManageReportsTo } = usePermissions() // Add canManageReportsTo here
 const currentUser = computed(() => getUser())
+
+// Check if current user can manage leave settings (only ADMINISTRATOR and EXECUTIVE)
+const canManageLeaveSettings = computed(() => {
+  return currentUser.value && ['ADMINISTRATOR', 'EXECUTIVE'].includes(currentUser.value.role)
+})
 
 const isOpen = computed({
   get: () => props.modelValue,
