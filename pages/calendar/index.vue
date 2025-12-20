@@ -13,24 +13,24 @@
 const router = useRouter()
 
 onMounted(() => {
-  // Get user data from localStorage
+  // ✅ SECURITY: Get user ID from JWT, not localStorage
   if (typeof window !== 'undefined') {
-    const userData = localStorage.getItem('user')
-    
-    if (userData) {
+    const token = localStorage.getItem('auth_token')
+
+    if (token) {
       try {
-        const user = JSON.parse(userData)
-        if (user?.id) {
+        const payload = JSON.parse(atob(token.split('.')[1]))
+        if (payload?.userId) {
           // Redirect to user's personal calendar
-          router.replace(`/calendar/${user.id}`)
+          router.replace(`/calendar/${payload.userId}`)
           return
         }
       } catch (error) {
-        console.error('Failed to parse user data:', error)
+        console.error('Failed to parse JWT:', error)
       }
     }
-    
-    // If no user data, redirect to home
+
+    // If no valid token, redirect to home
     router.replace('/')
   }
 })
