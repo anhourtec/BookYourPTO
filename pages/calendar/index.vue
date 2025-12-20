@@ -19,7 +19,7 @@ onMounted(() => {
 
     if (token) {
       try {
-        const payload = JSON.parse(atob(token.split('.')[1]))
+        const payload = JSON.parse(atob(token.split('.')[1]!))
         if (payload?.userId) {
           // Redirect to user's personal calendar
           router.replace(`/calendar/${payload.userId}`)

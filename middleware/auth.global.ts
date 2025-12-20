@@ -95,7 +95,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   // ============================================
   let userRole: string
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]))
+    const payload = JSON.parse(atob(token.split('.')[1]!))
     userRole = payload.role  // ✅ From signed JWT token
   } catch (error) {
     console.error('Failed to decode JWT for role:', error)
@@ -106,7 +106,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   // Role-based route protection
   // ============================================
   const protectedRoutes: { [key: string]: string[] } = {
-    '/users': ['ADMINISTRATOR', 'EXECUTIVE', 'DEPARTMENT_HEAD', 'MANAGER'],
+    '/users': ['ADMINISTRATOR', 'EXECUTIVE', 'DEPARTMENT_HEAD'],
     '/settings': ['ADMINISTRATOR', 'EXECUTIVE'],
     '/departments': ['ADMINISTRATOR', 'EXECUTIVE'],
   }

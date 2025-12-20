@@ -28,7 +28,7 @@ export const useSecurityValidator = () => {
       // Try to get user info from JWT or localStorage
       if (token) {
         try {
-          const payload = JSON.parse(atob(token.split('.')[1]))
+          const payload = JSON.parse(atob(token.split('.')[1]!))
           userId = payload.userId
           organizationId = payload.organizationId
         } catch (e) {
@@ -98,7 +98,7 @@ export const useSecurityValidator = () => {
 
     try {
       // Decode JWT to get the TRUTH (cryptographically signed)
-      const payload = JSON.parse(atob(token.split('.')[1]))
+      const payload = JSON.parse(atob(token.split('.')[1]!))
 
       // Check JWT expiration
       const currentTime = Math.floor(Date.now() / 1000)
@@ -198,7 +198,7 @@ export const useSecurityValidator = () => {
     if (!token) return null
 
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]))
+      const payload = JSON.parse(atob(token.split('.')[1]!))
 
       // Also get display data from localStorage but OVERRIDE critical fields
       const userStr = localStorage.getItem('user')
