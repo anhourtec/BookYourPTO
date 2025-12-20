@@ -259,7 +259,11 @@ const handleSave = async () => {
     Object.assign(form, response)
     originalForm.value = JSON.parse(JSON.stringify(form))
 
-    successMessage.value = 'Branding settings saved successfully! Refresh the page to see changes.'
+    // Reload branding immediately to apply changes
+    const { reloadBranding } = useWhitelabel()
+    await reloadBranding()
+
+    successMessage.value = 'Branding settings saved and applied successfully!'
 
     // Clear success message after 5 seconds
     setTimeout(() => {
@@ -315,7 +319,11 @@ const resetToDefault = async () => {
     Object.assign(form, response)
     originalForm.value = JSON.parse(JSON.stringify(form))
 
-    successMessage.value = 'Branding reset to default BookYourPTO values! Refresh the page to see changes.'
+    // Reload branding immediately to apply changes
+    const { reloadBranding } = useWhitelabel()
+    await reloadBranding()
+
+    successMessage.value = 'Branding reset to default BookYourPTO values and applied successfully!'
 
     // Clear success message after 5 seconds
     setTimeout(() => {
