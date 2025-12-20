@@ -118,6 +118,11 @@ import CarryForwardSettings from '../../components/settings/CarryForwardSettings
 import LeaveTypesSettings from '../../components/settings/LeaveTypesSettings.vue'
 import DepartmentsSettings from '../../components/settings/DepartmentsSettings.vue'
 import PublicHolidaysSettings from '../../components/settings/PublicHolidaysSettings.vue'
+
+// Set page title
+useHead({
+  title: 'Settings'
+})
 import EmailSettings from '../../components/settings/EmailSettings.vue'
 import ReportsSettings from '../../components/settings/ReportsSettings.vue'
 import DeleteOrganizationSettings from '../../components/settings/DeleteOrganizationSettings.vue'

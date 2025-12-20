@@ -108,7 +108,12 @@
 </template>
 
 <script setup lang="ts">
-const { logoUrl, brandName } = useWhitelabel()
+const { logoUrl, brandName, initializeBranding } = useWhitelabel()
+
+// Set page title
+useHead({
+  title: 'Sign In'
+})
 
 const form = ref({
   email: '',
@@ -119,12 +124,15 @@ const loading = ref(false)
 const error = ref('')
 const showPassword = ref(false)
 
-// Check for security violation on mount
+// Check for security violation and initialize branding on mount
 onMounted(() => {
   const route = useRoute()
   if (route.query.error === 'session_invalid') {
     error.value = 'Security Alert: Session data was tampered with. Please log in again.'
   }
+
+  // Initialize branding (loads from cookie if available)
+  initializeBranding()
 })
 
 // Normalize email on blur (optional UX improvement)
@@ -152,6 +160,10 @@ const handleLogin = async () => {
     localStorage.setItem('auth_token', response.accessToken)
     localStorage.setItem('refresh_token', response.refreshToken)
     localStorage.setItem('user', JSON.stringify(response.user))
+
+    // Load branding after login
+    const { reloadBranding } = useWhitelabel()
+    await reloadBranding()
 
     // Navigate to dashboard
     navigateTo('/dashboard')

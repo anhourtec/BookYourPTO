@@ -248,6 +248,11 @@ import Filter from '~/components/users/Filter.vue'
 import UserCard from '~/components/users/UserCard.vue'
 import UserTableRow from '~/components/users/UserTableRow.vue'
 import UserActionMenu from '~/components/users/UserActionMenu.vue'
+
+// Set page title
+useHead({
+  title: 'Users'
+})
 import type { User } from '~/types/user'
 
 interface Department {

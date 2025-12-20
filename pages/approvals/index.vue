@@ -298,6 +298,11 @@ import ApprovalFilter from '~/components/approvals/ApprovalFilter.vue'
 import LeaveDetailModal from '~/components/approvals/LeaveDetailModal.vue'
 import type { LeaveRequest } from '~/types/approval'
 
+// Set page title
+useHead({
+  title: 'Approvals'
+})
+
 const { getUser, canApproveRequests } = usePermissions()
 const { ensureValidToken } = useAuth()
 
