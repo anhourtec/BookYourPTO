@@ -119,6 +119,14 @@ const loading = ref(false)
 const error = ref('')
 const showPassword = ref(false)
 
+// Check for security violation on mount
+onMounted(() => {
+  const route = useRoute()
+  if (route.query.error === 'session_invalid') {
+    error.value = 'Security Alert: Session data was tampered with. Please log in again.'
+  }
+})
+
 // Normalize email on blur (optional UX improvement)
 const normalizeEmail = () => {
   form.value.email = form.value.email.toLowerCase().trim()
