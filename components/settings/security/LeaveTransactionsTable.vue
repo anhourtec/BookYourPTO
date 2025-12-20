@@ -242,16 +242,47 @@ const exportToCSV = async () => {
   exporting.value = true
 
   try {
-    const queryString = buildQueryString(1)
-    const response = await fetch(`/api/security/leave-transactions/export?${queryString}`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
-      },
-    })
+    // Fetch all transactions with current filters (no pagination limit)
+    const params = new URLSearchParams()
+    if (filters.value.status) params.append('status', filters.value.status)
+    if (filters.value.userName) params.append('userName', filters.value.userName)
+    if (filters.value.startDate) params.append('startDate', filters.value.startDate)
+    if (filters.value.endDate) params.append('endDate', filters.value.endDate)
+    params.append('limit', '10000') // Get all records
 
-    if (!response.ok) throw new Error('Failed to export')
+    const response = await $fetch(`/api/security/leave-transactions?${params}`)
+    const allTransactions = response.transactions
 
-    const blob = await response.blob()
+    // Define CSV headers
+    const headers = [
+      'Submitted Date',
+      'User Name',
+      'Leave Type',
+      'Start Date',
+      'End Date',
+      'Total Days',
+      'Status'
+    ]
+
+    // Convert data to CSV rows
+    const rows = allTransactions.map((t: LeaveTransaction) => [
+      formatDate(t.submittedAt),
+      `${t.user.firstName} ${t.user.lastName}`,
+      t.leaveType.name,
+      formatDate(t.startDate),
+      formatDate(t.endDate),
+      t.totalDays.toString(),
+      t.status
+    ])
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ].join('\n')
+
+    // Create and download the file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -261,7 +292,7 @@ const exportToCSV = async () => {
     window.URL.revokeObjectURL(url)
     document.body.removeChild(a)
   } catch (err: any) {
-    error.value = err.message || 'Failed to export leave transactions'
+    error.value = err.data?.message || err.message || 'Failed to export leave transactions'
   } finally {
     exporting.value = false
   }
