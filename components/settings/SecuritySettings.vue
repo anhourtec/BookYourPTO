@@ -36,6 +36,9 @@
       </div>
 
       <div class="p-6">
+        <!-- Security Violations Tab -->
+        <SecurityViolationsTable v-if="activeTab === 'violations'" />
+
         <!-- Audit Logs Tab -->
         <AuditLogsTable v-if="activeTab === 'audit'" />
 
@@ -50,6 +53,7 @@
 </template>
 
 <script setup lang="ts">
+import SecurityViolationsTable from './security/SecurityViolationsTable.vue'
 import AuditLogsTable from './security/AuditLogsTable.vue'
 import LeaveTransactionsTable from './security/LeaveTransactionsTable.vue'
 import SignInLogsTable from './security/SignInLogsTable.vue'
@@ -60,5 +64,7 @@ const tabs = [
   { id: 'audit', label: 'Audit Logs', icon: 'lucide:file-text' },
   { id: 'signin', label: 'Sign-in Logs', icon: 'lucide:lock' },
   { id: 'transactions', label: 'Leave Transactions', icon: 'lucide:calendar-check' },
+  { id: 'violations', label: 'Security Violations', icon: 'lucide:shield-alert' }
+
 ]
 </script>
