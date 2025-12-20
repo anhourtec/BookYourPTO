@@ -94,6 +94,7 @@ model Organization {
   auditLogs        AuditLog[]
   signInLogs       SignInLog[]
   emailTemplates   EmailTemplate[]
+  securityViolations SecurityViolation[]
 
   @@index([slug])
 }
@@ -249,6 +250,7 @@ model User {
   firstLevelApprovals Leave[]          @relation("FirstLevelApprover")
   secondLevelApprovals Leave[]         @relation("SecondLevelApprover")
   holidayOverrides  UserHolidayOverride[]
+  securityViolations SecurityViolation[]
 
   @@unique([organizationId, email])
   @@unique([organizationId, employeeId])
@@ -830,5 +832,69 @@ enum EmailTemplateType {
 enum UserHolidayOverrideType {
   EXCLUDE // Exclude an organization holiday for this user
   ADD     // Add a custom holiday for this user
+}
+
+// ============================================
+// SECURITY VIOLATIONS LOG
+// ============================================
+model SecurityViolation {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String? // May be null if user deleted
+
+  // Violation Details
+  violationType  SecurityViolationType
+  description    String
+  severity       SecuritySeverity @default(MEDIUM)
+
+  // Tampering Evidence
+  attemptedRole  String? // Role they tried to set
+  actualRole     String? // Role from JWT
+  tamperedData   Json?   // What they modified
+
+  // Device & Location
+  ipAddress      String
+  userAgent      String
+  deviceType     String?
+  browser        String?
+  os             String?
+  country        String?
+  city           String?
+
+  // Action Taken
+  actionTaken    String  @default("FORCE_LOGOUT") // FORCE_LOGOUT, ACCOUNT_LOCKED, etc.
+
+  // Investigation
+  reviewed       Boolean @default(false)
+  reviewedBy     String? // Admin who reviewed
+  reviewedAt     DateTime?
+  notes          String? // Admin notes
+
+  createdAt      DateTime @default(now())
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([violationType])
+  @@index([createdAt])
+  @@index([reviewed])
+}
+
+enum SecurityViolationType {
+  LOCALSTORAGE_TAMPERING  // Modified user data in localStorage
+  JWT_MISMATCH            // JWT doesn't match localStorage
+  INVALID_JWT             // Corrupted or fake JWT
+  UNAUTHORIZED_ACCESS     // Tried to access forbidden route
+  API_PERMISSION_DENIED   // API rejected due to insufficient permissions
+  SESSION_HIJACK_ATTEMPT  // Suspicious session activity
+}
+
+enum SecuritySeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
 }
 
