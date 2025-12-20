@@ -57,8 +57,10 @@ export default defineNuxtPlugin(() => {
       options.headers = {}
     }
 
-    // Skip adding auth header for refresh endpoint to avoid loops
-    if (!url.includes('/api/auth/refresh') && import.meta.client) {
+    // Skip adding auth header for public endpoints and refresh endpoint
+    const isPublicEndpoint = url.includes('/api/public/') || url.includes('/api/auth/refresh')
+
+    if (!isPublicEndpoint && import.meta.client) {
       const token = localStorage.getItem('auth_token')
       if (token) {
         options.headers = {
@@ -71,9 +73,14 @@ export default defineNuxtPlugin(() => {
     try {
       return await originalFetch(url, options)
     } catch (error: any) {
-      // Handle 401 errors with token refresh
+      // Handle 401 errors with token refresh (but skip for public endpoints)
       if (import.meta.client && (error?.statusCode === 401 || error?.response?.status === 401)) {
-        // Don't try to refresh if this IS the refresh endpoint
+        // Don't try to refresh for public endpoints or refresh endpoint
+        if (isPublicEndpoint) {
+          // Public endpoints shouldn't trigger auth flow
+          throw error
+        }
+
         if (url.includes('/api/auth/refresh')) {
           // console.log('🚪 Refresh token invalid - logging out...')
           localStorage.removeItem('auth_token')
