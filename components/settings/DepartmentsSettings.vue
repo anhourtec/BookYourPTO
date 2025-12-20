@@ -345,7 +345,7 @@ interface Department {
   name: string
   code: string
   description?: string
-  color: string
+  color?: string
   headOfDepartmentId?: string
   headOfDept?: {
     id: string
@@ -503,7 +503,7 @@ const openEditModal = (dept: Department) => {
     name: dept.name,
     code: dept.code,
     description: dept.description || '',
-    color: dept.color,
+    color: dept.color || '#3b82f6',
     headOfDepartmentId: dept.headOfDepartmentId || null,
     maxAbsent: null, // Not in schema yet, but ready for future
     isActive: dept.isActive,
