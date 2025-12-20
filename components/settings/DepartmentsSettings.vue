@@ -191,7 +191,9 @@
 
 
           <!-- Maximum Absent -->
-          <div>
+
+          <!--
+             <div>
             <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
               Maximum absent
               <Icon name="lucide:info" class="w-3.5 h-3.5 inline-block ml-1 text-[rgb(var(--muted-foreground))]" title="Maximum number of people who can be absent at the same time" />
@@ -205,6 +207,8 @@
             </select>
           </div>
 
+          -->
+       
 
           <!-- Description -->
           <div>
