@@ -131,7 +131,9 @@
             </button>
 
             <!-- Lock Dates (placeholder for future) -->
-            <button
+
+            <!--
+             <button
               v-if="canAccessGroupBooking"
               class="flex items-center gap-2 rounded-full bg-blue-600 text-white px-3 py-1.5 shadow-lg hover:bg-blue-700 text-sm transition-colors"
               @click="openLockDates"
@@ -141,6 +143,8 @@
                 <Icon name="lucide:lock" class="w-4 h-4" />
               </span>
             </button>
+            -->
+           
           </div>
         </Transition>
 
