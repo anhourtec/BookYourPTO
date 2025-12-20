@@ -85,6 +85,7 @@ model Organization {
   departments      Department[]
   leaveTypes       LeaveType[]
   publicHolidays   PublicHoliday[]
+  holidayOverrides UserHolidayOverride[]
   leaves           Leave[]
   leaveBalances    LeaveBalance[]
   documents        Document[]
@@ -216,6 +217,10 @@ model User {
   customLeaveAllowance Float? // Override organization default
   customLeaveBalances  Json? // Other leave types: { MATERNITY: 90, etc. }
 
+  // Holiday Location Override
+  holidayCountry String? // Override org holiday country (e.g., "US", "GB")
+  holidayRegion  String? // Specific region/state (e.g., "CA", "NY")
+
   // Status & Activity
   isActive           Boolean   @default(true)
   emailVerified      Boolean   @default(false)
@@ -243,6 +248,7 @@ model User {
   signedDocuments   Document[]         @relation("DocumentSigner")
   firstLevelApprovals Leave[]          @relation("FirstLevelApprover")
   secondLevelApprovals Leave[]         @relation("SecondLevelApprover")
+  holidayOverrides  UserHolidayOverride[]
 
   @@unique([organizationId, email])
   @@unique([organizationId, employeeId])
@@ -326,10 +332,42 @@ model PublicHoliday {
 
   // Relations
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userOverrides UserHolidayOverride[] @relation("HolidayToOverride")
 
   @@index([organizationId])
   @@index([date])
   @@index([country])
+}
+
+// User-specific Holiday Overrides
+model UserHolidayOverride {
+  id             String  @id @default(cuid())
+  userId         String
+  organizationId String
+
+  // Override Type
+  type           UserHolidayOverrideType // EXCLUDE or ADD
+
+  // For EXCLUDE: reference to org holiday being excluded
+  publicHolidayId String?
+
+  // For ADD: custom holiday details
+  name       String?
+  date       DateTime?
+  isRecurring Boolean @default(true)
+  isHalfDay  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  publicHoliday PublicHoliday? @relation("HolidayToOverride", fields: [publicHolidayId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([publicHolidayId])
 }
 
 // Leave Requests (Time-off requests)
@@ -787,5 +825,10 @@ enum EmailTemplateType {
   DOCUMENT_SIGNED
   BALANCE_UPDATED
   POLICY_UPDATE
+}
+
+enum UserHolidayOverrideType {
+  EXCLUDE // Exclude an organization holiday for this user
+  ADD     // Add a custom holiday for this user
 }
 

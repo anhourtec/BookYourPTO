@@ -291,13 +291,18 @@ const downloadLeaveReport = async (filters: {
     return await authenticatedFetch<LeaveType[]>('/api/leave-types')
   }
 
-  const fetchPublicHolidays = async (year?: number): Promise<PublicHoliday[]> => {
+  const fetchPublicHolidays = async (year?: number, userId?: string): Promise<PublicHoliday[]> => {
     const currentYear = year || new Date().getFullYear()
-    
-    // console.log('Fetching public holidays for year:', currentYear)
-    
-    const holidays = await authenticatedFetch<PublicHoliday[]>(`/api/public-holidays?year=${currentYear}`)
-    
+
+    // console.log('Fetching public holidays for year:', currentYear, 'userId:', userId)
+
+    // Add userId parameter to get user-specific holidays
+    const url = userId
+      ? `/api/public-holidays?year=${currentYear}&userId=${userId}`
+      : `/api/public-holidays?year=${currentYear}`
+
+    const holidays = await authenticatedFetch<PublicHoliday[]>(url)
+
     // console.log('Received holidays:', holidays)
     return holidays
   }

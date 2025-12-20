@@ -13,7 +13,7 @@
             :key="day.dateKey"
             class="text-center py-1"
           >
-            <!-- Day of week letter only -->
+            <!-- Day of week letter -->
             <div
               class="text-xs sm:text-sm font-bold uppercase tracking-wider"
               :class="getDayHeaderClass(day)"
@@ -115,9 +115,6 @@ defineEmits<{
   'add-user': []
 }>()
 
-const dayLetters: string[] = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
-const mondayStartDayLetters: string[] = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
-
 // Helper function to compare dates by calendar day (ignoring time)
 const isSameDay = (a: Date, b: Date): boolean => {
   return (
@@ -147,14 +144,18 @@ const headerDays = computed(() => {
       const date = new Date(startDate)
       date.setDate(startDate.getDate() + i)
 
-      const dayOfWeek = date.getDay()
+      const dayOfWeek = date.getDay() // 0 = Sunday, 6 = Saturday
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
       const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+
+      // Get correct day letter based on actual day of week
+      const dayLetters = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+      const dayLetter = dayLetters[dayOfWeek] || 'S'
 
       days.push({
         date,
         dateKey,
-        dayLetter: props.weekStartDay === 1 ? (mondayStartDayLetters[dayOfWeek] || 'M') : (dayLetters[dayOfWeek] || 'S'),
+        dayLetter,
         isCurrentMonth: date.getMonth() === props.currentMonth,
         isToday: isSameDay(date, todayDate.value),
         isWeekend,
@@ -164,27 +165,34 @@ const headerDays = computed(() => {
       })
     }
   } else {
-    // Desktop: Show 35 days (5 weeks)
+    // Desktop: Show 30 days (not 35) to match user rows
     const startOfMonth = new Date(props.year, props.currentMonth, 1)
     const firstDayOfWeek = startOfMonth.getDay()
+    
+    // Calculate days to show before month start based on week start preference
     const daysToSubtract = props.weekStartDay === 1
       ? (firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1)
       : firstDayOfWeek
     
     const startDate = new Date(props.year, props.currentMonth, 1 - daysToSubtract)
     
-    for (let i = 0; i < 35; i++) {
+    // Generate exactly 30 days
+    for (let i = 0; i < 30; i++) {
       const date = new Date(startDate)
       date.setDate(startDate.getDate() + i)
       
-      const dayOfWeek = date.getDay()
+      const dayOfWeek = date.getDay() // 0 = Sunday, 6 = Saturday
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
       const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+      
+      // Get correct day letter based on actual day of week
+      const dayLetters = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+      const dayLetter = dayLetters[dayOfWeek] || 'S'
       
       days.push({
         date,
         dateKey,
-        dayLetter: props.weekStartDay === 1 ? (mondayStartDayLetters[i % 7] || 'M') : (dayLetters[dayOfWeek] || 'S'),
+        dayLetter,
         isCurrentMonth: date.getMonth() === props.currentMonth,
         isToday: isSameDay(date, todayDate.value),
         isWeekend,
@@ -211,24 +219,51 @@ const getDayHeaderClass = (day: DayInfo): string => {
 
 // Check if a date is a holiday
 const isHoliday = (date: Date): PublicHoliday | undefined => {
-  const dateStr = date.toISOString().split('T')[0]
-  return props.publicHolidays.find(h => {
-    const holidayDate = new Date(h.date)
-    return holidayDate.toISOString().split('T')[0] === dateStr
-  })
+  try {
+    const dateStr = date.toISOString().split('T')[0]
+    if (!dateStr) return undefined
+    
+    return props.publicHolidays.find(h => {
+      try {
+        const holidayDate = new Date(h.date)
+        const holidayStr = holidayDate.toISOString().split('T')[0]
+        if (!holidayStr) return false
+        return holidayStr === dateStr
+      } catch {
+        return false
+      }
+    })
+  } catch {
+    return undefined
+  }
 }
 
 // Check if a date falls within a leave period
 const getLeaveForDate = (user: User, date: Date): Leave | undefined => {
-  // Use ISO date strings to avoid timezone issues (same approach as isHoliday)
-  const dateStr = date.toISOString().split('T')[0]
+  try {
+    const dateStr = date.toISOString().split('T')[0]
+    if (!dateStr) return undefined
 
-  return user.leaves.find(leave => {
-    const leaveStart = new Date(leave.startDate).toISOString().split('T')[0]
-    const leaveEnd = new Date(leave.endDate).toISOString().split('T')[0]
+    return user.leaves.find(leave => {
+      try {
+        if (!leave.startDate || !leave.endDate) return false
+        
+        const startDateObj = new Date(leave.startDate)
+        const endDateObj = new Date(leave.endDate)
+        
+        const leaveStart = startDateObj.toISOString().split('T')[0]
+        const leaveEnd = endDateObj.toISOString().split('T')[0]
 
-    return dateStr >= leaveStart && dateStr <= leaveEnd
-  })
+        if (!leaveStart || !leaveEnd) return false
+
+        return dateStr >= leaveStart && dateStr <= leaveEnd
+      } catch {
+        return false
+      }
+    })
+  } catch {
+    return undefined
+  }
 }
 
 // Generate days for a specific user (with their leaves)

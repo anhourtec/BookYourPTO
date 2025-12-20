@@ -52,19 +52,36 @@ export default defineEventHandler(async (event) => {
 
     const query = getQuery(event)
     const year = query.year != null ? parseInt(query.year as string, 10) : new Date().getFullYear()
+    const userId = query.userId as string | undefined // Optional: get holidays for specific user
 
     const organization = await prisma.organization.findUnique({
       where: { id: decoded.organizationId },
       select: { timezone: true },
     })
-    
+
     if (!organization) {
       throw createError({ statusCode: 404, message: 'Organization not found' })
     }
 
+    // Get user-specific holiday settings if userId is provided
+    let targetUser = null
+    if (userId) {
+      targetUser = await prisma.user.findFirst({
+        where: {
+          id: userId,
+          organizationId: decoded.organizationId
+        },
+        select: {
+          id: true,
+          holidayCountry: true,
+          holidayRegion: true
+        }
+      })
+    }
+
     const yearStartStr = `${year}-01-01T00:00:00.000Z`
     const yearEndStr = `${year}-12-31T23:59:59.999Z`
-    
+
     const yearStart = new Date(yearStartStr)
     const yearEnd = new Date(yearEndStr)
 
@@ -143,6 +160,91 @@ export default defineEventHandler(async (event) => {
         // Sort by date
         holidays.sort((a, b) => a.date.getTime() - b.date.getTime())
       }
+    }
+
+    // Apply user-specific country/region if userId is provided
+    if (userId && targetUser && targetUser.holidayCountry) {
+      console.log(`🌍 User has custom holiday country: ${targetUser.holidayCountry}${targetUser.holidayRegion ? ` (${targetUser.holidayRegion})` : ''}`)
+
+      // Fetch holidays from API for user's country (don't save to org's public holidays)
+      console.log(`📥 Fetching holidays from API for ${targetUser.holidayCountry}...`)
+      try {
+        let apiHolidays = await fetchHolidaysFromAPI(targetUser.holidayCountry, year)
+
+        // Filter by subdivision if specified
+        if (targetUser.holidayRegion) {
+          apiHolidays = apiHolidays.filter(h =>
+            h.global || (h.counties && h.counties.includes(targetUser.holidayRegion!))
+          )
+        }
+
+        // Convert to the expected format but DON'T save to database
+        // This keeps holidays user-specific and doesn't pollute org holidays
+        holidays = apiHolidays.map(holiday => ({
+          id: `temp-${targetUser.holidayCountry}-${holiday.date}`, // Temporary ID
+          organizationId: decoded.organizationId,
+          country: targetUser.holidayCountry!,
+          name: holiday.name,
+          date: parseHolidayDate(holiday.date),
+          isRecurring: holiday.fixed === false,
+          region: targetUser.holidayRegion || null,
+          recurringPattern: null,
+          affectedDepartments: [],
+          isHalfDay: false,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }))
+
+        console.log(`✅ Fetched ${holidays.length} holidays for user's country (not saved to DB)`)
+      } catch (error) {
+        console.error(`❌ Failed to fetch holidays for ${targetUser.holidayCountry}:`, error)
+        // Keep organization holidays if fetch fails
+      }
+    }
+
+    // Apply user-specific overrides if userId is provided
+    if (userId && targetUser) {
+      console.log(`🎯 Applying user-specific holiday overrides for user ${userId}`)
+
+      // Get user's holiday overrides
+      const userOverrides = await prisma.userHolidayOverride.findMany({
+        where: {
+          userId: userId,
+          organizationId: decoded.organizationId
+        }
+      })
+
+      // Process EXCLUDE overrides - remove holidays
+      const excludedHolidayIds = userOverrides
+        .filter(o => o.type === 'EXCLUDE' && o.publicHolidayId)
+        .map(o => o.publicHolidayId)
+
+      holidays = holidays.filter(h => !excludedHolidayIds.includes(h.id))
+
+      // Process ADD overrides - add custom holidays
+      const customHolidays = userOverrides
+        .filter(o => o.type === 'ADD' && o.date)
+        .map(o => ({
+          id: o.id,
+          organizationId: decoded.organizationId,
+          country: targetUser.holidayCountry || 'CUSTOM',
+          region: targetUser.holidayRegion || null,
+          name: o.name || 'Custom Holiday',
+          date: o.date!,
+          isRecurring: o.isRecurring,
+          recurringPattern: null,
+          affectedDepartments: [],
+          isHalfDay: o.isHalfDay,
+          createdAt: o.createdAt,
+          updatedAt: o.updatedAt
+        }))
+
+      holidays.push(...customHolidays)
+
+      // Sort again after applying overrides
+      holidays.sort((a, b) => a.date.getTime() - b.date.getTime())
+
+      console.log(`✅ Applied ${userOverrides.length} overrides (${excludedHolidayIds.length} excluded, ${customHolidays.length} added)`)
     }
 
     console.log(`✅ Returning ${holidays.length} holidays for ${year}`)

@@ -62,7 +62,10 @@
               <h3 class="font-semibold text-sm sm:text-base text-[rgb(var(--foreground))] truncate">{{ leaveType.name }}</h3>
               <p class="text-xs sm:text-sm text-[rgb(var(--muted-foreground))] break-words">
                 {{ getLeaveTypeCodeLabel(leaveType.code) }}
+                <span v-if="leaveType.annualAllowance"></span>
+                <!--
                 <span v-if="leaveType.annualAllowance"> • {{ leaveType.annualAllowance }} days/year</span>
+                -->
                 <span v-if="!leaveType.isActive" class="text-[rgb(var(--destructive))]"> • Inactive</span>
               </p>
             </div>
@@ -381,6 +384,7 @@ const canEditSettings = () => {
 }
 
 interface LeaveType {
+  deductionBucket: string
   id: string
   name: string
   code: string
@@ -515,8 +519,8 @@ const openEditModal = (leaveType: LeaveType) => {
 
   // Determine deduction bucket from existing data
   let deductionBucket: 'NONE' | 'ANNUAL' | 'SICK' = 'NONE'
-  if (leaveType.deductionBucket) {
-    deductionBucket = leaveType.deductionBucket
+  if (leaveType.deductionBucket && ['NONE', 'ANNUAL', 'SICK'].includes(leaveType.deductionBucket)) {
+    deductionBucket = leaveType.deductionBucket as 'NONE' | 'ANNUAL' | 'SICK'
   } else if (leaveType.annualAllowance && leaveType.annualAllowance > 0) {
     // Backward compatibility: if annualAllowance is set but no deductionBucket,
     // assume ANNUAL for non-SICK_PAID types

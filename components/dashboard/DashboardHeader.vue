@@ -87,6 +87,7 @@ const dateRangeText = computed(() => {
   // Mobile: Show 7-day range
   if (props.isMobile && props.mobileStartDate) {
     const startDate = new Date(props.mobileStartDate)
+    startDate.setHours(0, 0, 0, 0)
     const endDate = new Date(startDate)
     endDate.setDate(startDate.getDate() + 6)
 
@@ -111,18 +112,7 @@ const dateRangeText = computed(() => {
     }
   }
 
-  // Desktop: Show month range
-  const currentMonth = monthNames[props.month]
-  const currentYear = props.year
-
-  // Calculate next month
-  const nextMonth = props.month === 11 ? 0 : props.month + 1
-  const nextYear = props.month === 11 ? props.year + 1 : props.year
-
-  if (nextYear !== currentYear) {
-    return `${currentMonth} ${currentYear} — ${monthNames[nextMonth]} ${nextYear}`
-  }
-
-  return `${currentMonth} — ${monthNames[nextMonth]} ${currentYear}`
+  // Desktop: Show current month (30 days view)
+  return `${monthNames[props.month]} ${props.year}`
 })
 </script>
