@@ -39,6 +39,10 @@ export interface User {
   state?: string
   postalCode?: string
   country?: string
+
+  // Holiday Location Override
+  holidayCountry?: string
+  holidayRegion?: string
   
   // Emergency Contact
   emergencyContact?: {
@@ -130,6 +134,8 @@ export interface UpdateUserInput {
   state?: string | null
   postalCode?: string | null
   country?: string | null
+  holidayCountry?: string | null
+  holidayRegion?: string | null
   carryOverBalance?: number
   customLeaveAllowance?: number | null
   allowCarryForward?: boolean
