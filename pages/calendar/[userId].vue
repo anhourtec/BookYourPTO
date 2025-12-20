@@ -254,11 +254,7 @@ const loadUser = async () => {
 const loadDepartments = async () => {
   if (!canAccessGroupBooking.value) return
   try {
-    const token = localStorage.getItem('auth_token')
-    const data = await $fetch('/api/departments', {
-      headers: { 'Authorization': `Bearer ${token}` },
-    })
-    departments.value = data as Department[]
+    departments.value = await api.fetchDepartments()
   } catch (error) {
     console.error('Failed to load departments:', error)
   }
@@ -364,22 +360,21 @@ const handleGroupBooking = async (payload: {
   reason?: string
 }) => {
   // console.log('📤 Creating group booking:', payload)
-  
+
   try {
-    const token = localStorage.getItem('auth_token')
+    // Plugin will auto-add auth header and handle token refresh
     await $fetch('/api/leaves/group-booking', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` },
       body: payload,
     })
-    
+
     groupBookingModalOpen.value = false
     fabOpen.value = false
-    
+
     // Show success message
     const dept = departments.value.find(d => d.id === payload.departmentId)
     alert(`Successfully created leave requests for ${dept?._count?.users || 0} members of ${dept?.name || 'department'}`)
-    
+
     // Reload calendar
     await loadCalendarData(routeUserId.value, year.value)
   } catch (error: any) {
@@ -393,13 +388,9 @@ const handleLeaveCancel = async (leaveId: string) => {
   try {
     console.log('Cancelling leave:', leaveId)
 
-    // Make API call to cancel the leave
-    const token = localStorage.getItem('auth_token')
+    // Plugin will auto-add auth header and handle token refresh
     await $fetch(`/api/leaves/${leaveId}`, {
       method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
     })
 
     console.log('Leave cancelled successfully')
