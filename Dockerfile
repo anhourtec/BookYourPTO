@@ -43,6 +43,7 @@ COPY --from=build --chown=nuxtjs:nodejs /app/.output ./.output
 COPY --from=build --chown=nuxtjs:nodejs /app/node_modules ./node_modules
 COPY --from=build --chown=nuxtjs:nodejs /app/package.json ./package.json
 COPY --from=build --chown=nuxtjs:nodejs /app/prisma ./prisma
+COPY --from=build --chown=nuxtjs:nodejs /app/prisma.config.ts ./prisma.config.ts
 COPY --from=build --chown=nuxtjs:nodejs /app/scripts ./scripts
 
 USER nuxtjs

@@ -2,13 +2,13 @@
   "name": "nuxt-app",
   "type": "module",
   "private": true,
-  "scripts": {
-    "build": "node scripts/db-init.mjs && nuxt build",
+ "scripts": {
+    "build": "nuxt build",
     "dev": "node scripts/dev-start.mjs",
     "start": "node scripts/docker-deploy.mjs",
     "generate": "node scripts/db-init.mjs && nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare && npx prisma generate",
+    "postinstall": "nuxt prepare",
     "db:init": "node scripts/db-init.mjs",
     "db:generate": "npx prisma generate",
     "db:migrate": "npx prisma migrate deploy",
