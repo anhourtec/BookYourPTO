@@ -9,6 +9,8 @@ services:
       POSTGRES_DB: bookyourpto
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -22,7 +24,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        # Required ONLY at build time for Prisma client generation
+        # Prisma build-time connection (Docker DNS)
         DATABASE_URL: postgresql://postgres:postgres123@postgres:5432/bookyourpto
     container_name: bookyourpto-app
     restart: unless-stopped
@@ -31,7 +33,7 @@ services:
     env_file:
       - .env
     environment:
-      # Runtime override for Docker networking
+      # Runtime connection INSIDE Docker
       DATABASE_URL: postgresql://postgres:postgres123@postgres:5432/bookyourpto
       NODE_ENV: production
     depends_on:
