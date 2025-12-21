@@ -16,7 +16,7 @@
         <!-- Social Links -->
         <div class="flex items-center gap-3">
           <a
-            href="https://github.com/yourusername/bookyourpto"
+            href="https://github.com/anhourtec"
             target="_blank"
             rel="noopener noreferrer"
             class="group p-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all duration-200 hover:scale-110"
@@ -25,14 +25,20 @@
             <Icon name="lucide:github" class="w-5 h-5" />
           </a>
           <a
-            href="#"
+            href="https://x.com/anhourtec"
             class="group p-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all duration-200 hover:scale-110"
             aria-label="Twitter"
           >
-            <Icon name="lucide:twitter" class="w-5 h-5" />
+             <svg
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              class="w-5 h-5 fill-current"
+            >
+              <path d="M21.742 21.75l-7.563-11.179 7.056-8.321h-2.456l-5.691 6.714-4.54-6.714H2.359l7.29 10.776L2.25 21.75h2.456l6.035-7.118 4.818 7.118h6.191-.008zM7.739 3.818L18.81 20.182h-2.447L5.29 3.818h2.447z" />
+            </svg>
           </a>
           <a
-            href="#"
+            href="https://www.linkedin.com/company/anhourtec"
             class="group p-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all duration-200 hover:scale-110"
             aria-label="LinkedIn"
           >
