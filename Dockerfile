@@ -1,66 +1,51 @@
-# Multi-stage build for BookYourPTO
-
-# Stage 1: Dependencies
-FROM node:20-alpine AS deps
+# syntax=docker/dockerfile:1
+FROM node:22-alpine AS deps
 WORKDIR /app
 
-# Install dependencies needed for native packages
-RUN apk add --no-cache libc6-compat python3 make g++
+RUN apk add --no-cache libc6-compat openssl python3 make g++
+RUN corepack enable
 
-# Copy package files
-COPY package*.json ./
-COPY prisma ./prisma/
+ARG DATABASE_URL
+ENV DATABASE_URL=${DATABASE_URL}
 
-# Install dependencies
-RUN npm ci
+COPY package.json package-lock.json ./
+COPY prisma ./prisma
+COPY prisma.config.ts ./
 
-# Generate Prisma Client
-RUN npx prisma generate
+RUN --mount=type=cache,target=/root/.npm npm ci
+RUN npx prisma generate && unset DATABASE_URL
 
-# Stage 2: Builder
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS build
 WORKDIR /app
 
-# Copy dependencies from deps stage
+RUN corepack enable
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Build the application (without running migrations)
 ENV NODE_ENV=production
 RUN npm run build
 
-# Stage 3: Runner
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS production
 WORKDIR /app
 
+RUN apk add --no-cache openssl
+
 ENV NODE_ENV=production
+ENV HOST=0.0.0.0
+ENV PORT=3000
 
-# Install PostgreSQL client for health checks
-RUN apk add --no-cache postgresql-client
+# Create user BEFORE copying files
+RUN addgroup -S nodejs && adduser -S nuxtjs -G nodejs
 
-# Create non-root user
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nuxtjs
+# Copy with ownership set during copy (not after)
+COPY --from=build --chown=nuxtjs:nodejs /app/.output ./.output
+COPY --from=build --chown=nuxtjs:nodejs /app/node_modules ./node_modules
+COPY --from=build --chown=nuxtjs:nodejs /app/package.json ./package.json
+COPY --from=build --chown=nuxtjs:nodejs /app/prisma ./prisma
+COPY --from=build --chown=nuxtjs:nodejs /app/scripts ./scripts
 
-# Copy necessary files
-COPY --from=builder /app/.output ./.output
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/scripts ./scripts
-
-# Change ownership
-RUN chown -R nuxtjs:nodejs /app
-
-# Switch to non-root user
 USER nuxtjs
 
-# Expose port
 EXPOSE 3000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
-
-# Start with deployment script
 CMD ["npm", "run", "start"]
