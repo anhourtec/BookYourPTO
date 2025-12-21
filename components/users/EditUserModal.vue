@@ -1119,14 +1119,19 @@ const cannotDeactivateReason = computed(() => {
   return ''
 })
 
-// Only show Holiday Overrides tab for ADMINISTRATOR and EXECUTIVE
+// Only show Employment and Holiday Overrides tabs for ADMINISTRATOR and EXECUTIVE
 const tabs = computed(() => {
   const baseTabs = [
     { id: 'profile', label: 'Profile', icon: 'lucide:user' },
     { id: 'contact', label: 'Contact', icon: 'lucide:phone' },
-    { id: 'employment', label: 'Employment', icon: 'lucide:briefcase' },
-    { id: 'allowance', label: 'Leave Allowance', icon: 'lucide:calendar-days' },
   ]
+
+  // Add Employment tab only for ADMINISTRATOR and EXECUTIVE
+  if (currentUser.value && ['ADMINISTRATOR', 'EXECUTIVE'].includes(currentUser.value.role)) {
+    baseTabs.push({ id: 'employment', label: 'Employment', icon: 'lucide:briefcase' })
+  }
+
+  baseTabs.push({ id: 'allowance', label: 'Leave Allowance', icon: 'lucide:calendar-days' })
 
   // Add Holiday Overrides tab only for ADMINISTRATOR and EXECUTIVE
   if (currentUser.value && ['ADMINISTRATOR', 'EXECUTIVE'].includes(currentUser.value.role)) {

@@ -136,6 +136,28 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // ✅ BUSINESS RULE 7: Employment fields can only be modified by ADMINISTRATOR and EXECUTIVE
+    const employmentFields = [
+      'jobTitle',
+      'employeeId',
+      'departmentId',
+      'reportsToId',
+      'employmentType',
+      'role',
+      'payrollId',
+      'isActive',
+      'employmentStartDate'
+    ]
+
+    const isModifyingEmploymentFields = employmentFields.some(field => body[field] !== undefined)
+
+    if (isModifyingEmploymentFields && !['ADMINISTRATOR', 'EXECUTIVE'].includes(currentUser.role)) {
+      throw createError({
+        statusCode: 403,
+        message: 'Only administrators and executives can modify employment details',
+      })
+    }
+
     // ============================================
     // DATE PARSING
     // ============================================
