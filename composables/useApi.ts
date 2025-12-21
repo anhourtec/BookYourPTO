@@ -23,6 +23,10 @@ import type {
 let isRefreshing = false
 let refreshPromise: Promise<boolean> | null = null
 
+// Type-safe fetch wrapper to avoid Nuxt's complex route type inference
+type FetchFunction = <T = any>(url: string, options?: Record<string, any>) => Promise<T>
+const safeFetch = $fetch as FetchFunction
+
 export const useApi = () => {
   const router = useRouter()
 
@@ -33,7 +37,7 @@ export const useApi = () => {
     if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
       return {}
     }
-    
+
     const token = localStorage.getItem('auth_token')
     return token ? { 'Authorization': `Bearer ${token}` } : {}
   }
@@ -56,7 +60,7 @@ export const useApi = () => {
     refreshPromise = (async () => {
       try {
         const refreshToken = localStorage.getItem('refresh_token')
-        
+
         if (!refreshToken) {
           console.log('No refresh token found')
           isRefreshing = false
@@ -64,8 +68,8 @@ export const useApi = () => {
         }
 
         console.log('Refreshing access token...')
-        
-        const response = await $fetch<RefreshTokenResponse>('/api/auth/refresh', {
+
+        const response = await safeFetch<RefreshTokenResponse>('/api/auth/refresh', {
           method: 'POST',
           body: { refreshToken },
         })
@@ -73,7 +77,7 @@ export const useApi = () => {
         // IMPORTANT: Update BOTH tokens (for token rotation)
         localStorage.setItem('auth_token', response.accessToken)
         localStorage.setItem('refresh_token', response.refreshToken)
-        
+
         console.log('Access token refreshed successfully')
         isRefreshing = false
         return true
@@ -90,41 +94,44 @@ export const useApi = () => {
   // ============================================
   // Authenticated fetch with auto-retry on 401
   // ============================================
-  const authenticatedFetch = async <T = any>(url: string, options: any = {}): Promise<T> => {
+  const authenticatedFetch = async <T = any>(
+    url: string,
+    options: Record<string, any> = {}
+  ): Promise<T> => {
     // Skip refresh endpoint to avoid infinite loops
     if (url.includes('/api/auth/refresh')) {
-      return await $fetch(url, options) as T
+      return await safeFetch<T>(url, options)
     }
 
     try {
       // First attempt with current token
-      const response = await $fetch(url, {
+      const response = await safeFetch<T>(url, {
         ...options,
         headers: {
           ...getAuthHeaders(),
           ...options.headers,
         },
       })
-      return response as T
+      return response
     } catch (error: any) {
       // If 401 error, try to refresh token and retry
       if (error?.statusCode === 401 || error?.response?.status === 401) {
         console.log('401 error - attempting to refresh token...')
-        
+
         const refreshed = await refreshAccessToken()
-        
+
         if (refreshed) {
           // Retry the original request with new token
           try {
             console.log('Retrying request with new token...')
-            const retryResponse = await $fetch(url, {
+            const retryResponse = await safeFetch<T>(url, {
               ...options,
               headers: {
                 ...getAuthHeaders(),
                 ...options.headers,
               },
             })
-            return retryResponse as T
+            return retryResponse
           } catch (retryError) {
             console.error('Retry failed after token refresh')
             throw retryError
@@ -140,7 +147,7 @@ export const useApi = () => {
           }
         }
       }
-      
+
       throw error
     }
   }
@@ -291,13 +298,18 @@ const downloadLeaveReport = async (filters: {
     return await authenticatedFetch<LeaveType[]>('/api/leave-types')
   }
 
-  const fetchPublicHolidays = async (year?: number): Promise<PublicHoliday[]> => {
+  const fetchPublicHolidays = async (year?: number, userId?: string): Promise<PublicHoliday[]> => {
     const currentYear = year || new Date().getFullYear()
-    
-    // console.log('Fetching public holidays for year:', currentYear)
-    
-    const holidays = await authenticatedFetch<PublicHoliday[]>(`/api/public-holidays?year=${currentYear}`)
-    
+
+    // console.log('Fetching public holidays for year:', currentYear, 'userId:', userId)
+
+    // Add userId parameter to get user-specific holidays
+    const url = userId
+      ? `/api/public-holidays?year=${currentYear}&userId=${userId}`
+      : `/api/public-holidays?year=${currentYear}`
+
+    const holidays = await authenticatedFetch<PublicHoliday[]>(url)
+
     // console.log('Received holidays:', holidays)
     return holidays
   }

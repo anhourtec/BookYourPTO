@@ -191,7 +191,9 @@
 
 
           <!-- Maximum Absent -->
-          <div>
+
+          <!--
+             <div>
             <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
               Maximum absent
               <Icon name="lucide:info" class="w-3.5 h-3.5 inline-block ml-1 text-[rgb(var(--muted-foreground))]" title="Maximum number of people who can be absent at the same time" />
@@ -205,6 +207,8 @@
             </select>
           </div>
 
+          -->
+       
 
           <!-- Description -->
           <div>
@@ -345,7 +349,7 @@ interface Department {
   name: string
   code: string
   description?: string
-  color: string
+  color?: string
   headOfDepartmentId?: string
   headOfDept?: {
     id: string
@@ -503,7 +507,7 @@ const openEditModal = (dept: Department) => {
     name: dept.name,
     code: dept.code,
     description: dept.description || '',
-    color: dept.color,
+    color: dept.color || '#3b82f6',
     headOfDepartmentId: dept.headOfDepartmentId || null,
     maxAbsent: null, // Not in schema yet, but ready for future
     isActive: dept.isActive,

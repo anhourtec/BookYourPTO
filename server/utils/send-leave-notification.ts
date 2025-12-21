@@ -50,27 +50,111 @@ async function createEmailTransporter(organizationId: string) {
 }
 
 /**
- * Get approvers who should be notified about leave submissions
- * - All department heads if user has a department
- * - All administrators
- * - All executives
+ * Get the appropriate approver for a leave request based on organizational hierarchy
+ * Priority:
+ * 1. Direct manager (reportsToId)
+ * 2. Department head (if user is not the department head)
+ * 3. Any administrator or executive
  */
-async function getApproversForNotification(organizationId: string, userDepartmentId?: string | null) {
-  const approvers = await prisma.user.findMany({
+async function getLeaveApprover(userId: string, organizationId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      manager: {
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+        }
+      },
+      department: {
+        include: {
+          headOfDept: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              role: true,
+            }
+          }
+        }
+      }
+    }
+  })
+
+  if (!user) return null
+
+  // Priority 1: Direct manager (reportsTo)
+  if (user.manager && user.manager.id !== userId && user.manager.email) {
+    console.log(`✅ Approver found: Direct manager ${user.manager.firstName} ${user.manager.lastName}`)
+    return user.manager
+  }
+
+  // Priority 2: Department head (if user is not the department head themselves)
+  if (user.department?.headOfDept && user.department.headOfDept.id !== userId && user.department.headOfDept.email) {
+    console.log(`✅ Approver found: Department head ${user.department.headOfDept.firstName} ${user.department.headOfDept.lastName}`)
+    return user.department.headOfDept
+  }
+
+  // Priority 3: Find any administrator or executive
+  const fallbackApprover = await prisma.user.findFirst({
+    where: {
+      organizationId,
+      role: { in: ['ADMINISTRATOR', 'EXECUTIVE'] },
+      isActive: true,
+      id: { not: userId } // Don't return the user themselves
+    },
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      role: true,
+    },
+    orderBy: {
+      role: 'desc' // EXECUTIVE comes before ADMINISTRATOR alphabetically
+    }
+  })
+
+  if (fallbackApprover) {
+    console.log(`✅ Approver found: Fallback ${fallbackApprover.role} ${fallbackApprover.firstName} ${fallbackApprover.lastName}`)
+  } else {
+    console.warn(`⚠️ No approver found for user ${userId}`)
+  }
+
+  return fallbackApprover
+}
+
+/**
+ * Get all approvers who should be notified about leave submissions
+ * This includes the primary approver PLUS any additional stakeholders
+ */
+async function getApproversForNotification(
+  userId: string,
+  organizationId: string,
+  userDepartmentId?: string | null
+): Promise<Array<{ id: string; email: string; firstName: string; lastName: string; role: string }>> {
+  const approvers: Array<{ id: string; email: string; firstName: string; lastName: string; role: string }> = []
+
+  // Get the primary approver (the person who should approve)
+  const primaryApprover = await getLeaveApprover(userId, organizationId)
+  if (primaryApprover) {
+    approvers.push(primaryApprover)
+  }
+
+  // Optionally, also notify all administrators and executives for visibility
+  // (You can comment this out if you only want the direct approver to be notified)
+  const additionalApprovers = await prisma.user.findMany({
     where: {
       organizationId,
       isActive: true,
+      id: { not: userId }, // Don't notify the user themselves
       OR: [
-        // All administrators
         { role: 'ADMINISTRATOR' as const },
-        // All executives
         { role: 'EXECUTIVE' as const },
-        // Department heads of the user's department
-        ...(userDepartmentId ? [{
-          role: 'DEPARTMENT_HEAD' as const,
-          departmentId: userDepartmentId,
-        }] : []),
-        // Custom approvers
         { isApprover: true },
       ],
     },
@@ -82,6 +166,13 @@ async function getApproversForNotification(organizationId: string, userDepartmen
       role: true,
     },
   })
+
+  // Add additional approvers, avoiding duplicates
+  for (const approver of additionalApprovers) {
+    if (!approvers.find(a => a.email === approver.email)) {
+      approvers.push(approver)
+    }
+  }
 
   // Remove duplicates by email
   const uniqueApprovers = approvers.filter(
@@ -118,9 +209,11 @@ export async function sendLeaveSubmissionNotification(
         },
         user: {
           select: {
+            id: true,
             firstName: true,
             lastName: true,
             email: true,
+            jobTitle: true,
             departmentId: true,
             department: {
               select: {
@@ -137,15 +230,20 @@ export async function sendLeaveSubmissionNotification(
       return { sent: 0, failed: 0, errors: ['Leave not found'] }
     }
 
-    // Get approvers to notify
-    const approvers = await getApproversForNotification(organizationId, leave.user.departmentId)
+    // Get approvers to notify (primary approver + optional additional approvers)
+    const approvers = await getApproversForNotification(
+      leave.user.id,
+      organizationId,
+      leave.user.departmentId
+    )
 
     if (approvers.length === 0) {
       console.log('No approvers found to notify')
       return { sent: 0, failed: 0, errors: ['No approvers found'] }
     }
 
-    console.log(`Sending leave submission notifications to ${approvers.length} approver(s)`)
+    console.log(`📧 Sending leave submission notifications to ${approvers.length} approver(s):`)
+    approvers.forEach(a => console.log(`   - ${a.firstName} ${a.lastName} (${a.role}) <${a.email}>`))
 
     // Generate email content
     const emailContent = generateLeaveSubmittedEmail(leave as any, {
@@ -169,18 +267,18 @@ export async function sendLeaveSubmissionNotification(
           text: emailContent.text,
         })
         sent++
-        console.log(`Notification sent to ${approver.email}`)
+        console.log(`✅ Notification sent to ${approver.email}`)
       } catch (error: any) {
         failed++
         const errorMsg = `Failed to send to ${approver.email}: ${error.message}`
         errors.push(errorMsg)
-        console.error(`${errorMsg}`)
+        console.error(`❌ ${errorMsg}`)
       }
     }
 
     return { sent, failed, errors }
   } catch (error: any) {
-    console.error('Error sending leave submission notifications:', error)
+    console.error('❌ Error sending leave submission notifications:', error)
     return { sent: 0, failed: 0, errors: [error.message || 'Unknown error'] }
   }
 }
@@ -245,7 +343,7 @@ export async function sendLeaveApprovalNotification(
       return false
     }
 
-    console.log(`Sending leave approval notification to ${leave.user.email}`)
+    console.log(`📧 Sending leave approval notification to ${leave.user.email}`)
 
     // Generate email content
     const emailContent = generateLeaveApprovedEmail(
@@ -267,10 +365,10 @@ export async function sendLeaveApprovalNotification(
       text: emailContent.text,
     })
 
-    console.log(`Approval notification sent to ${leave.user.email}`)
+    console.log(`✅ Approval notification sent to ${leave.user.email}`)
     return true
   } catch (error: any) {
-    console.error('Error sending leave approval notification:', error)
+    console.error('❌ Error sending leave approval notification:', error)
     return false
   }
 }
@@ -336,7 +434,7 @@ export async function sendLeaveRejectionNotification(
       return false
     }
 
-    console.log(`Sending leave rejection notification to ${leave.user.email}`)
+    console.log(`📧 Sending leave rejection notification to ${leave.user.email}`)
 
     // Generate email content
     const emailContent = generateLeaveRejectedEmail(
@@ -359,10 +457,10 @@ export async function sendLeaveRejectionNotification(
       text: emailContent.text,
     })
 
-    console.log(`Rejection notification sent to ${leave.user.email}`)
+    console.log(`✅ Rejection notification sent to ${leave.user.email}`)
     return true
   } catch (error: any) {
-    console.error('Error sending leave rejection notification:', error)
+    console.error('❌ Error sending leave rejection notification:', error)
     return false
   }
 }

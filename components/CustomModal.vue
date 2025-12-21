@@ -1,27 +1,29 @@
 <template>
-  <Teleport to="body">
-    <Transition name="modal">
-      <div
-        v-if="modelValue"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4"
-        @click.self="closeModal"
-      >
-        <!-- Backdrop -->
-        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
-
-        <!-- Modal Content -->
+  <ClientOnly>
+    <Teleport to="body">
+      <Transition name="modal">
         <div
-          :class="[
-            'relative bg-[rgb(var(--card))] rounded-lg shadow-2xl border border-[rgb(var(--border))] w-full',
-            maxWidthClass
-          ]"
-          @click.stop
+          v-if="modelValue"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4"
+          @click.self="closeModal"
         >
-          <slot></slot>
+          <!-- Backdrop -->
+          <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+
+          <!-- Modal Content -->
+          <div
+            :class="[
+              'relative bg-[rgb(var(--card))] rounded-lg shadow-2xl border border-[rgb(var(--border))] w-full',
+              maxWidthClass
+            ]"
+            @click.stop
+          >
+            <slot></slot>
+          </div>
         </div>
-      </div>
-    </Transition>
-  </Teleport>
+      </Transition>
+    </Teleport>
+  </ClientOnly>
 </template>
 
 <script setup lang="ts">
@@ -54,18 +56,20 @@ const closeModal = () => {
   emit('update:modelValue', false)
 }
 
-// Close on ESC key
+// Close on ESC key (client-side only)
 onMounted(() => {
-  const handleEscape = (e: KeyboardEvent) => {
-    if (e.key === 'Escape' && props.modelValue) {
-      closeModal()
+  if (import.meta.client) {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && props.modelValue) {
+        closeModal()
+      }
     }
+    window.addEventListener('keydown', handleEscape)
+
+    onUnmounted(() => {
+      window.removeEventListener('keydown', handleEscape)
+    })
   }
-  window.addEventListener('keydown', handleEscape)
-  
-  onUnmounted(() => {
-    window.removeEventListener('keydown', handleEscape)
-  })
 })
 </script>
 

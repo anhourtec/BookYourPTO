@@ -221,19 +221,21 @@
 
           <!-- Footer -->
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-            <div class="text-[11px] text-gray-500 dark:text-gray-400 flex flex-col sm:flex-row sm:items-center gap-1.5">
-              <span v-if="estimatedDays > 0 && deductsFromAllowance">
-                Takes
-                <span class="font-semibold text-gray-900 dark:text-white">{{ estimatedDays }}</span>
-                day{{ estimatedDays === 1 ? '' : 's' }} from allowance
-              </span>
-              <span v-else-if="estimatedDays > 0">
-                Does not deduct from annual allowance
-              </span>
+            <div class="text-[11px] flex flex-col gap-1.5">
+              <div class="text-gray-500 dark:text-gray-400 flex flex-col sm:flex-row sm:items-center gap-1.5">
+                <span v-if="estimatedDays > 0 && deductsFromAllowance">
+                  Takes
+                  <span class="font-semibold text-gray-900 dark:text-white">{{ estimatedDays }}</span>
+                  day{{ estimatedDays === 1 ? '' : 's' }} from {{ deductionBucketName }}
+                </span>
+                <span v-else-if="estimatedDays > 0">
+                  Does not deduct from any allowance
+                </span>
 
-              <span v-if="selectedLeaveType" class="sm:ml-1.5">
-                • {{ isPaidLeave ? 'Paid leave' : 'Unpaid leave' }}
-              </span>
+                <span v-if="selectedLeaveType" class="sm:ml-1.5">
+                  • {{ isPaidLeave ? 'Paid leave' : 'Unpaid leave' }}
+                </span>
+              </div>
             </div>
 
             <div class="flex items-center justify-end gap-2">
@@ -298,6 +300,7 @@ interface Props {
   leaveTypes: LeaveType[]
   userName?: string
   userJobTitle?: string
+  publicHolidays?: any[]
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -306,7 +309,8 @@ const props = withDefaults(defineProps<Props>(), {
   startDate: null,
   endDate: null,
   currentUserId: '',
-  currentUserRole: 'EMPLOYEE'
+  currentUserRole: 'EMPLOYEE',
+  publicHolidays: () => []
 })
 
 const emit = defineEmits<{
@@ -328,11 +332,31 @@ const permissions = usePermissions()
 const submitting = ref(false)
 const cancelling = ref(false)
 
+// Organization settings (business hours)
+const orgSettings = ref<any>(null)
+
 const form = reactive({
   leaveTypeId: '',
   reason: '',
   startHalf: 'FULL_DAY' as 'FULL_DAY' | 'FIRST_HALF' | 'SECOND_HALF',
   endHalf: 'FULL_DAY' as 'FULL_DAY' | 'FIRST_HALF' | 'SECOND_HALF',
+})
+
+// Fetch organization settings on mount
+const fetchOrgSettings = async () => {
+  try {
+    const token = localStorage.getItem('auth_token')
+    const settings = await $fetch('/api/organization/settings', {
+      headers: { 'Authorization': `Bearer ${token}` },
+    })
+    orgSettings.value = settings
+  } catch (error) {
+    console.error('Failed to fetch organization settings:', error)
+  }
+}
+
+onMounted(() => {
+  fetchOrgSettings()
 })
 
 const activeLeaveTypes = computed(() =>
@@ -344,7 +368,24 @@ const selectedLeaveType = computed(() =>
 )
 
 const deductsFromAllowance = computed(() => {
-  return !!selectedLeaveType.value?.annualAllowance
+  if (!selectedLeaveType.value) return false
+  const bucket = selectedLeaveType.value.deductionBucket ||
+    (selectedLeaveType.value.annualAllowance && selectedLeaveType.value.annualAllowance > 0
+      ? (selectedLeaveType.value.code === 'SICK_PAID' ? 'SICK' : 'ANNUAL')
+      : 'NONE')
+  return bucket !== 'NONE'
+})
+
+const deductionBucketName = computed(() => {
+  if (!selectedLeaveType.value) return ''
+  const bucket = selectedLeaveType.value.deductionBucket ||
+    (selectedLeaveType.value.annualAllowance && selectedLeaveType.value.annualAllowance > 0
+      ? (selectedLeaveType.value.code === 'SICK_PAID' ? 'SICK' : 'ANNUAL')
+      : 'NONE')
+
+  if (bucket === 'ANNUAL') return 'annual leave allowance'
+  if (bucket === 'SICK') return 'sick leave allowance'
+  return ''
 })
 
 const isPaidLeave = computed(() => {
@@ -354,6 +395,101 @@ const isPaidLeave = computed(() => {
 const isViewingOtherUserLeave = computed(() => {
   return props.mode === 'view' && props.userId !== props.currentUserId
 })
+
+// Check if a date is a business day according to org settings
+const isBusinessDay = (date: Date): boolean => {
+  if (!orgSettings.value?.businessHours) return true // If no settings, allow all days
+
+  const dayOfWeek = date.getDay() // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+  const dayName = dayNames[dayOfWeek]
+
+  return dayName !== undefined && orgSettings.value.businessHours[dayName] === true
+}
+
+// Check if a date is a public holiday
+const isPublicHoliday = (date: Date): boolean => {
+  if (!props.publicHolidays || props.publicHolidays.length === 0) return false
+
+  return props.publicHolidays.some(holiday => {
+    const holidayDate = new Date(holiday.date)
+    return (
+      holidayDate.getUTCFullYear() === date.getFullYear() &&
+      holidayDate.getUTCMonth() === date.getMonth() &&
+      holidayDate.getUTCDate() === date.getDate()
+    )
+  })
+}
+
+// Get array of all dates in the selected range
+const getDatesInRange = (start: Date, end: Date): Date[] => {
+  const dates: Date[] = []
+  const current = new Date(start)
+
+  while (current <= end) {
+    dates.push(new Date(current))
+    current.setDate(current.getDate() + 1)
+  }
+
+  return dates
+}
+
+// Validate selected date range
+const validateDateRange = (): { valid: boolean; message: string } => {
+  if (!startDateInput.value || !endDateInput.value) {
+    return { valid: false, message: 'Please select start and end dates' }
+  }
+
+  const start = new Date(startDateInput.value)
+  const end = new Date(endDateInput.value)
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    return { valid: false, message: 'Invalid date format' }
+  }
+
+  if (end < start) {
+    return { valid: false, message: 'End date cannot be before start date' }
+  }
+
+  // Get all dates in range
+  const datesInRange = getDatesInRange(start, end)
+
+  // Check for public holidays
+  const holidayDates = datesInRange.filter(date => isPublicHoliday(date))
+  if (holidayDates.length > 0) {
+    const holidayNames = holidayDates.map(date => {
+      const holiday = props.publicHolidays?.find(h => {
+        const hDate = new Date(h.date)
+        return (
+          hDate.getUTCFullYear() === date.getFullYear() &&
+          hDate.getUTCMonth() === date.getMonth() &&
+          hDate.getUTCDate() === date.getDate()
+        )
+      })
+      return holiday?.name || date.toLocaleDateString()
+    }).join(', ')
+
+    return {
+      valid: false,
+      message: `Cannot book leave on public holiday${holidayDates.length > 1 ? 's' : ''}: ${holidayNames}`
+    }
+  }
+
+  // Check for non-business days
+  const nonBusinessDays = datesInRange.filter(date => !isBusinessDay(date))
+  if (nonBusinessDays.length > 0) {
+    const dayNames = nonBusinessDays.map(date =>
+      date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
+    ).join(', ')
+
+    return {
+      valid: false,
+      message: `Cannot book leave on non-business day${nonBusinessDays.length > 1 ? 's' : ''}: ${dayNames}`
+    }
+  }
+
+  return { valid: true, message: '' }
+}
 
 const userInitials = computed(() => {
   if (!props.userName) return 'U'
@@ -478,10 +614,17 @@ const handleSubmit = async () => {
     return
   }
 
+  // Validate date range for business hours and public holidays
+  const validation = validateDateRange()
+  if (!validation.valid) {
+    alert(validation.message)
+    return
+  }
+
   if (submitting.value) return // Prevent double submission
 
   submitting.value = true
-  
+
   try {
     const payload = {
       userId: props.userId,
@@ -492,15 +635,15 @@ const handleSubmit = async () => {
       endHalf: form.endHalf,
       reason: form.reason || undefined,
     }
-    
+
     console.log('📤 Submitting leave request:', {
       ...payload,
       inputDates: { start: startDateInput.value, end: endDateInput.value }
     })
-    
+
     // Emit the submit event - parent will handle closing the modal
     emit('submit', payload)
-    
+
     // ✅ NOTE: Don't reset submitting here - the watcher will do it when modal closes
     // This prevents the button from flickering back to "Send request" before modal closes
   } catch (error) {

@@ -42,7 +42,7 @@ export const useLeaves = () => {
       const [leavesData, balanceData, holidaysData] = await Promise.all([
         fetchLeaves(userId, year),
         fetchLeaveBalance(userId, year),
-        fetchPublicHolidays(year),
+        fetchPublicHolidays(year, userId), // Pass userId to get user-specific holidays
       ])
 
       leaves.value = leavesData

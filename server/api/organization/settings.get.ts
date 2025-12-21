@@ -19,6 +19,7 @@ export default defineEventHandler(async (event) => {
         name: true,
         slug: true,
         defaultLeaveAllowance: true,
+        defaultSickLeaveAllowance: true,
         carryForwardDays: true,
         carryForwardHours: true,
         carryForwardExpires: true,

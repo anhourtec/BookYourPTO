@@ -57,7 +57,7 @@
         </div>
 
         <!-- Form -->
-        <div v-else @submit.prevent="handleSubmit" class="space-y-6">
+        <div v-else class="space-y-6">
           <div>
             <label class="block text-sm font-medium text-foreground mb-2">
               Email Address
@@ -68,6 +68,7 @@
               required
               class="w-full px-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
               placeholder="john@company.com"
+              @blur="normalizeEmail"
             />
           </div>
 
@@ -106,6 +107,11 @@ const countdown = ref(60)
 
 let countdownInterval: NodeJS.Timeout | null = null
 
+// Normalize email on blur (UX improvement)
+const normalizeEmail = () => {
+  email.value = email.value.toLowerCase().trim()
+}
+
 const startCountdown = () => {
   canResend.value = false
   countdown.value = 60
@@ -136,6 +142,7 @@ const handleSubmit = async () => {
   error.value = ''
 
   try {
+    // Ensure email is normalized before sending
     await $fetch('/api/auth/forgot-password', {
       method: 'POST',
       body: { email: email.value.toLowerCase().trim() },
@@ -155,6 +162,7 @@ const handleResend = async () => {
   error.value = ''
 
   try {
+    // Ensure email is normalized before sending
     await $fetch('/api/auth/forgot-password', {
       method: 'POST',
       body: { email: email.value.toLowerCase().trim() },

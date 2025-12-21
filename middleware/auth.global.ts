@@ -23,6 +23,15 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     return
   }
 
+  // ============================================
+  // 🔒 SECURITY CHECK: Validate JWT integrity
+  // ============================================
+  const { validateIntegrity } = useSecurityValidator()
+  if (!validateIntegrity()) {
+    // validateIntegrity already forces logout if tampering detected
+    return navigateTo('/login')
+  }
+
   const token = localStorage.getItem('auth_token')
   const refreshToken = localStorage.getItem('refresh_token')
   const userStr = localStorage.getItem('user')
@@ -81,21 +90,30 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     return navigateTo('/login')
   }
 
-  // Parse user data for role-based access
-  const user = JSON.parse(userStr)
+  // ============================================
+  // ✅ SECURITY FIX: Get role from JWT, NOT localStorage!
+  // ============================================
+  let userRole: string
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]!))
+    userRole = payload.role  // ✅ From signed JWT token
+  } catch (error) {
+    console.error('Failed to decode JWT for role:', error)
+    return navigateTo('/login')
+  }
 
   // ============================================
   // Role-based route protection
   // ============================================
   const protectedRoutes: { [key: string]: string[] } = {
-    '/users': ['ADMINISTRATOR', 'EXECUTIVE', 'DEPARTMENT_HEAD', 'MANAGER'],
+    '/users': ['ADMINISTRATOR', 'EXECUTIVE', 'DEPARTMENT_HEAD'],
     '/settings': ['ADMINISTRATOR', 'EXECUTIVE'],
     '/departments': ['ADMINISTRATOR', 'EXECUTIVE'],
   }
 
   for (const [route, allowedRoles] of Object.entries(protectedRoutes)) {
     if (to.path.startsWith(route)) {
-      if (!allowedRoles.includes(user.role)) {
+      if (!allowedRoles.includes(userRole)) {  // ✅ Using JWT role now!
         throw createError({
           statusCode: 404,
           statusMessage: 'Page Not Found',

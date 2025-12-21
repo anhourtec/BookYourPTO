@@ -1,8 +1,9 @@
 export const usePermissions = () => {
+  // ✅ SECURITY: Always get user from JWT (source of truth)
+  const { getTrustedUser } = useSecurityValidator()
+
   const getUser = () => {
-    if (process.server) return null
-    const userStr = localStorage.getItem('user')
-    return userStr ? JSON.parse(userStr) : null
+    return getTrustedUser()
   }
 
   const hasRole = (allowedRoles: string[]) => {
@@ -75,6 +76,14 @@ export const usePermissions = () => {
     if (user.id === targetUserId) return true
     
     return false
+  }
+
+  /**
+   * ✅ NEW: Can manage reporting structure (reportsToId)
+   * Only ADMINISTRATOR and EXECUTIVE can modify who reports to whom
+   */
+  const canManageReportsTo = () => {
+    return hasRole(['ADMINISTRATOR', 'EXECUTIVE'])
   }
 
   /**
@@ -153,13 +162,14 @@ export const usePermissions = () => {
     canManageDepartments,
     canDeleteDepartments,
     canAccessSettings,
-    canAccessAdminSettings, // NEW: Separate permission for admin settings
+    canAccessAdminSettings,
     canManageOrganization,
     canManageLeaveTypes,
     canManageCarryForward,
     canApproveRequests,
     isAdmin,
     canEditUser,
+    canManageReportsTo, // NEW: For managing reporting structure
     // Leave cancellation and group booking permissions
     canCreateGroupBooking,
     canLockDates,

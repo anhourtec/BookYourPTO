@@ -131,12 +131,13 @@
 
         <!-- Desktop Table View (>= lg) -->
         <div class="hidden lg:block bg-[rgb(var(--card))] rounded-lg border border-[rgb(var(--border))] shadow-sm overflow-hidden">
-          <!-- Table Header -->
+          <!-- Table Header - UPDATED WITH REPORTS TO COLUMN -->
           <div class="grid grid-cols-12 gap-4 px-6 py-3.5 bg-[rgb(var(--muted))]/50 border-b border-[rgb(var(--border))] text-xs font-semibold text-[rgb(var(--muted-foreground))] uppercase tracking-wider">
-            <div class="col-span-3">Name</div>
-            <div class="col-span-3">Email</div>
+            <div class="col-span-2">Name</div>
+            <div class="col-span-2">Email</div>
             <div class="col-span-2">Department</div>
             <div class="col-span-2">Role</div>
+            <div class="col-span-2">Reports To</div>
             <div class="col-span-2 text-right">Actions</div>
           </div>
 
@@ -247,6 +248,11 @@ import Filter from '~/components/users/Filter.vue'
 import UserCard from '~/components/users/UserCard.vue'
 import UserTableRow from '~/components/users/UserTableRow.vue'
 import UserActionMenu from '~/components/users/UserActionMenu.vue'
+
+// Set page title
+useHead({
+  title: 'Users'
+})
 import type { User } from '~/types/user'
 
 interface Department {

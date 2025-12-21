@@ -11,19 +11,21 @@ export const useHeaderAuth = () => {
   const checkAuth = () => {
     // Only run on client-side
     if (process.server || typeof window === 'undefined') return
-    
-    const token = localStorage.getItem('auth_token')
-    const userData = localStorage.getItem('user')
-    
-    if (token && userData) {
-      try {
-        user.value = JSON.parse(userData)
-        isAuthenticated.value = true
-      } catch (error) {
-        console.error('Failed to parse user data:', error)
-        user.value = null
-        isAuthenticated.value = false
-      }
+
+    // ✅ SECURITY: Use security validator to get trusted user data
+    const { getTrustedUser, validateIntegrity } = useSecurityValidator()
+
+    // Validate integrity first (force logout if tampering detected)
+    if (!validateIntegrity()) {
+      user.value = null
+      isAuthenticated.value = false
+      return
+    }
+
+    const trustedUser = getTrustedUser()
+    if (trustedUser) {
+      user.value = trustedUser
+      isAuthenticated.value = true
     } else {
       user.value = null
       isAuthenticated.value = false

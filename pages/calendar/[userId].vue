@@ -26,51 +26,12 @@
 
         <!-- Right: sidebar column -->
         <aside class="w-full lg:w-80 lg:shrink-0 space-y-4 lg:sticky lg:top-24 lg:self-start">
-          <!-- Year end summary card group -->
+          <!-- Balance Summary -->
           <div class="rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-4 shadow-sm">
             <div class="text-xs text-gray-500 dark:text-gray-400 mb-3">
               Year end Dec {{ year }}
             </div>
-
-            <!-- Allowance -->
-            <div class="mb-4">
-              <div class="flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400 mb-1">
-                <span>Allowance</span>
-                <span>Days</span>
-              </div>
-              <div class="rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-2.5">
-                <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                  <span>Contractual allowance</span>
-                  <span>{{ balanceSummary?.totalAllowance ?? 0 }}</span>
-                </div>
-                <div class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between text-xs font-semibold text-gray-900 dark:text-white">
-                  <span>Total allowance</span>
-                  <span>{{ balanceSummary?.totalAllowance ?? 0 }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Deductions -->
-            <div>
-              <div class="flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400 mb-1">
-                <span>Deductions</span>
-                <span>Days</span>
-              </div>
-              <div class="rounded-xl border border-gray-200 dark:border-gray-800 px-3 py-2.5">
-                <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                  <span>Total deductions</span>
-                  <span>{{ balanceSummary?.totalUsed ?? 0 }}</span>
-                </div>
-                <div class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-800">
-                  <div class="text-[11px] text-gray-500 dark:text-gray-400 mb-0.5">
-                    Days remaining
-                  </div>
-                  <div class="text-3xl leading-tight font-semibold text-gray-900 dark:text-white">
-                    {{ balanceSummary?.totalRemaining ?? (balanceSummary?.totalAllowance ?? 0) }}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <BalanceSummary :summary="balanceSummary" />
           </div>
 
           <!-- Deductible leave card -->
@@ -170,7 +131,9 @@
             </button>
 
             <!-- Lock Dates (placeholder for future) -->
-            <button
+
+            <!--
+             <button
               v-if="canAccessGroupBooking"
               class="flex items-center gap-2 rounded-full bg-blue-600 text-white px-3 py-1.5 shadow-lg hover:bg-blue-700 text-sm transition-colors"
               @click="openLockDates"
@@ -180,6 +143,8 @@
                 <Icon name="lucide:lock" class="w-4 h-4" />
               </span>
             </button>
+            -->
+           
           </div>
         </Transition>
 
@@ -204,8 +169,8 @@
         :current-user-role="user?.role"
         :user-name="`${user?.firstName} ${user?.lastName}`"
         :user-job-title="user?.jobTitle"
-        :leave-types="leaveTypes"
         :public-holidays="publicHolidays"
+        :leave-types="leaveTypes"
         @close="requestModalOpen = false"
         @submit="handleCreateLeave"
         @cancel="handleLeaveCancel"
@@ -226,6 +191,7 @@
 <script setup lang="ts">
 import CalendarHeader from '~/components/calendar/CalendarHeader.vue'
 import CalendarGrid from '~/components/calendar/CalendarGrid.vue'
+import BalanceSummary from '~/components/calendar/BalanceSummary.vue'
 import LeaveRequestModal from '~/components/calendar/LeaveRequestModal.vue'
 import GroupBookingModal from '~/components/calendar/GroupBookingModal.vue'
 
@@ -234,64 +200,7 @@ import { useApi } from '~/composables/useApi'
 import { useLeaves } from '~/composables/useLeaves'
 import { useCalendar } from '~/composables/useCalendar'
 import type { User } from '~/types/user'
-
-// TypeScript interfaces
-interface LeaveType {
-  id: string
-  organizationId: string
-  name: string
-  code: string
-  description?: string
-  color: string
-  icon?: string
-  requiresApproval: boolean
-  requiresDocumentation: boolean
-  annualAllowance?: number | null
-  isActive: boolean
-  updatedAt: string
-}
-
-interface Department {
-  id: string
-  name: string
-  code: string
-  color: string
-  isActive: boolean
-  _count?: {
-    users: number
-  }
-}
-
-interface NonDeductibleItem {
-  leaveType: LeaveType
-  count: number
-  days: number
-}
-
-interface DeductibleItem {
-  leaveType: LeaveType
-  days: number
-}
-
-interface BalanceItem {
-  leaveType: LeaveType
-  allowance: number
-  used: number
-  remaining: number
-}
-
-interface BalanceSummary {
-  year: number
-  fiscalPeriodStart: string
-  fiscalPeriodEnd: string
-  totalAllowance: number
-  totalUsed: number
-  totalRemaining: number
-  carriedOver: number
-  balances: BalanceItem[]
-  deductible: DeductibleItem[]
-  nonDeductible: NonDeductibleItem[]
-}
+import type { LeaveBalanceSummary, LeaveType, Department } from '~/types/api'
 
 // Composables and route
 const route = useRoute()
@@ -349,11 +258,7 @@ const loadUser = async () => {
 const loadDepartments = async () => {
   if (!canAccessGroupBooking.value) return
   try {
-    const token = localStorage.getItem('auth_token')
-    const data = await $fetch('/api/departments', {
-      headers: { 'Authorization': `Bearer ${token}` },
-    })
-    departments.value = data as Department[]
+    departments.value = await api.fetchDepartments()
   } catch (error) {
     console.error('Failed to load departments:', error)
   }
@@ -459,22 +364,21 @@ const handleGroupBooking = async (payload: {
   reason?: string
 }) => {
   // console.log('📤 Creating group booking:', payload)
-  
+
   try {
-    const token = localStorage.getItem('auth_token')
+    // Plugin will auto-add auth header and handle token refresh
     await $fetch('/api/leaves/group-booking', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` },
       body: payload,
     })
-    
+
     groupBookingModalOpen.value = false
     fabOpen.value = false
-    
+
     // Show success message
     const dept = departments.value.find(d => d.id === payload.departmentId)
     alert(`Successfully created leave requests for ${dept?._count?.users || 0} members of ${dept?.name || 'department'}`)
-    
+
     // Reload calendar
     await loadCalendarData(routeUserId.value, year.value)
   } catch (error: any) {
@@ -486,16 +390,25 @@ const handleGroupBooking = async (payload: {
 // Handle leave cancellation
 const handleLeaveCancel = async (leaveId: string) => {
   try {
-    // Optimistic update
-    const leaveIndex = leaves.value.findIndex(l => l.id === leaveId)
-    if (leaveIndex !== -1) {
-      leaves.value.splice(leaveIndex, 1)
-    }
-    
-    // Refresh from server
+    console.log('Cancelling leave:', leaveId)
+
+    // Plugin will auto-add auth header and handle token refresh
+    await $fetch(`/api/leaves/${leaveId}`, {
+      method: 'DELETE',
+    })
+
+    console.log('Leave cancelled successfully')
+
+    // Close the modal
+    requestModalOpen.value = false
+    selectedLeave.value = null
+
+    // Refresh calendar data from server
     await loadCalendarData(routeUserId.value, year.value)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to cancel leave:', error)
+    alert(error.data?.message || error.message || 'Failed to cancel leave request')
+    // Refresh to ensure UI is in sync
     await loadCalendarData(routeUserId.value, year.value)
   }
 }

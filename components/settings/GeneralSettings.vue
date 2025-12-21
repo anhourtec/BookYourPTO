@@ -161,6 +161,28 @@
               Standard is typically 20-30 days
             </p>
           </div>
+
+          <!-- Default Sick Leave Allowance -->
+          <div>
+            <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
+              Default sick leave allowance
+            </label>
+            <div class="flex items-center gap-3">
+              <input
+                v-model.number="form.defaultSickLeaveAllowance"
+                type="number"
+                min="0"
+                max="365"
+                step="0.5"
+                :disabled="!canEditSettings()"
+                class="w-32 px-4 py-2.5 bg-[rgb(var(--muted))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] focus:ring-2 focus:ring-[rgb(var(--primary))] focus:border-transparent outline-none transition text-center font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              <span class="text-sm text-[rgb(var(--muted-foreground))]">days per year</span>
+            </div>
+            <p class="text-xs text-[rgb(var(--muted-foreground))] mt-2">
+              Standard is typically 5-10 days
+            </p>
+          </div>
         </div>
 
         <!-- Success Message -->
@@ -273,6 +295,7 @@ interface FormData {
   weekStartDay: number
   leaveYearStart: number
   defaultLeaveAllowance: number
+  defaultSickLeaveAllowance: number
   calendarViewHidden: boolean
   otherDepartmentsHidden: boolean
 }
@@ -293,6 +316,7 @@ const form = ref<FormData>({
   weekStartDay: 1,
   leaveYearStart: 1,
   defaultLeaveAllowance: 25,
+  defaultSickLeaveAllowance: 10,
   calendarViewHidden: false,
   otherDepartmentsHidden: false,
 })
@@ -446,10 +470,11 @@ const fetchSettings = async (): Promise<void> => {
     if (data) {
       form.value.companyName = data.name || ''
       form.value.timezone = data.timezone || 'UTC'
-      form.value.businessDays = data.businessDays || ['mon', 'tue', 'wed', 'thu', 'fri'] // ✅ Load business days
+      form.value.businessDays = data.businessDays || ['mon', 'tue', 'wed', 'thu', 'fri']
       form.value.weekStartDay = data.weekStartDay ?? 1
       form.value.leaveYearStart = data.leaveYearStartMonth || 1
       form.value.defaultLeaveAllowance = data.defaultLeaveAllowance || 25
+      form.value.defaultSickLeaveAllowance = data.defaultSickLeaveAllowance || 10
       form.value.calendarViewHidden = data.calendarViewRestricted || false
       form.value.otherDepartmentsHidden = data.departmentViewRestricted || false
     }
@@ -480,10 +505,11 @@ const saveSettings = async (): Promise<void> => {
     const payload = {
       name: form.value.companyName,
       timezone: form.value.timezone,
-      businessDays: form.value.businessDays, // ✅ Include business days
+      businessDays: form.value.businessDays,
       weekStartDay: form.value.weekStartDay,
       leaveYearStartMonth: form.value.leaveYearStart,
       defaultLeaveAllowance: form.value.defaultLeaveAllowance,
+      defaultSickLeaveAllowance: form.value.defaultSickLeaveAllowance,
     }
     
     await api.updateSettings(payload)

@@ -5,7 +5,7 @@ import nodemailer from 'nodemailer'
 import { generateForgotPasswordEmail } from '~/server/utils/forgot-passwordTemplate'
 
 const forgotPasswordSchema = z.object({
-  email: z.string().email('Invalid email address'),
+  email: z.string().email('Invalid email address').transform(val => val.toLowerCase()),
 })
 
 async function createEmailTransporter(organizationId: string) {
@@ -40,11 +40,11 @@ async function createEmailTransporter(organizationId: string) {
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    const data = forgotPasswordSchema.parse(body)
+    const data = forgotPasswordSchema.parse(body) // Email is now lowercase
 
     const user = await prisma.user.findFirst({
       where: {
-        email: data.email.toLowerCase(),
+        email: data.email, // Already lowercase from transform
         isActive: true,
       },
       include: {
@@ -68,16 +68,16 @@ export default defineEventHandler(async (event) => {
 
     // Generate 6-digit code (this will be used for BOTH manual entry AND URL)
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString()
-    
+
     // Generate long token for URL-based reset (more secure)
     const resetToken = crypto.randomBytes(32).toString('hex')
-    
+
     const resetTokenExpiry = new Date(Date.now() + 15 * 60 * 1000)
 
     // Store BOTH: code in passwordResetToken, full token in a combined format
     // Format: "CODE:FULLTOKEN" - this way we can verify both
     const combinedToken = `${resetCode}:${resetToken}`
-    
+
     await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -88,10 +88,10 @@ export default defineEventHandler(async (event) => {
 
     try {
       const transporter = await createEmailTransporter(user.organizationId)
-      
+
       if (transporter && user.organization.emailFromName && user.organization.emailFromAddress) {
         const resetUrl = `${getRequestURL(event).origin}/reset-password?token=${resetToken}`
-        
+
         const emailContent = generateForgotPasswordEmail(
           { firstName: user.firstName, email: user.email },
           {
@@ -102,7 +102,7 @@ export default defineEventHandler(async (event) => {
           resetCode,
           resetUrl
         )
-        
+
         await transporter.sendMail({
           from: `"${user.organization.emailFromName}" <${user.organization.emailFromAddress}>`,
           to: user.email,

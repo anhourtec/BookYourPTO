@@ -19,7 +19,7 @@
         <!-- Icon pill when there is at least one leave -->
         <span
           v-else-if="firstLeave"
-          class="inline-flex items-center justify-center w-6 h-6 rounded-full text-[11px]"
+          class="inline-flex items-center justify-center w-6 h-6 rounded-full text-[11px] relative"
           :style="pillStyle"
         >
           <Icon
@@ -31,6 +31,12 @@
             v-else
             name="lucide:calendar"
             class="w-3.5 h-3.5"
+          />
+          <!-- Pending indicator -->
+          <span
+            v-if="firstLeave.status === 'PENDING'"
+            class="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-yellow-400 dark:bg-yellow-500 ring-1 ring-white dark:ring-gray-900"
+            title="Pending approval"
           />
         </span>
 
@@ -122,6 +128,9 @@ const dayClasses = computed(() => {
   // Highlight holidays with a subtle green border
   if (hasHoliday.value) {
     base.push('border-emerald-200 dark:border-emerald-800 bg-emerald-50/30 dark:bg-emerald-950/20')
+  } else if (firstLeave.value?.status === 'PENDING') {
+    // Pending leaves get a yellow background tint
+    base.push('bg-yellow-50/30 dark:bg-yellow-950/10 border-gray-500/40 dark:border-gray-400/40')
   } else if (hasEvents.value) {
     base.push('border-gray-500/40 dark:border-gray-400/40')
   }
@@ -138,10 +147,13 @@ const pillStyle = computed(() => {
   if (!leave?.leaveType) return {}
 
   const color = leave.leaveType.color || '#3b82f6'
+  const isPending = leave.status === 'PENDING'
+
   return {
     backgroundColor: color + '20',
     color,
-    border: `1px solid ${color}55`,
+    border: isPending ? `2px dashed ${color}80` : `1px solid ${color}55`,
+    opacity: isPending ? '0.85' : '1',
   }
 })
 
@@ -154,16 +166,14 @@ const tooltipText = computed(() => {
     parts.push(`${holidays}`)
   }
 
-  // Then show leaves
+  // Then show leaves with status
   if (props.day.leaves.length) {
-    const names = Array.from(
-      new Set(
-        props.day.leaves.map(
-          (l: any) => l.leaveType?.name || 'Leave',
-        ),
-      ),
-    )
-    parts.push(names.join(', '))
+    const leaveInfo = props.day.leaves.map((l: any) => {
+      const typeName = l.leaveType?.name || 'Leave'
+      const status = l.status === 'PENDING' ? 'Pending' : 'Approved'
+      return `${typeName} - ${status}`
+    })
+    parts.push(...leaveInfo)
   }
 
   if (!parts.length && props.day.isToday) {

@@ -181,6 +181,8 @@ export default defineEventHandler(async (event) => {
       state: body.state || null,
       postalCode: body.postalCode || null,
       country: body.country || null,
+      holidayCountry: body.holidayCountry || null,
+      holidayRegion: body.holidayRegion || null,
       carryOverBalance: body.carryOverBalance ?? 0,
       customLeaveAllowance: body.customLeaveAllowance || null,
       emergencyContact: body.emergencyContact || null,

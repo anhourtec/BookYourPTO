@@ -38,7 +38,7 @@
           <Icon name="lucide:crown" class="w-2 h-2 sm:w-2.5 sm:h-2.5 text-yellow-900 dark:text-yellow-950 fill-current" />
         </div>
         
-        <!-- Leave balance badge - Show for all users -->
+        <!-- Leave balance badge -->
         <span
           v-if="typeof user.annualLeaveBalance === 'number'"
           class="absolute -top-1 -left-1 min-w-[20px] sm:min-w-[22px] h-[20px] sm:h-[22px] px-1.5 rounded-full ring-2 ring-[rgb(var(--card))] flex items-center justify-center text-[9px] sm:text-[10px] font-bold shadow-md"
@@ -63,11 +63,11 @@
       </div>
     </div>
 
-    <!-- Calendar Days - Responsive: 7 days on mobile (from today), 30 days on desktop -->
+    <!-- Calendar Days -->
     <div class="flex-1 min-w-0 overflow-x-auto sm:overflow-x-visible">
-      <div class="grid gap-0.5 sm:gap-0" :style="{ gridTemplateColumns: `repeat(${displayDays.length}, minmax(0, 1fr))` }">
+      <div class="grid gap-0.5 sm:gap-0" :style="{ gridTemplateColumns: `repeat(${visibleDays.length}, minmax(0, 1fr))` }">
         <div
-          v-for="day in displayDays"
+          v-for="day in visibleDays"
           :key="day.dateKey"
           class="relative group"
         >
@@ -204,7 +204,6 @@ const formatBalance = (balance: number): string => {
   if (decimalPart === 0.5) {
     return wholePart === 0 ? '½' : `${wholePart}½`
   } else if (decimalPart > 0 && decimalPart < 1) {
-    // Round to nearest 0.5
     const rounded = Math.round(balance * 2) / 2
     const whole = Math.floor(rounded)
     const decimal = rounded - whole
@@ -220,38 +219,6 @@ const initials = computed(() => {
   return (first + last).toUpperCase() || 'U'
 })
 
-// Compute which days to display based on screen size
-const displayDays = computed(() => {
-  // Desktop: show first 30 days
-  if (!props.isMobile) {
-    return props.visibleDays.slice(0, 30)
-  }
-
-  // Mobile: show 7 days starting from mobileStartDate
-  const startDate = new Date(props.mobileStartDate)
-  startDate.setHours(0, 0, 0, 0)
-
-  // Find start date's index in visible days
-  const startIndex = props.visibleDays.findIndex(day => {
-    const dayDate = new Date(day.date)
-    dayDate.setHours(0, 0, 0, 0)
-    return dayDate.getTime() === startDate.getTime()
-  })
-
-  // If start date is found, show 7 days from that point
-  if (startIndex >= 0 && startIndex + 7 <= props.visibleDays.length) {
-    return props.visibleDays.slice(startIndex, startIndex + 7)
-  }
-
-  // If start date is near the end, show remaining days
-  if (startIndex >= 0) {
-    return props.visibleDays.slice(startIndex, Math.min(props.visibleDays.length, startIndex + 7))
-  }
-
-  // Fallback: show first 7 days of visible days
-  return props.visibleDays.slice(0, Math.min(7, props.visibleDays.length))
-})
-
 const getDayClasses = (day: DayInfo): string => {
   const classes: string[] = []
 
@@ -262,7 +229,7 @@ const getDayClasses = (day: DayInfo): string => {
     classes.push('text-[rgb(var(--foreground))]')
   }
 
-  // Today indicator - very subtle on mobile, visible on desktop
+  // Today indicator
   if (day.isToday) {
     classes.push('sm:ring-1 ring-[rgb(var(--primary))] bg-[rgb(var(--primary))]/10 sm:bg-[rgb(var(--primary))]/5 relative')
   }
@@ -286,7 +253,7 @@ const getDayClasses = (day: DayInfo): string => {
     }
   }
 
-  // Hover - faster and more visible
+  // Hover
   if (day.isCurrentMonth) {
     classes.push('hover:bg-[rgb(var(--primary))]/10 hover:ring-1 hover:ring-[rgb(var(--primary))]/30 cursor-pointer')
   }

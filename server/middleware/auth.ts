@@ -31,11 +31,12 @@ export default defineEventHandler(async (event) => {
     '/api/auth/verify-reset-token',
     '/api/_nuxt_icon',
     '/api/test-db',
-    '/api/github-stars', // ✅ Added GitHub stars endpoint
+    '/api/github-stars',
+    '/api/public/', 
   ]
 
   if (publicRoutes.some(route => path.startsWith(route))) {
-    console.log('✅ Public route - skipping auth')
+    console.log('Public route - skipping auth')
     return
   }
 

@@ -190,18 +190,7 @@
 </template>
 
 <script setup lang="ts">
-import type { LeaveType } from '~/types/api'
-
-interface Department {
-  id: string
-  name: string
-  code: string
-  color: string
-  isActive: boolean
-  _count?: {
-    users: number
-  }
-}
+import type { LeaveType, Department } from '~/types/api'
 
 interface Props {
   open: boolean

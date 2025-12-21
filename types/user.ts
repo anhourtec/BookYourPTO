@@ -39,6 +39,10 @@ export interface User {
   state?: string
   postalCode?: string
   country?: string
+
+  // Holiday Location Override
+  holidayCountry?: string
+  holidayRegion?: string
   
   // Emergency Contact
   emergencyContact?: {
@@ -58,7 +62,7 @@ export interface User {
   carryOverBalance: number
   customLeaveAllowance?: number
   
-  // ✅ NEW: Carry Forward Settings
+  // Carry Forward Settings
   allowCarryForward?: boolean
   maxCarryForwardDays?: number
   
@@ -67,6 +71,14 @@ export interface User {
     id: string
     name: string
     code?: string
+    headOfDept?: {
+      id: string
+      firstName: string
+      lastName: string
+      email?: string
+      jobTitle?: string
+      role?: string
+    } | null
   }
   manager?: {
     id: string
@@ -74,6 +86,7 @@ export interface User {
     lastName: string
     email?: string
     jobTitle?: string
+    role?: string
   }
   
   // Status
@@ -93,6 +106,7 @@ export interface CreateUserInput {
   password: string
   jobTitle?: string
   departmentId?: string
+  reportsToId?: string
   role?: User['role']
 }
 
@@ -120,6 +134,8 @@ export interface UpdateUserInput {
   state?: string | null
   postalCode?: string | null
   country?: string | null
+  holidayCountry?: string | null
+  holidayRegion?: string | null
   carryOverBalance?: number
   customLeaveAllowance?: number | null
   allowCarryForward?: boolean

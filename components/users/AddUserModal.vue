@@ -151,7 +151,7 @@
             </div>
           </div>
 
-          <!-- Email -->
+          <!-- Email with normalization -->
           <div>
             <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
               Email <span class="text-[rgb(var(--destructive))]">*</span>
@@ -162,6 +162,7 @@
               required
               class="w-full px-3 py-2 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg focus:ring-2 focus:ring-[rgb(var(--primary))] text-[rgb(var(--foreground))]"
               placeholder="john@company.com"
+              @blur="normalizeEmail"
             />
           </div>
 
@@ -473,6 +474,11 @@ const quickDeptCodePreview = computed(() => {
   return generateCodePreview(quickDept.value.name, quickDept.value.code)
 })
 
+// Normalize email on blur (UX improvement)
+const normalizeEmail = () => {
+  form.value.email = form.value.email.toLowerCase().trim()
+}
+
 const handleQuickAddDept = async () => {
   if (!quickDept.value.name) return
   
@@ -568,12 +574,18 @@ const handleSubmit = async () => {
   try {
     const token = localStorage.getItem('auth_token')
     
+    // Ensure email is normalized before sending
+    const userData = {
+      ...form.value,
+      email: form.value.email.toLowerCase().trim()
+    }
+    
     const response = await $fetch<UserCreationResponse>('/api/users', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
       },
-      body: form.value,
+      body: userData,
     })
 
     // Store the response data

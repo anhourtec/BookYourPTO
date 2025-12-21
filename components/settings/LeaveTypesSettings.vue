@@ -62,7 +62,10 @@
               <h3 class="font-semibold text-sm sm:text-base text-[rgb(var(--foreground))] truncate">{{ leaveType.name }}</h3>
               <p class="text-xs sm:text-sm text-[rgb(var(--muted-foreground))] break-words">
                 {{ getLeaveTypeCodeLabel(leaveType.code) }}
+                <span v-if="leaveType.annualAllowance"></span>
+                <!--
                 <span v-if="leaveType.annualAllowance"> • {{ leaveType.annualAllowance }} days/year</span>
+                -->
                 <span v-if="!leaveType.isActive" class="text-[rgb(var(--destructive))]"> • Inactive</span>
               </p>
             </div>
@@ -174,32 +177,28 @@
             <h3 class="text-sm font-semibold text-[rgb(var(--foreground))] uppercase tracking-wide">Settings</h3>
             
             <div class="space-y-3">
-              <div class="flex items-center justify-between gap-3 p-3 rounded-lg bg-[rgb(var(--muted))]/30">
-                <div class="flex-1 min-w-0">
-                  <label class="text-sm font-medium text-[rgb(var(--foreground))] block">
-                    Deducts from annual allowance
+              <!-- Deduction Bucket Selector -->
+              <div class="p-3 rounded-lg bg-[rgb(var(--muted))]/30 space-y-3">
+                <div>
+                  <label class="text-sm font-medium text-[rgb(var(--foreground))] block mb-2">
+                    Deduction Bucket
                   </label>
-                  <p class="text-xs text-[rgb(var(--muted-foreground))] mt-0.5">
-                    Should this leave type reduce the user's annual allowance?
+                  <p class="text-xs text-[rgb(var(--muted-foreground))] mb-3">
+                    Choose which leave balance bucket this leave type should deduct from
+                  </p>
+                  <select
+                    v-model="form.deductionBucket"
+                    class="w-full px-4 py-2.5 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] text-sm focus:ring-2 focus:ring-[rgb(var(--primary))] focus:border-transparent outline-none transition"
+                  >
+                    <option value="NONE">None (doesn't deduct from any bucket)</option>
+                    <option value="ANNUAL">Annual Leave Bucket</option>
+                    <option value="SICK">Sick Leave Bucket</option>
+                  </select>
+                  <p v-if="form.deductionBucket !== 'NONE'" class="text-xs text-amber-600 dark:text-amber-400 mt-2 flex items-start gap-1.5">
+                    <Icon name="lucide:info" class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                    <span>The allowance for {{ bucketAllowanceLabel }} is controlled in General Settings by executives.</span>
                   </p>
                 </div>
-                <SwitchToggle v-model="form.deductsFromAllowance" class="flex-shrink-0" />
-              </div>
-
-              <!-- Annual Allowance (shows when deductsFromAllowance is true) -->
-              <div v-if="form.deductsFromAllowance" class="ml-4 pl-4 border-l-2 border-[rgb(var(--primary))]">
-                <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
-                  Annual allowance (days per year)
-                </label>
-                <input
-                  v-model.number="form.annualAllowance"
-                  type="number"
-                  min="0"
-                  max="365"
-                  step="0.5"
-                  placeholder="e.g., 20"
-                  class="w-full max-w-[200px] px-4 py-2.5 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] text-sm focus:ring-2 focus:ring-[rgb(var(--primary))] focus:border-transparent outline-none transition"
-                />
               </div>
 
               <div class="flex items-center justify-between gap-3 p-3 rounded-lg bg-[rgb(var(--muted))]/30">
@@ -385,6 +384,7 @@ const canEditSettings = () => {
 }
 
 interface LeaveType {
+  deductionBucket: string
   id: string
   name: string
   code: string
@@ -450,13 +450,22 @@ const form = ref({
   calendarDisplay: 'BUSY',
   visibility: 'PUBLIC',
   requiresApproval: true,
-  deductsFromAllowance: true,
+  deductionBucket: 'NONE' as 'NONE' | 'ANNUAL' | 'SICK',
   paidLeave: true,
-  annualAllowance: null as number | null,
   isActive: true,
 })
 
 const editingId = ref<string | null>(null)
+
+// Computed: Allowance label based on selected bucket
+const bucketAllowanceLabel = computed(() => {
+  if (form.value.deductionBucket === 'ANNUAL') {
+    return 'Annual leave allowance'
+  } else if (form.value.deductionBucket === 'SICK') {
+    return 'Sick leave allowance'
+  }
+  return 'Allowance'
+})
 
 // Computed: Available leave type codes (exclude already used ones in add mode)
 const availableLeaveTypeCodes = computed(() => {
@@ -507,6 +516,17 @@ const openAddModal = () => {
 const openEditModal = (leaveType: LeaveType) => {
   isEditMode.value = true
   editingId.value = leaveType.id
+
+  // Determine deduction bucket from existing data
+  let deductionBucket: 'NONE' | 'ANNUAL' | 'SICK' = 'NONE'
+  if (leaveType.deductionBucket && ['NONE', 'ANNUAL', 'SICK'].includes(leaveType.deductionBucket)) {
+    deductionBucket = leaveType.deductionBucket as 'NONE' | 'ANNUAL' | 'SICK'
+  } else if (leaveType.annualAllowance && leaveType.annualAllowance > 0) {
+    // Backward compatibility: if annualAllowance is set but no deductionBucket,
+    // assume ANNUAL for non-SICK_PAID types
+    deductionBucket = leaveType.code === 'SICK_PAID' ? 'SICK' : 'ANNUAL'
+  }
+
   form.value = {
     name: leaveType.name,
     code: leaveType.code,
@@ -516,9 +536,8 @@ const openEditModal = (leaveType: LeaveType) => {
     calendarDisplay: 'BUSY',
     visibility: 'PUBLIC',
     requiresApproval: leaveType.requiresApproval,
-    deductsFromAllowance: !!leaveType.annualAllowance,
+    deductionBucket,
     paidLeave: leaveType.paidLeave,
-    annualAllowance: leaveType.annualAllowance || null,
     isActive: leaveType.isActive,
   }
   showModal.value = true
@@ -539,9 +558,8 @@ const resetForm = () => {
     calendarDisplay: 'BUSY',
     visibility: 'PUBLIC',
     requiresApproval: true,
-    deductsFromAllowance: true,
+    deductionBucket: 'NONE',
     paidLeave: true,
-    annualAllowance: null,
     isActive: true,
   }
   formError.value = ''
@@ -550,7 +568,7 @@ const resetForm = () => {
 const handleSubmit = async () => {
   saving.value = true
   formError.value = ''
-  
+
   try {
     const token = localStorage.getItem('auth_token')
     const payload = {
@@ -561,7 +579,7 @@ const handleSubmit = async () => {
       icon: form.value.icon || null,
       requiresApproval: form.value.requiresApproval,
       paidLeave: form.value.paidLeave,
-      annualAllowance: form.value.deductsFromAllowance ? form.value.annualAllowance : null,
+      deductionBucket: form.value.deductionBucket,
       isActive: form.value.isActive,
     }
 

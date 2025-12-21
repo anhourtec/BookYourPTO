@@ -230,6 +230,11 @@ import DashboardCalendarGrid from '~/components/dashboard/DashboardCalendarGrid.
 import DashboardFilterModal from '~/components/dashboard/DashboardFilterModal.vue'
 import LeaveRequestModal from '~/components/calendar/LeaveRequestModal.vue'
 import GroupBookingModal from '~/components/calendar/GroupBookingModal.vue'
+
+// Set page title
+useHead({
+  title: 'Dashboard'
+})
 import { useCalendar } from '~/composables/useCalendar'
 
 import type { Leave, PublicHoliday, LeaveType, Department } from '~/types/api'

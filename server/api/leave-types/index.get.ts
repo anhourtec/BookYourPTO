@@ -31,6 +31,7 @@ export default defineEventHandler(async (event) => {
         allowQuarterDays: true,
         allowHourly: true,
         paidLeave: true,
+        deductionBucket: true,
         annualAllowance: true,
         hasAccrual: true,
         accrualRate: true,

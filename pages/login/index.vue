@@ -36,6 +36,7 @@
               required
               class="w-full px-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
               placeholder="john@company.com"
+              @blur="normalizeEmail"
             />
           </div>
 
@@ -107,7 +108,12 @@
 </template>
 
 <script setup lang="ts">
-const { logoUrl, brandName } = useWhitelabel()
+const { logoUrl, brandName, initializeBranding } = useWhitelabel()
+
+// Set page title
+useHead({
+  title: 'Sign In'
+})
 
 const form = ref({
   email: '',
@@ -118,20 +124,46 @@ const loading = ref(false)
 const error = ref('')
 const showPassword = ref(false)
 
+// Check for security violation and initialize branding on mount
+onMounted(() => {
+  const route = useRoute()
+  if (route.query.error === 'session_invalid') {
+    error.value = 'Security Alert: Session data was tampered with. Please log in again.'
+  }
+
+  // Initialize branding (loads from cookie if available)
+  initializeBranding()
+})
+
+// Normalize email on blur (optional UX improvement)
+const normalizeEmail = () => {
+  form.value.email = form.value.email.toLowerCase().trim()
+}
+
 const handleLogin = async () => {
   loading.value = true
   error.value = ''
 
+  // Ensure email is normalized before sending
+  const loginData = {
+    email: form.value.email.toLowerCase().trim(),
+    password: form.value.password,
+  }
+
   try {
     const response = await $fetch('/api/auth/login', {
       method: 'POST',
-      body: form.value,
+      body: loginData,
     })
 
     // Store both access and refresh tokens
     localStorage.setItem('auth_token', response.accessToken)
     localStorage.setItem('refresh_token', response.refreshToken)
     localStorage.setItem('user', JSON.stringify(response.user))
+
+    // Load branding after login
+    const { reloadBranding } = useWhitelabel()
+    await reloadBranding()
 
     // Navigate to dashboard
     navigateTo('/dashboard')

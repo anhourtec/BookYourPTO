@@ -50,6 +50,7 @@
               required
               class="w-full px-4 py-3 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
               placeholder="john@company.com"
+              @blur="normalizeEmail"
             />
           </div>
 
@@ -158,19 +159,28 @@ const generateSlug = () => {
   }
 }
 
+// Normalize email on blur (UX improvement)
+const normalizeEmail = () => {
+  form.value.email = form.value.email.toLowerCase().trim()
+}
+
 const handleRegister = async () => {
   loading.value = true
   error.value = ''
 
   try {
+    // Ensure email is normalized before sending
+    const registrationData = {
+      ...form.value,
+      email: form.value.email.toLowerCase().trim()
+    }
+
     const response = await $fetch('/api/auth/register', {
       method: 'POST',
-      body: form.value,
+      body: registrationData,
     })
 
-    // ============================================
-    // UPDATED: Store both access and refresh tokens
-    // ============================================
+    // Store both access and refresh tokens
     localStorage.setItem('auth_token', response.accessToken)
     localStorage.setItem('refresh_token', response.refreshToken)
     localStorage.setItem('user', JSON.stringify(response.user))

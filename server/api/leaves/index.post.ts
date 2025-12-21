@@ -130,8 +130,9 @@ export default defineEventHandler(async (event) => {
     // Get organization settings including business days
     const organization = await prisma.organization.findUnique({
       where: { id: auth.organizationId },
-      select: { 
+      select: {
         defaultLeaveAllowance: true,
+        defaultSickLeaveAllowance: true,
         leaveYearStartMonth: true,
         businessDays: true
       }
@@ -266,17 +267,17 @@ export default defineEventHandler(async (event) => {
 
     // Check if booking non-business days/holidays only
     const isNonBusinessDayOrHolidayOnly = totalDays === 0
-    
+
     if (isNonBusinessDayOrHolidayOnly) {
-      const isExecutiveOrAdmin = ['ADMINISTRATOR', 'EXECUTIVE'].includes(targetUser.role)
-      
-      if (!isExecutiveOrAdmin) {
+      const canBookNonBusinessDays = ['ADMINISTRATOR', 'EXECUTIVE'].includes(targetUser.role)
+
+      if (!canBookNonBusinessDays) {
         throw createError({
           statusCode: 400,
           message: 'You cannot book leave for non-business days or public holidays only. Please select at least one business day.'
         })
       }
-      
+
       // For executives/admins, allow booking on non-business days/holidays
       console.log('Admin/Executive booking non-business day/holiday - allowing')
     }
@@ -379,12 +380,24 @@ export default defineEventHandler(async (event) => {
 
     console.log('No overlaps found')
 
-    // Check leave balance only for deductible leave types
-    if (leaveType.annualAllowance && leaveType.annualAllowance > 0) {
+    // Check leave balance based on deduction bucket
+    const deductionBucket = leaveType.deductionBucket ||
+      // Backward compatibility
+      (leaveType.annualAllowance && leaveType.annualAllowance > 0
+        ? (leaveType.code === 'SICK_PAID' ? 'SICK' : 'ANNUAL')
+        : 'NONE')
+
+    if (deductionBucket !== 'NONE') {
       const year = new Date().getFullYear()
       const fiscalStartMonth = organization.leaveYearStartMonth || 1
       const fiscalPeriodStart = new Date(year, fiscalStartMonth - 1, 1)
       const fiscalPeriodEnd = new Date(year + 1, fiscalStartMonth - 1, 0)
+
+      // Get user for custom allowance
+      const user = await prisma.user.findUnique({
+        where: { id: data.userId },
+        select: { customLeaveAllowance: true, carryOverBalance: true, allowCarryForward: true }
+      })
 
       // Get used leaves this year - only APPROVED and PENDING
       const usedLeaves = await prisma.leave.findMany({
@@ -404,15 +417,47 @@ export default defineEventHandler(async (event) => {
         }
       })
 
-      // Calculate used days (only deductible types)
-      const totalUsed = usedLeaves
-        .filter(l => l.leaveType && l.leaveType.annualAllowance && l.leaveType.annualAllowance > 0)
-        .reduce((sum, l) => sum + (l.totalDays || 0), 0)
+      let totalAllowance = 0
+      let totalUsed = 0
+      let bucketName = ''
 
-      const totalAllowance = organization.defaultLeaveAllowance || 0
+      if (deductionBucket === 'ANNUAL') {
+        // Check annual leave bucket
+        bucketName = 'annual leave'
+        totalAllowance = (user?.customLeaveAllowance ?? organization.defaultLeaveAllowance) ?? 0
+
+        // Add carried over days
+        if (user?.allowCarryForward !== false) {
+          totalAllowance += (user?.carryOverBalance ?? 0)
+        }
+
+        // Calculate used annual leave days
+        totalUsed = usedLeaves
+          .filter(l => l.leaveType && (
+            l.leaveType.deductionBucket === 'ANNUAL' ||
+            // Backward compatibility
+            (!l.leaveType.deductionBucket && l.leaveType.annualAllowance && l.leaveType.annualAllowance > 0 && l.leaveType.code !== 'SICK_PAID')
+          ))
+          .reduce((sum, l) => sum + (l.totalDays || 0), 0)
+      } else if (deductionBucket === 'SICK') {
+        // Check sick leave bucket (using organization default)
+        bucketName = 'sick leave'
+        totalAllowance = organization.defaultSickLeaveAllowance ?? 0
+
+        // Calculate used sick leave days
+        totalUsed = usedLeaves
+          .filter(l => l.leaveType && (
+            l.leaveType.deductionBucket === 'SICK' ||
+            // Backward compatibility
+            (!l.leaveType.deductionBucket && l.leaveType.code === 'SICK_PAID' && l.leaveType.annualAllowance && l.leaveType.annualAllowance > 0)
+          ))
+          .reduce((sum, l) => sum + (l.totalDays || 0), 0)
+      }
+
       const remaining = totalAllowance - totalUsed
 
-      console.log('💰 Leave balance check:', {
+      console.log(`💰 ${bucketName} balance check:`, {
+        bucket: deductionBucket,
         totalAllowance,
         totalUsed,
         remaining,
@@ -423,20 +468,21 @@ export default defineEventHandler(async (event) => {
       if (finalTotalDays > remaining) {
         throw createError({
           statusCode: 400,
-          message: `Insufficient leave balance. You have ${remaining} days remaining but are requesting ${finalTotalDays} days.`
+          message: `Insufficient ${bucketName} balance. You have ${remaining} days remaining but are requesting ${finalTotalDays} days.`
         })
       }
     }
 
     // Determine approval requirements
-    const isExecutiveOrAdmin = ['ADMINISTRATOR', 'EXECUTIVE'].includes(targetUser.role)
-    const requiresApproval = leaveType.requiresApproval && !isExecutiveOrAdmin
+    // Only EXECUTIVE is auto-approved, everyone else follows the leave type's requiresApproval setting
+    const isExecutive = targetUser.role === 'EXECUTIVE'
+    const requiresApproval = leaveType.requiresApproval && !isExecutive
     const initialStatus = requiresApproval ? 'PENDING' : 'APPROVED'
 
     console.log('Creating leave with status:', {
       status: initialStatus,
       targetUserRole: targetUser.role,
-      isExecutiveOrAdmin,
+      isExecutive,
       leaveTypeRequiresApproval: leaveType.requiresApproval
     })
 
@@ -495,7 +541,7 @@ export default defineEventHandler(async (event) => {
           endDate: data.endDate,
           totalDays: finalTotalDays,
           status: initialStatus,
-          autoApproved: isExecutiveOrAdmin
+          autoApproved: isExecutive
         },
         ipAddress: getHeader(event, 'x-forwarded-for') || 'unknown',
         userAgent: getHeader(event, 'user-agent') || 'unknown'
@@ -509,7 +555,7 @@ export default defineEventHandler(async (event) => {
       endDate: endDate.toISOString().split('T')[0],
       totalDays: leave.totalDays,
       status: leave.status,
-      autoApproved: isExecutiveOrAdmin
+      autoApproved: isExecutive
     })
 
     // Send email notifications to approvers if leave requires approval

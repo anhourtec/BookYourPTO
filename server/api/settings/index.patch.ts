@@ -5,9 +5,10 @@ import { z } from 'zod'
 const updateSettingsSchema = z.object({
   name: z.string().min(1, 'Company name is required').optional(),
   timezone: z.string().optional(),
-  businessDays: z.array(z.enum(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'])).min(1, 'At least one business day is required').optional(), // ADD THIS LINE
+  businessDays: z.array(z.enum(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'])).min(1, 'At least one business day is required').optional(),
   leaveYearStartMonth: z.number().min(1).max(12).optional(),
   defaultLeaveAllowance: z.number().min(0).max(365).optional(),
+  defaultSickLeaveAllowance: z.number().min(0).max(365).optional(),
   weekStartDay: z.number().min(0).max(6).optional(),
   calendarViewRestricted: z.boolean().optional(),
   departmentViewRestricted: z.boolean().optional(),
@@ -49,9 +50,10 @@ export default defineEventHandler(async (event) => {
       data: {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.timezone !== undefined && { timezone: data.timezone }),
-        ...(data.businessDays !== undefined && { businessDays: data.businessDays }), // ADD THIS LINE
+        ...(data.businessDays !== undefined && { businessDays: data.businessDays }),
         ...(data.leaveYearStartMonth !== undefined && { leaveYearStartMonth: data.leaveYearStartMonth }),
         ...(data.defaultLeaveAllowance !== undefined && { defaultLeaveAllowance: data.defaultLeaveAllowance }),
+        ...(data.defaultSickLeaveAllowance !== undefined && { defaultSickLeaveAllowance: data.defaultSickLeaveAllowance }),
         ...(data.weekStartDay !== undefined && { weekStartDay: data.weekStartDay }),
         ...(data.calendarViewRestricted !== undefined && { calendarViewRestricted: data.calendarViewRestricted }),
         ...(data.departmentViewRestricted !== undefined && { departmentViewRestricted: data.departmentViewRestricted }),
@@ -64,9 +66,10 @@ export default defineEventHandler(async (event) => {
         id: true,
         name: true,
         timezone: true,
-        businessDays: true, // ADD THIS LINE
+        businessDays: true,
         leaveYearStartMonth: true,
         defaultLeaveAllowance: true,
+        defaultSickLeaveAllowance: true,
         weekStartDay: true,
         calendarViewRestricted: true,
         departmentViewRestricted: true,
