@@ -21,14 +21,16 @@
     </button>
 
     <!-- Edit User Modal for Profile -->
-    <EditUserModal
-      v-if="user"
-      v-model="showProfileModal"
-      :user-id="user?.id || null"
-      :departments="departments"
-      :all-users="allUsers"
-      @user-updated="handleProfileUpdated"
-    />
+    <ClientOnly>
+      <EditUserModal
+        v-if="user"
+        v-model="showProfileModal"
+        :user-id="user?.id || null"
+        :departments="departments"
+        :all-users="allUsers"
+        @user-updated="handleProfileUpdated"
+      />
+    </ClientOnly>
   </div>
 </template>
 
@@ -57,20 +59,23 @@ const departments = ref<any[]>([])
 const allUsers = ref<User[]>([])
 
 const openProfileModal = async () => {
-  // Close mobile menu if open
-  emit('close-mobile-menu')
-  
+  // Guard against server-side execution
+  if (import.meta.server) return
+
   // Load departments and users data for the modal
   try {
     const [departmentsData, usersData] = await Promise.all([
       api.fetchDepartments(),
       api.fetchUsers()
     ])
-    
+
     departments.value = departmentsData
     allUsers.value = usersData as User[]
-    
+
     showProfileModal.value = true
+
+    // Don't close mobile menu - let modal appear on top
+    // The modal has higher z-index so it will be visible
   } catch (err) {
     console.error('Error loading data for profile modal:', err)
     alert('Failed to load profile data')
@@ -78,10 +83,20 @@ const openProfileModal = async () => {
 }
 
 const handleProfileUpdated = (updatedUser: User) => {
-  // Update localStorage
-  localStorage.setItem('user', JSON.stringify(updatedUser))
-  
+  // Update localStorage (client-side only)
+  if (import.meta.client) {
+    localStorage.setItem('user', JSON.stringify(updatedUser))
+  }
+
   // Emit event to parent to update header display
   emit('profile-updated', updatedUser)
 }
+
+// Watch for modal close on mobile to also close the mobile menu
+watch(showProfileModal, (newValue, oldValue) => {
+  if (props.isMobile && oldValue === true && newValue === false) {
+    // Modal was closed on mobile, close the mobile menu too
+    emit('close-mobile-menu')
+  }
+})
 </script>

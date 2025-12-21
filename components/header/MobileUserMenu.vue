@@ -21,12 +21,14 @@
       {{ item.label }}
     </NuxtLink>
 
-    <UserProfileButton
-      :user="user"
-      :is-mobile="true"
-      @profile-updated="$emit('profile-updated', $event)"
-      @close-mobile-menu="$emit('close')"
-    />
+    <ClientOnly>
+      <UserProfileButton
+        :user="user"
+        :is-mobile="true"
+        @profile-updated="$emit('profile-updated', $event)"
+        @close-mobile-menu="$emit('close')"
+      />
+    </ClientOnly>
 
     <button
       @click="$emit('logout')"
