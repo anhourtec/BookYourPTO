@@ -208,13 +208,12 @@ model User {
   canApproveDepartments String[] // Array of Department IDs
   permissions          Json? // Granular permissions: { canExportData: true, etc. }
 
-  // Work Schedule (stored as JSON)
-  workSchedule Json? // { monday: { start: "09:00", end: "17:00", isWorkday: true }, ... }
-  scheduleRepeatsWeekly Boolean @default(true)
-  scheduleEffectiveFrom DateTime?
-  scheduleEffectiveTo   DateTime?
-  timezone     String @default("UTC") // User-specific timezone override (IANA identifier)
+  // Work Schedule - Hybrid approach
+  scheduleRepeatsWeekly Boolean @default(true) // If true, use workSchedule; if false, use workSchedules table
+  workSchedule Json? // Simple repeating weekly schedule: { monday: { start: "09:00", end: "17:00", isWorkday: true }, ... }
   hoursPerWeek Float  @default(40)
+  timezone     String @default("UTC") // User-specific timezone override (IANA identifier)
+  workSchedules WorkSchedule[] // Advanced: Work schedule history (used when scheduleRepeatsWeekly = false)
   
 
   // Leave Balances (Quick access - detailed tracking in LeaveBalance table)
@@ -271,6 +270,37 @@ model User {
   @@index([reportsToId])
   @@index([email])
   @@index([isActive])
+}
+
+// ============================================
+// WORK SCHEDULE HISTORY
+// ============================================
+
+// Work Schedule History - Tracks schedule changes over time
+model WorkSchedule {
+  id           String    @id @default(cuid())
+  userId       String
+
+  // The weekly pattern stored as JSON
+  // Structure: { monday: { isWorkday, startTime, endTime, breakMinutes, hours }, tuesday: {...}, etc. }
+  schedule     Json
+  hoursPerWeek Float     @default(40)
+
+  // Date range for this schedule
+  effectiveFrom DateTime
+  effectiveTo   DateTime? // null = current/ongoing schedule
+
+  // Metadata
+  createdAt    DateTime  @default(now())
+  createdBy    String?   // User ID who made this change
+  notes        String?   // Optional notes about why schedule changed
+
+  // Relations
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, effectiveFrom])
+  @@index([effectiveFrom, effectiveTo])
 }
 
 // Leave Types (Annual, Sick, Maternity, etc.)

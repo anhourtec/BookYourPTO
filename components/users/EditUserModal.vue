@@ -1019,65 +1019,101 @@
               </div>
             </div>
 
-            <!-- Schedule Repeats Weekly Toggle -->
+            <!-- Schedule Mode Toggle -->
             <div class="p-4 bg-[rgb(var(--muted))]/30 rounded-lg border border-[rgb(var(--border))]">
               <div class="flex items-center justify-between">
                 <div class="flex items-start gap-3">
                   <Icon
-                    :name="form.scheduleRepeatsWeekly ? 'lucide:repeat' : 'lucide:calendar'"
+                    :name="form.scheduleRepeatsWeekly ? 'lucide:repeat' : 'lucide:calendar-range'"
                     class="w-5 h-5 flex-shrink-0 mt-0.5"
-                    :class="form.scheduleRepeatsWeekly ? 'text-green-600' : 'text-[rgb(var(--muted-foreground))]'"
+                    :class="form.scheduleRepeatsWeekly ? 'text-green-600' : 'text-blue-600'"
                   />
                   <div>
                     <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-1">
-                      Repeating Weekly Schedule
+                      Schedule Type
                     </label>
                     <p class="text-xs text-[rgb(var(--muted-foreground))]">
                       {{ form.scheduleRepeatsWeekly
-                        ? 'This schedule repeats every week'
-                        : 'This is a one-time schedule for a specific date range'
+                        ? 'Simple repeating weekly schedule (same every week)'
+                        : 'Advanced schedule periods (can change over time)'
                       }}
                     </p>
                   </div>
                 </div>
-                <SwitchToggle
-                  v-model="form.scheduleRepeatsWeekly"
-                  :disabled="!canManageSchedule"
-                />
+                <div class="flex flex-col items-end gap-1">
+                  <SwitchToggle
+                    v-model="form.scheduleRepeatsWeekly"
+                    :disabled="!canManageSchedule"
+                    @update:modelValue="onScheduleModeChange"
+                  />
+                  <span class="text-xs text-[rgb(var(--muted-foreground))]">
+                    {{ form.scheduleRepeatsWeekly ? 'Repeating' : 'Periods' }}
+                  </span>
+                </div>
               </div>
             </div>
 
-            <!-- Schedule Date Range (shown when NOT repeating weekly) -->
-            <div v-if="!form.scheduleRepeatsWeekly" class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
-              <div>
-                <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
-                  Effective From <span class="text-[rgb(var(--destructive))]">*</span>
-                </label>
-                <input
-                  v-model="form.scheduleEffectiveFrom"
-                  type="date"
-                  :disabled="!canManageSchedule"
-                  class="w-full px-3 py-2 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-sm focus:ring-2 focus:ring-[rgb(var(--primary))] disabled:opacity-50 disabled:cursor-not-allowed"
-                  required
-                />
-                <p class="text-xs text-[rgb(var(--muted-foreground))] mt-1">
-                  Start date for this schedule
-                </p>
+            <!-- Schedule Period Selection (only shown when NOT repeating) -->
+            <div v-if="!form.scheduleRepeatsWeekly" class="p-4 bg-[rgb(var(--muted))]/30 rounded-lg border border-[rgb(var(--border))]">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                  <Icon name="lucide:calendar-range" class="w-5 h-5 text-[rgb(var(--primary))]" />
+                  <label class="block text-sm font-medium text-[rgb(var(--foreground))]">
+                    {{ editingScheduleIndex === null ? 'Current Active Schedule' : `Editing Schedule Period #${editingScheduleIndex + 1}` }}
+                  </label>
+                </div>
+                <button
+                  v-if="canManageSchedule && editingScheduleIndex !== null"
+                  type="button"
+                  @click="cancelEditSchedule"
+                  class="text-xs px-2 py-1 bg-[rgb(var(--muted))] hover:bg-[rgb(var(--muted))]/80 rounded transition"
+                >
+                  Cancel Edit
+                </button>
               </div>
-              <div>
-                <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
-                  Effective To <span class="text-[rgb(var(--destructive))]">*</span>
+
+              <!-- Schedule Period Dates -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label class="block text-xs font-medium text-[rgb(var(--foreground))] mb-1.5">
+                    Effective From <span class="text-[rgb(var(--destructive))]">*</span>
+                  </label>
+                  <input
+                    v-model="currentScheduleEffectiveFrom"
+                    type="date"
+                    :disabled="!canManageSchedule"
+                    class="w-full px-3 py-2 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-sm focus:ring-2 focus:ring-[rgb(var(--primary))] disabled:opacity-50 disabled:cursor-not-allowed"
+                    required
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-[rgb(var(--foreground))] mb-1.5">
+                    Effective To
+                  </label>
+                  <input
+                    v-model="currentScheduleEffectiveTo"
+                    type="date"
+                    :disabled="!canManageSchedule"
+                    class="w-full px-3 py-2 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-sm focus:ring-2 focus:ring-[rgb(var(--primary))] disabled:opacity-50 disabled:cursor-not-allowed"
+                    placeholder="Leave empty for ongoing"
+                  />
+                  <p class="text-xs text-[rgb(var(--muted-foreground))] mt-1">
+                    Leave empty for ongoing schedule
+                  </p>
+                </div>
+              </div>
+
+              <!-- Schedule Notes -->
+              <div v-if="canManageSchedule">
+                <label class="block text-xs font-medium text-[rgb(var(--foreground))] mb-1.5">
+                  Notes (Optional)
                 </label>
                 <input
-                  v-model="form.scheduleEffectiveTo"
-                  type="date"
-                  :disabled="!canManageSchedule"
-                  class="w-full px-3 py-2 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-sm focus:ring-2 focus:ring-[rgb(var(--primary))] disabled:opacity-50 disabled:cursor-not-allowed"
-                  required
+                  v-model="currentScheduleNotes"
+                  type="text"
+                  placeholder="e.g., Reduced hours for summer, Part-time schedule, etc."
+                  class="w-full px-3 py-2 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-sm focus:ring-2 focus:ring-[rgb(var(--primary))]"
                 />
-                <p class="text-xs text-[rgb(var(--muted-foreground))] mt-1">
-                  End date for this schedule
-                </p>
               </div>
             </div>
 
@@ -1199,6 +1235,101 @@
                 </div>
                 <div class="text-2xl font-bold text-[rgb(var(--primary))]">
                   {{ totalWeeklyHours }} hrs
+                </div>
+              </div>
+            </div>
+
+            <!-- Schedule Actions (only shown when NOT repeating) -->
+            <div v-if="canManageSchedule && !form.scheduleRepeatsWeekly" class="flex flex-wrap gap-2">
+              <button
+                v-if="editingScheduleIndex === null"
+                type="button"
+                @click="saveCurrentSchedule"
+                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2 text-sm font-medium"
+              >
+                <Icon name="lucide:save" class="w-4 h-4" />
+                <span>Save Current Schedule</span>
+              </button>
+              <button
+                v-if="editingScheduleIndex !== null"
+                type="button"
+                @click="updateSchedulePeriod"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2 text-sm font-medium"
+              >
+                <Icon name="lucide:check" class="w-4 h-4" />
+                <span>Update Schedule Period</span>
+              </button>
+              <button
+                type="button"
+                @click="addNewSchedulePeriod"
+                class="px-4 py-2 bg-[rgb(var(--primary))] text-[rgb(var(--primary-foreground))] rounded-lg hover:bg-[rgb(var(--primary))]/90 transition flex items-center gap-2 text-sm font-medium"
+              >
+                <Icon name="lucide:plus" class="w-4 h-4" />
+                <span>Add New Schedule Period</span>
+              </button>
+            </div>
+
+            <!-- Schedule History (only shown when NOT repeating) -->
+            <div v-if="!form.scheduleRepeatsWeekly && workScheduleHistory.length > 0" class="space-y-3">
+              <div class="flex items-center gap-2">
+                <Icon name="lucide:history" class="w-4 h-4 text-[rgb(var(--muted-foreground))]" />
+                <h4 class="text-sm font-semibold text-[rgb(var(--foreground))]">Schedule History</h4>
+                <span class="text-xs text-[rgb(var(--muted-foreground))]">({{ workScheduleHistory.length }} period{{ workScheduleHistory.length !== 1 ? 's' : '' }})</span>
+              </div>
+
+              <div class="space-y-2">
+                <div
+                  v-for="(schedule, index) in workScheduleHistory"
+                  :key="index"
+                  class="p-3 bg-[rgb(var(--card))] rounded-lg border border-[rgb(var(--border))] hover:border-[rgb(var(--primary))]/50 transition"
+                >
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="flex-1 space-y-1">
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <Icon
+                          :name="schedule.effectiveTo ? 'lucide:calendar-check' : 'lucide:calendar-clock'"
+                          class="w-4 h-4"
+                          :class="schedule.effectiveTo ? 'text-gray-500' : 'text-green-600'"
+                        />
+                        <span class="text-sm font-medium text-[rgb(var(--foreground))]">
+                          {{ formatDate(schedule.effectiveFrom) }}
+                          <span class="text-[rgb(var(--muted-foreground))]">to</span>
+                          {{ schedule.effectiveTo ? formatDate(schedule.effectiveTo) : 'Ongoing' }}
+                        </span>
+                        <span
+                          v-if="!schedule.effectiveTo"
+                          class="text-xs px-2 py-0.5 bg-green-500/10 text-green-600 rounded-full font-medium"
+                        >
+                          Active
+                        </span>
+                      </div>
+                      <div class="flex items-center gap-2 text-xs text-[rgb(var(--muted-foreground))]">
+                        <Icon name="lucide:clock" class="w-3 h-3" />
+                        <span>{{ schedule.hoursPerWeek }} hrs/week</span>
+                      </div>
+                      <div v-if="schedule.notes" class="text-xs text-[rgb(var(--muted-foreground))] italic">
+                        {{ schedule.notes }}
+                      </div>
+                    </div>
+                    <div v-if="canManageSchedule" class="flex items-center gap-1">
+                      <button
+                        type="button"
+                        @click="editSchedulePeriod(index)"
+                        class="p-1.5 hover:bg-[rgb(var(--muted))] rounded transition"
+                        title="Edit"
+                      >
+                        <Icon name="lucide:pencil" class="w-3.5 h-3.5 text-blue-600" />
+                      </button>
+                      <button
+                        type="button"
+                        @click="deleteSchedulePeriod(index)"
+                        class="p-1.5 hover:bg-[rgb(var(--muted))] rounded transition"
+                        title="Delete"
+                      >
+                        <Icon name="lucide:trash-2" class="w-3.5 h-3.5 text-[rgb(var(--destructive))]" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1397,6 +1528,41 @@ const workSchedule = ref({
 const orderedDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const
 
 // ============================================
+// WORK SCHEDULE HISTORY MANAGEMENT
+// ============================================
+
+// Schedule history - array of schedule periods
+const workScheduleHistory = ref<Array<{
+  id?: string
+  schedule: any
+  hoursPerWeek: number
+  effectiveFrom: string
+  effectiveTo: string | null
+  notes?: string | null
+}>>([])
+
+// Current schedule period being edited
+const currentScheduleEffectiveFrom = ref<string>('')
+const currentScheduleEffectiveTo = ref<string | null>(null)
+const currentScheduleNotes = ref<string>('')
+const editingScheduleIndex = ref<number | null>(null)
+
+// Helper function to format dates (timezone-safe)
+const formatDate = (dateStr: string) => {
+  // Parse date string as local date to avoid timezone conversion
+  const parts = dateStr.split('-').map(Number)
+  if (parts.length !== 3 || parts.some(p => isNaN(p))) {
+    return dateStr // Return original if invalid
+  }
+  // Use array indexing after validation to satisfy TypeScript
+  const year = parts[0]!
+  const month = parts[1]!
+  const day = parts[2]!
+  const date = new Date(year, month - 1, day)
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
+// ============================================
 // WORK SCHEDULE HELPERS
 // ============================================
 
@@ -1520,6 +1686,148 @@ watch(() => Object.values(workSchedule.value).map(d => d.isWorkday), () => {
   })
 }, { deep: true })
 
+// ============================================
+// SCHEDULE PERIOD MANAGEMENT FUNCTIONS
+// ============================================
+
+// Save current schedule as a new period
+const saveCurrentSchedule = () => {
+  if (!currentScheduleEffectiveFrom.value) {
+    error.value = 'Please set an effective start date for the schedule'
+    return
+  }
+
+  const newSchedule = {
+    schedule: JSON.parse(JSON.stringify(workSchedule.value)),
+    hoursPerWeek: totalWeeklyHours.value,
+    effectiveFrom: currentScheduleEffectiveFrom.value,
+    effectiveTo: currentScheduleEffectiveTo.value || null,
+    notes: currentScheduleNotes.value || null,
+  }
+
+  workScheduleHistory.value.push(newSchedule)
+
+  // Sort by effectiveFrom (newest first)
+  workScheduleHistory.value.sort((a, b) =>
+    new Date(b.effectiveFrom).getTime() - new Date(a.effectiveFrom).getTime()
+  )
+
+  successMessage.value = 'Schedule period added successfully!'
+  setTimeout(() => {
+    successMessage.value = ''
+  }, 3000)
+}
+
+// Add a new schedule period (resets the form for new entry)
+const addNewSchedulePeriod = () => {
+  editingScheduleIndex.value = null
+  workSchedule.value = getDefaultScheduleFromOrg()
+  currentScheduleEffectiveFrom.value = ''
+  currentScheduleEffectiveTo.value = null
+  currentScheduleNotes.value = ''
+}
+
+// Edit an existing schedule period
+const editSchedulePeriod = (index: number) => {
+  const schedule = workScheduleHistory.value[index]
+  if (!schedule) return
+
+  editingScheduleIndex.value = index
+  workSchedule.value = JSON.parse(JSON.stringify(schedule.schedule))
+  currentScheduleEffectiveFrom.value = schedule.effectiveFrom
+  currentScheduleEffectiveTo.value = schedule.effectiveTo
+  currentScheduleNotes.value = schedule.notes || ''
+}
+
+// Update an existing schedule period
+const updateSchedulePeriod = () => {
+  if (editingScheduleIndex.value === null) return
+
+  workScheduleHistory.value[editingScheduleIndex.value] = {
+    ...workScheduleHistory.value[editingScheduleIndex.value],
+    schedule: JSON.parse(JSON.stringify(workSchedule.value)),
+    hoursPerWeek: totalWeeklyHours.value,
+    effectiveFrom: currentScheduleEffectiveFrom.value,
+    effectiveTo: currentScheduleEffectiveTo.value || null,
+    notes: currentScheduleNotes.value || null,
+  }
+
+  // Sort by effectiveFrom (newest first)
+  workScheduleHistory.value.sort((a, b) =>
+    new Date(b.effectiveFrom).getTime() - new Date(a.effectiveFrom).getTime()
+  )
+
+  successMessage.value = 'Schedule period updated successfully!'
+  editingScheduleIndex.value = null
+  setTimeout(() => {
+    successMessage.value = ''
+  }, 3000)
+}
+
+// Cancel editing a schedule period
+const cancelEditSchedule = () => {
+  editingScheduleIndex.value = null
+  // Load the current active schedule or default
+  if (workScheduleHistory.value.length > 0) {
+    const currentSchedule = workScheduleHistory.value.find(s => !s.effectiveTo) || workScheduleHistory.value[0]
+    if (currentSchedule) {
+      workSchedule.value = JSON.parse(JSON.stringify(currentSchedule.schedule))
+      currentScheduleEffectiveFrom.value = currentSchedule.effectiveFrom
+      currentScheduleEffectiveTo.value = currentSchedule.effectiveTo
+      currentScheduleNotes.value = currentSchedule.notes || ''
+    } else {
+      workSchedule.value = getDefaultScheduleFromOrg()
+      currentScheduleEffectiveFrom.value = ''
+      currentScheduleEffectiveTo.value = null
+      currentScheduleNotes.value = ''
+    }
+  } else {
+    workSchedule.value = getDefaultScheduleFromOrg()
+    currentScheduleEffectiveFrom.value = ''
+    currentScheduleEffectiveTo.value = null
+    currentScheduleNotes.value = ''
+  }
+}
+
+// Delete a schedule period
+const deleteSchedulePeriod = (index: number) => {
+  if (confirm('Are you sure you want to delete this schedule period?')) {
+    workScheduleHistory.value.splice(index, 1)
+    successMessage.value = 'Schedule period deleted successfully!'
+    setTimeout(() => {
+      successMessage.value = ''
+    }, 3000)
+  }
+}
+
+// Handle schedule mode change (repeating vs periods)
+const onScheduleModeChange = (isRepeating: boolean) => {
+  if (isRepeating) {
+    // Switching to repeating mode - clear schedule history if any
+    if (workScheduleHistory.value.length > 0) {
+      if (confirm('Switching to repeating schedule will clear all schedule periods. Continue?')) {
+        workScheduleHistory.value = []
+        currentScheduleEffectiveFrom.value = ''
+        currentScheduleEffectiveTo.value = null
+        currentScheduleNotes.value = ''
+        editingScheduleIndex.value = null
+      } else {
+        // User cancelled, revert the toggle
+        form.value.scheduleRepeatsWeekly = false
+      }
+    }
+  } else {
+    // Switching to periods mode - keep current schedule as first period
+    if (workScheduleHistory.value.length === 0) {
+      // Create first period from current schedule
+      const employmentStart = form.value.employmentStartDate || new Date().toISOString().split('T')[0]
+      currentScheduleEffectiveFrom.value = employmentStart
+      currentScheduleEffectiveTo.value = null
+      currentScheduleNotes.value = ''
+    }
+  }
+}
+
 const form = ref<any>({
   firstName: '',
   lastName: '',
@@ -1551,10 +1859,8 @@ const form = ref<any>({
   customLeaveAllowance: null,
   allowCarryForward: true,
   maxCarryForwardDays: null,
-  // Work Schedule fields
+  // Work Schedule
   scheduleRepeatsWeekly: true,
-  scheduleEffectiveFrom: null,
-  scheduleEffectiveTo: null,
 })
 
 // Organization defaults (fetched from org settings)
@@ -1597,13 +1903,6 @@ const filteredCountries = ref<any[]>([])
 const selectedCountry = ref('')
 const selectedSubdivision = ref('')
 const loadingSubdivisions = ref(false)
-
-// Auto-set schedule effective from to employment start date
-watch(() => form.value.employmentStartDate, (newDate) => {
-  if (newDate && !form.value.scheduleEffectiveFrom) {
-    form.value.scheduleEffectiveFrom = newDate
-  }
-})
 
 // Fetch balance data from API
 const fetchBalanceData = async (userId: string) => {
@@ -1935,18 +2234,73 @@ const fetchUserData = async (userId: string) => {
       customLeaveAllowance: user.customLeaveAllowance || null,
       allowCarryForward: user.allowCarryForward !== undefined ? user.allowCarryForward : true,
       maxCarryForwardDays: user.maxCarryForwardDays || null,
-      // Work Schedule fields
+      // Work Schedule
       scheduleRepeatsWeekly: user.scheduleRepeatsWeekly ?? true,
-      scheduleEffectiveFrom: user.scheduleEffectiveFrom ? new Date(user.scheduleEffectiveFrom).toISOString().split('T')[0] : null,
-      scheduleEffectiveTo: user.scheduleEffectiveTo ? new Date(user.scheduleEffectiveTo).toISOString().split('T')[0] : null,
     }
 
-    // Load work schedule
-    if (user.workSchedule) {
-      workSchedule.value = user.workSchedule as any
+    // Load work schedules based on mode
+    const userWithSchedules = user as any // Type assertion for workSchedules
+
+    if (user.scheduleRepeatsWeekly) {
+      // Simple repeating schedule
+      if (user.workSchedule) {
+        workSchedule.value = user.workSchedule as any
+      } else {
+        workSchedule.value = getDefaultScheduleFromOrg()
+      }
+      // Clear schedule history
+      workScheduleHistory.value = []
+      currentScheduleEffectiveFrom.value = ''
+      currentScheduleEffectiveTo.value = null
+      currentScheduleNotes.value = ''
+    } else if (userWithSchedules.workSchedules && Array.isArray(userWithSchedules.workSchedules) && userWithSchedules.workSchedules.length > 0) {
+      // Advanced schedule periods
+      // Load all schedule periods
+      workScheduleHistory.value = userWithSchedules.workSchedules.map((ws: any) => ({
+        id: ws.id,
+        schedule: ws.schedule,
+        hoursPerWeek: ws.hoursPerWeek || 40,
+        effectiveFrom: new Date(ws.effectiveFrom).toISOString().split('T')[0],
+        effectiveTo: ws.effectiveTo ? new Date(ws.effectiveTo).toISOString().split('T')[0] : null,
+        notes: ws.notes || null,
+      }))
+
+      // Sort by effectiveFrom (newest first)
+      workScheduleHistory.value.sort((a, b) =>
+        new Date(b.effectiveFrom).getTime() - new Date(a.effectiveFrom).getTime()
+      )
+
+      // Load the current active schedule (one without effectiveTo)
+      const currentSchedule = workScheduleHistory.value.find(s => !s.effectiveTo)
+      if (currentSchedule) {
+        workSchedule.value = JSON.parse(JSON.stringify(currentSchedule.schedule))
+        currentScheduleEffectiveFrom.value = currentSchedule.effectiveFrom
+        currentScheduleEffectiveTo.value = currentSchedule.effectiveTo
+        currentScheduleNotes.value = currentSchedule.notes || ''
+      } else {
+        // If no active schedule, load the most recent one
+        const latestSchedule = workScheduleHistory.value[0]
+        if (latestSchedule) {
+          workSchedule.value = JSON.parse(JSON.stringify(latestSchedule.schedule))
+          currentScheduleEffectiveFrom.value = latestSchedule.effectiveFrom
+          currentScheduleEffectiveTo.value = latestSchedule.effectiveTo
+          currentScheduleNotes.value = latestSchedule.notes || ''
+        } else {
+          workSchedule.value = getDefaultScheduleFromOrg()
+          currentScheduleEffectiveFrom.value = ''
+          currentScheduleEffectiveTo.value = null
+          currentScheduleNotes.value = ''
+        }
+      }
     } else {
-      // Set defaults based on organization's business days
+      // No schedules found - set defaults
       workSchedule.value = getDefaultScheduleFromOrg()
+      currentScheduleEffectiveFrom.value = user.employmentStartDate
+        ? (new Date(user.employmentStartDate).toISOString().split('T')[0] || '')
+        : ''
+      currentScheduleEffectiveTo.value = null
+      currentScheduleNotes.value = ''
+      workScheduleHistory.value = []
     }
 
     if (user.emergencyContact) {
@@ -2032,13 +2386,29 @@ const handleSubmit = async () => {
       updateData.reportsToId = form.value.reportsToId || null
     }
 
-    // ✅ Only include work schedule if user has permission to manage it
+    // ✅ Only include work schedules if user has permission to manage it
     if (canManageSchedule.value) {
-      updateData.workSchedule = workSchedule.value
       updateData.scheduleRepeatsWeekly = form.value.scheduleRepeatsWeekly
-      updateData.scheduleEffectiveFrom = form.value.scheduleEffectiveFrom || null
-      updateData.scheduleEffectiveTo = form.value.scheduleEffectiveTo || null
-      updateData.hoursPerWeek = totalWeeklyHours.value
+
+      if (form.value.scheduleRepeatsWeekly) {
+        // Simple repeating schedule
+        updateData.workSchedule = workSchedule.value
+        updateData.hoursPerWeek = totalWeeklyHours.value
+        // Clear workSchedules array
+        updateData.workSchedules = []
+      } else {
+        // Advanced schedule periods
+        updateData.workSchedules = workScheduleHistory.value.map(ws => ({
+          id: ws.id,
+          schedule: ws.schedule,
+          hoursPerWeek: ws.hoursPerWeek,
+          effectiveFrom: ws.effectiveFrom,
+          effectiveTo: ws.effectiveTo,
+          notes: ws.notes,
+        }))
+        // Clear simple workSchedule
+        updateData.workSchedule = null
+      }
     }
 
     const updatedUser = await updateUser(props.userId, updateData)

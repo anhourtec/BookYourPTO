@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
     const startDate = startDateStr ? new Date(startDateStr) : startOfMonth(new Date())
     const endDate = endDateStr ? new Date(endDateStr) : endOfMonth(new Date())
 
-    // Fetch users
+    // Fetch users with their work schedule history
     const users = await prisma.user.findMany({
       where: {
         organizationId: auth.organizationId,
@@ -47,8 +47,13 @@ export default defineEventHandler(async (event) => {
         email: true,
         employeeId: true,
         department: { select: { name: true } },
+        scheduleRepeatsWeekly: true,
         workSchedule: true,
-        hoursPerWeek: true,
+        workSchedules: {
+          orderBy: {
+            effectiveFrom: 'desc'
+          }
+        }
       },
       orderBy: [
         { lastName: 'asc' },
@@ -148,8 +153,25 @@ export default defineEventHandler(async (event) => {
         { width: 30 }, // Notes
       ]
 
-      // Parse work schedule
-      const schedule = user.workSchedule as any || {}
+      // Helper function to get the work schedule active on a specific date
+      const getScheduleForDate = (date: Date, schedules: any[]) => {
+        if (!schedules || schedules.length === 0) return null
+
+        // Find the schedule that was active on this date
+        const activeSchedule = schedules.find(s => {
+          const effectiveFrom = new Date(s.effectiveFrom)
+          const effectiveTo = s.effectiveTo ? new Date(s.effectiveTo) : null
+
+          // Check if date is within this schedule's range
+          if (date < effectiveFrom) return false
+          if (effectiveTo && date > effectiveTo) return false
+
+          return true
+        })
+
+        return activeSchedule?.schedule || null
+      }
+
       const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
 
       // Generate daily breakdown
@@ -162,6 +184,17 @@ export default defineEventHandler(async (event) => {
 
       for (const day of days) {
         const dayName = dayNames[day.getDay()]
+
+        // Get the schedule for this day (either repeating or from history)
+        let schedule: any = {}
+        if (user.scheduleRepeatsWeekly) {
+          // Use simple repeating schedule
+          schedule = user.workSchedule as any || {}
+        } else {
+          // Use schedule history
+          schedule = getScheduleForDate(day, user.workSchedules) || {}
+        }
+
         const daySchedule = schedule[dayName] || { isWorkday: false, hours: 0 }
         const scheduledHours = daySchedule.isWorkday ? (daySchedule.hours || 0) : 0
 

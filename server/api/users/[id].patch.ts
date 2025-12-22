@@ -218,15 +218,17 @@ export default defineEventHandler(async (event) => {
       updateData.maxCarryForwardDays = body.maxCarryForwardDays
     }
 
-    // ✅ NEW: Add work schedule if provided and user has permission
-    if (body.workSchedule !== undefined && ['ADMINISTRATOR', 'EXECUTIVE'].includes(currentUser.role)) {
-      updateData.workSchedule = body.workSchedule
-    }
-    if (body.scheduleRepeatsWeekly !== undefined && ['ADMINISTRATOR', 'EXECUTIVE'].includes(currentUser.role)) {
-      updateData.scheduleRepeatsWeekly = body.scheduleRepeatsWeekly
-    }
-    if (body.hoursPerWeek !== undefined && ['ADMINISTRATOR', 'EXECUTIVE'].includes(currentUser.role)) {
-      updateData.hoursPerWeek = body.hoursPerWeek
+    // ✅ Add simple repeating schedule if provided
+    if (['ADMINISTRATOR', 'EXECUTIVE'].includes(currentUser.role)) {
+      if (body.scheduleRepeatsWeekly !== undefined) {
+        updateData.scheduleRepeatsWeekly = body.scheduleRepeatsWeekly
+      }
+      if (body.workSchedule !== undefined) {
+        updateData.workSchedule = body.workSchedule
+      }
+      if (body.hoursPerWeek !== undefined) {
+        updateData.hoursPerWeek = body.hoursPerWeek
+      }
     }
 
     // Only add dates if they're valid
@@ -240,16 +242,31 @@ export default defineEventHandler(async (event) => {
       updateData.employmentStartDate = parsedEmploymentStartDate
     }
 
-    // Parse work schedule dates if provided and user has permission
-    if (['ADMINISTRATOR', 'EXECUTIVE'].includes(currentUser.role)) {
-      const parsedScheduleEffectiveFrom = parseDate(body.scheduleEffectiveFrom)
-      if (parsedScheduleEffectiveFrom !== undefined) {
-        updateData.scheduleEffectiveFrom = parsedScheduleEffectiveFrom
-      }
+    // ============================================
+    // HANDLE WORK SCHEDULES (if provided and user has permission)
+    // ============================================
 
-      const parsedScheduleEffectiveTo = parseDate(body.scheduleEffectiveTo)
-      if (parsedScheduleEffectiveTo !== undefined) {
-        updateData.scheduleEffectiveTo = parsedScheduleEffectiveTo
+    if (body.workSchedules !== undefined && ['ADMINISTRATOR', 'EXECUTIVE'].includes(currentUser.role)) {
+      // Delete all existing schedules for this user
+      await prisma.workSchedule.deleteMany({
+        where: { userId: userId }
+      })
+
+      // Create new schedules from the provided array
+      if (Array.isArray(body.workSchedules) && body.workSchedules.length > 0) {
+        const scheduleData = body.workSchedules.map((schedule: any) => ({
+          userId: userId,
+          schedule: schedule.schedule,
+          hoursPerWeek: schedule.hoursPerWeek || 40,
+          effectiveFrom: parseDate(schedule.effectiveFrom) || new Date(),
+          effectiveTo: schedule.effectiveTo ? parseDate(schedule.effectiveTo) : null,
+          notes: schedule.notes || null,
+          createdBy: auth.userId,
+        }))
+
+        await prisma.workSchedule.createMany({
+          data: scheduleData
+        })
       }
     }
 
@@ -258,7 +275,7 @@ export default defineEventHandler(async (event) => {
     // ============================================
 
     const updatedUser = await prisma.user.update({
-      where: { 
+      where: {
         id: userId,
         organizationId: auth.organizationId
       },
@@ -272,6 +289,11 @@ export default defineEventHandler(async (event) => {
             lastName: true,
           },
         },
+        workSchedules: {
+          orderBy: {
+            effectiveFrom: 'desc'
+          }
+        }
       },
     })
 

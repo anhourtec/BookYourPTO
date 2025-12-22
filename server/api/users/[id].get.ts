@@ -44,6 +44,11 @@ export default defineEventHandler(async (event) => {
             lastName: true,
             jobTitle: true
           }
+        },
+        workSchedules: {
+          orderBy: {
+            effectiveFrom: 'desc'
+          }
         }
       }
     })
