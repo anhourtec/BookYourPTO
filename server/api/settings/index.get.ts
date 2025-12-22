@@ -31,6 +31,7 @@ export default defineEventHandler(async (event) => {
         departmentViewRestricted: true,
         carryForwardDays: true,
         carryForwardHours: true,
+        carryForwardEligibilityYears: true,
         carryForwardExpires: true,
         carryForwardExpiryMonths: true,
       },

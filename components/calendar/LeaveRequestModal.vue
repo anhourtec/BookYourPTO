@@ -636,10 +636,10 @@ const handleSubmit = async () => {
       reason: form.reason || undefined,
     }
 
-    console.log('📤 Submitting leave request:', {
-      ...payload,
-      inputDates: { start: startDateInput.value, end: endDateInput.value }
-    })
+    //console.log('📤 Submitting leave request:', {
+    //  ...payload,
+     // inputDates: { start: startDateInput.value, end: endDateInput.value }
+   // })
 
     // Emit the submit event - parent will handle closing the modal
     emit('submit', payload)

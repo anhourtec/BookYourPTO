@@ -73,7 +73,8 @@ model Organization {
   carryForwardHours     Float   @default(0)    // Max hours that can be carried forward
   carryForwardExpires   Boolean @default(false) // Whether carry forward expires
   carryForwardExpiryMonths Int? @default(12)   // Months until expiry (when enabled)
-  
+  carryForwardEligibilityYears Int @default(2) // Year of employment when eligible (1=joining year, 2=2nd year, 3=3rd year)
+
   // Billing & Subscription
   plan               String   @default("free") // free, pro, enterprise
   maxUsers           Int      @default(10)

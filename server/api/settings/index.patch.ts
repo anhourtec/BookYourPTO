@@ -14,6 +14,7 @@ const updateSettingsSchema = z.object({
   departmentViewRestricted: z.boolean().optional(),
   carryForwardDays: z.number().min(0).optional(),
   carryForwardHours: z.number().min(0).optional(),
+  carryForwardEligibilityYears: z.number().min(1).max(3).optional(),
   carryForwardExpires: z.boolean().optional(),
   carryForwardExpiryMonths: z.number().min(1).max(24).nullable().optional(),
 })
@@ -59,6 +60,7 @@ export default defineEventHandler(async (event) => {
         ...(data.departmentViewRestricted !== undefined && { departmentViewRestricted: data.departmentViewRestricted }),
         ...(data.carryForwardDays !== undefined && { carryForwardDays: data.carryForwardDays }),
         ...(data.carryForwardHours !== undefined && { carryForwardHours: data.carryForwardHours }),
+        ...(data.carryForwardEligibilityYears !== undefined && { carryForwardEligibilityYears: data.carryForwardEligibilityYears }),
         ...(data.carryForwardExpires !== undefined && { carryForwardExpires: data.carryForwardExpires }),
         ...(data.carryForwardExpiryMonths !== undefined && { carryForwardExpiryMonths: data.carryForwardExpiryMonths }),
       },
@@ -75,6 +77,7 @@ export default defineEventHandler(async (event) => {
         departmentViewRestricted: true,
         carryForwardDays: true,
         carryForwardHours: true,
+        carryForwardEligibilityYears: true,
         carryForwardExpires: true,
         carryForwardExpiryMonths: true,
       },

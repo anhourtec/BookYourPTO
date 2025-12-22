@@ -50,6 +50,59 @@
           </div>
         </div>
 
+        <!-- Employee Eligibility Year -->
+        <div class="pt-6 border-t border-[rgb(var(--border))]">
+          <h3 class="text-sm font-semibold text-[rgb(var(--foreground))] mb-2">
+            Employee Eligibility
+          </h3>
+          <p class="text-sm text-[rgb(var(--muted-foreground))] mb-4">
+            When do employees become eligible for carry forward?
+          </p>
+          <div class="space-y-2">
+            <label class="flex items-center gap-3 p-3 rounded-lg border border-[rgb(var(--border))] cursor-pointer hover:bg-[rgb(var(--muted))]/30 transition-colors" :class="form.carryForwardEligibilityYears === 1 ? 'bg-[rgb(var(--primary))]/10 border-[rgb(var(--primary))]' : ''">
+              <input
+                type="radio"
+                v-model.number="form.carryForwardEligibilityYears"
+                :value="1"
+                :disabled="!canEditSettings()"
+                class="w-4 h-4 text-[rgb(var(--primary))] focus:ring-2 focus:ring-[rgb(var(--primary))] disabled:opacity-50"
+              />
+              <div class="flex-1">
+                <span class="text-sm font-medium text-[rgb(var(--foreground))]">Joining Year (Year 1)</span>
+                <p class="text-xs text-[rgb(var(--muted-foreground))]">Eligible immediately from their first year</p>
+              </div>
+            </label>
+
+            <label class="flex items-center gap-3 p-3 rounded-lg border border-[rgb(var(--border))] cursor-pointer hover:bg-[rgb(var(--muted))]/30 transition-colors" :class="form.carryForwardEligibilityYears === 2 ? 'bg-[rgb(var(--primary))]/10 border-[rgb(var(--primary))]' : ''">
+              <input
+                type="radio"
+                v-model.number="form.carryForwardEligibilityYears"
+                :value="2"
+                :disabled="!canEditSettings()"
+                class="w-4 h-4 text-[rgb(var(--primary))] focus:ring-2 focus:ring-[rgb(var(--primary))] disabled:opacity-50"
+              />
+              <div class="flex-1">
+                <span class="text-sm font-medium text-[rgb(var(--foreground))]">2nd Year (Recommended)</span>
+                <p class="text-xs text-[rgb(var(--muted-foreground))]">Eligible from their second year of employment</p>
+              </div>
+            </label>
+
+            <label class="flex items-center gap-3 p-3 rounded-lg border border-[rgb(var(--border))] cursor-pointer hover:bg-[rgb(var(--muted))]/30 transition-colors" :class="form.carryForwardEligibilityYears === 3 ? 'bg-[rgb(var(--primary))]/10 border-[rgb(var(--primary))]' : ''">
+              <input
+                type="radio"
+                v-model.number="form.carryForwardEligibilityYears"
+                :value="3"
+                :disabled="!canEditSettings()"
+                class="w-4 h-4 text-[rgb(var(--primary))] focus:ring-2 focus:ring-[rgb(var(--primary))] disabled:opacity-50"
+              />
+              <div class="flex-1">
+                <span class="text-sm font-medium text-[rgb(var(--foreground))]">3rd Year</span>
+                <p class="text-xs text-[rgb(var(--muted-foreground))]">Eligible from their third year of employment</p>
+              </div>
+            </label>
+          </div>
+        </div>
+
         <!-- Carry forward expires -->
         <div class="pt-6 border-t border-[rgb(var(--border))]">
           <div class="flex items-start justify-between gap-4">
@@ -146,6 +199,7 @@ const canEditSettings = () => {
 const form = ref({
   carryForwardDays: 0,
   carryForwardHours: 0,
+  carryForwardEligibilityYears: 2,
   carryForwardExpires: false,
   carryForwardExpiryMonths: 12,
 })
@@ -170,6 +224,7 @@ const fetchSettings = async () => {
     if (data) {
       form.value.carryForwardDays = data.carryForwardDays ?? 0
       form.value.carryForwardHours = data.carryForwardHours ?? 0
+      form.value.carryForwardEligibilityYears = data.carryForwardEligibilityYears ?? 2
       form.value.carryForwardExpires = data.carryForwardExpires ?? false
       form.value.carryForwardExpiryMonths = data.carryForwardExpiryMonths ?? 12
     }
@@ -201,15 +256,16 @@ const saveSettings = async () => {
     const payload = {
       carryForwardDays: form.value.carryForwardDays,
       carryForwardHours: form.value.carryForwardHours,
+      carryForwardEligibilityYears: form.value.carryForwardEligibilityYears,
       carryForwardExpires: form.value.carryForwardExpires,
       carryForwardExpiryMonths: form.value.carryForwardExpires ? form.value.carryForwardExpiryMonths : null,
     }
     
-    console.log('💾 Saving carry forward settings:', payload)
+    //console.log('Saving carry forward settings:', payload)
     
     const result = await api.updateSettings(payload)
     
-    console.log('✅ Carry forward settings saved successfully:', result)
+   // console.log('Carry forward settings saved successfully:', result)
 
     successMessage.value = 'Carry forward settings saved successfully!'
     
