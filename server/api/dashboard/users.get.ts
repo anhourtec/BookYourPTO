@@ -46,6 +46,7 @@ export default defineEventHandler(async (event) => {
         weekStartDay: true,
         leaveYearStartMonth: true,
         defaultLeaveAllowance: true,
+        defaultSickLeaveAllowance: true,
       },
     })
 
@@ -243,24 +244,50 @@ export default defineEventHandler(async (event) => {
 
     // Build response with calculated balances
     const usersWithLeaves = users.map(user => {
-      // Calculate total used days (only deductible leaves)
+      // Get all leaves for this user in the fiscal period
       const userLeaves = leavesByUserForBalance[user.id] || []
-      const totalUsed = userLeaves
-        .filter(l => l.leaveType && l.leaveType.annualAllowance != null && l.leaveType.annualAllowance > 0)
-        .reduce((sum, l) => sum + (l.totalDays || 0), 0)
 
-      // Calculate total allowance
-      const baseAllowance = user.customLeaveAllowance ?? organization?.defaultLeaveAllowance ?? 0
-      const carriedOver = (user.allowCarryForward !== false) ? (user.carryOverBalance || 0) : 0
-      const totalAllowance = baseAllowance + carriedOver
-      const totalRemaining = totalAllowance - totalUsed
+      // Separate leaves by deduction bucket (same logic as balance.get.ts)
+      const annualBucketLeaves = userLeaves.filter(
+        (l) => l.leaveType && (l.leaveType.deductionBucket === 'ANNUAL' ||
+          // Backward compatibility: if no deductionBucket but has annualAllowance and not SICK_PAID
+          (!l.leaveType.deductionBucket && l.leaveType.annualAllowance != null && l.leaveType.annualAllowance > 0 && l.leaveType.code !== 'SICK_PAID'))
+      )
+      const sickBucketLeaves = userLeaves.filter(
+        (l) => l.leaveType && (l.leaveType.deductionBucket === 'SICK' ||
+          // Backward compatibility: SICK_PAID with annualAllowance set
+          (!l.leaveType.deductionBucket && l.leaveType.code === 'SICK_PAID' && l.leaveType.annualAllowance != null && l.leaveType.annualAllowance > 0))
+      )
 
-      if (totalUsed > 0 || totalAllowance > 0) {
+      // Calculate Annual bucket
+      const annualBaseAllowance = user.customLeaveAllowance ?? organization?.defaultLeaveAllowance ?? 0
+      const annualCarriedOver = (user.allowCarryForward !== false) ? (user.carryOverBalance || 0) : 0
+      const annualUsed = annualBucketLeaves.reduce((sum, leave) => sum + (leave.totalDays || 0), 0)
+      const annualTotalAllowance = annualBaseAllowance + annualCarriedOver
+      const annualRemaining = annualTotalAllowance - annualUsed
+
+      // Calculate Sick bucket
+      const sickBaseAllowance = organization?.defaultSickLeaveAllowance ?? 0
+      const sickUsed = sickBucketLeaves.reduce((sum, leave) => sum + (leave.totalDays || 0), 0)
+      const sickRemaining = sickBaseAllowance - sickUsed
+
+      // Total remaining = Annual remaining + Sick remaining
+      const totalRemaining = annualRemaining + sickRemaining
+
+      if (annualUsed > 0 || sickUsed > 0 || annualTotalAllowance > 0 || sickBaseAllowance > 0) {
         console.log(`User ${user.firstName} ${user.lastName} balance:`, {
-          baseAllowance,
-          carriedOver,
-          totalAllowance,
-          totalUsed,
+          annual: {
+            baseAllowance: annualBaseAllowance,
+            carriedOver: annualCarriedOver,
+            totalAllowance: annualTotalAllowance,
+            used: annualUsed,
+            remaining: annualRemaining,
+          },
+          sick: {
+            baseAllowance: sickBaseAllowance,
+            used: sickUsed,
+            remaining: sickRemaining,
+          },
           totalRemaining,
           leavesInPeriod: userLeaves.length,
         })
@@ -275,7 +302,7 @@ export default defineEventHandler(async (event) => {
         jobTitle: user.jobTitle,
         role: user.role,
         departmentId: user.departmentId,
-        annualLeaveBalance: totalRemaining, // Use calculated balance (can be negative)
+        annualLeaveBalance: totalRemaining, // Total remaining (annual + sick)
         department: user.department,
         leaves: leavesByUser[user.id] || [],
       }
