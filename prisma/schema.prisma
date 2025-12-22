@@ -209,8 +209,12 @@ model User {
 
   // Work Schedule (stored as JSON)
   workSchedule Json? // { monday: { start: "09:00", end: "17:00", isWorkday: true }, ... }
+  scheduleRepeatsWeekly Boolean @default(true)
+  scheduleEffectiveFrom DateTime?
+  scheduleEffectiveTo   DateTime?
   timezone     String @default("UTC") // User-specific timezone override (IANA identifier)
   hoursPerWeek Float  @default(40)
+  
 
   // Leave Balances (Quick access - detailed tracking in LeaveBalance table)
   annualLeaveBalance   Float @default(0)

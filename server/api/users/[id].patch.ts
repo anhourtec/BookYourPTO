@@ -218,6 +218,17 @@ export default defineEventHandler(async (event) => {
       updateData.maxCarryForwardDays = body.maxCarryForwardDays
     }
 
+    // ✅ NEW: Add work schedule if provided and user has permission
+    if (body.workSchedule !== undefined && ['ADMINISTRATOR', 'EXECUTIVE'].includes(currentUser.role)) {
+      updateData.workSchedule = body.workSchedule
+    }
+    if (body.scheduleRepeatsWeekly !== undefined && ['ADMINISTRATOR', 'EXECUTIVE'].includes(currentUser.role)) {
+      updateData.scheduleRepeatsWeekly = body.scheduleRepeatsWeekly
+    }
+    if (body.hoursPerWeek !== undefined && ['ADMINISTRATOR', 'EXECUTIVE'].includes(currentUser.role)) {
+      updateData.hoursPerWeek = body.hoursPerWeek
+    }
+
     // Only add dates if they're valid
     const parsedDateOfBirth = parseDate(body.dateOfBirth)
     if (parsedDateOfBirth !== undefined) {
@@ -227,6 +238,19 @@ export default defineEventHandler(async (event) => {
     const parsedEmploymentStartDate = parseDate(body.employmentStartDate)
     if (parsedEmploymentStartDate !== undefined) {
       updateData.employmentStartDate = parsedEmploymentStartDate
+    }
+
+    // Parse work schedule dates if provided and user has permission
+    if (['ADMINISTRATOR', 'EXECUTIVE'].includes(currentUser.role)) {
+      const parsedScheduleEffectiveFrom = parseDate(body.scheduleEffectiveFrom)
+      if (parsedScheduleEffectiveFrom !== undefined) {
+        updateData.scheduleEffectiveFrom = parsedScheduleEffectiveFrom
+      }
+
+      const parsedScheduleEffectiveTo = parseDate(body.scheduleEffectiveTo)
+      if (parsedScheduleEffectiveTo !== undefined) {
+        updateData.scheduleEffectiveTo = parsedScheduleEffectiveTo
+      }
     }
 
     // ============================================

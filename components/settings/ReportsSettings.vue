@@ -147,6 +147,148 @@
             </div>
           </Transition>
         </div>
+
+        <!-- Timesheet Report Section -->
+        <div class="border border-[rgb(var(--border))] rounded-lg p-5 mt-6">
+          <div class="flex items-start gap-3 mb-4">
+            <div class="p-2 bg-[rgb(var(--primary))]/10 rounded-lg">
+              <Icon name="lucide:clock" class="w-5 h-5 text-[rgb(var(--primary))]" />
+            </div>
+            <div class="flex-1">
+              <h3 class="text-base font-semibold text-[rgb(var(--foreground))] mb-1">
+                Timesheet Report
+              </h3>
+              <p class="text-sm text-[rgb(var(--muted-foreground))]">
+                Generate work hours report based on user schedules, accounting for approved leaves and holidays.
+              </p>
+            </div>
+          </div>
+
+          <!-- Filter Options -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-5">
+            <!-- User Filter -->
+            <div>
+              <label class="block text-xs font-medium text-[rgb(var(--foreground))] mb-2">
+                Select User
+              </label>
+              <select
+                v-model="timesheetFilters.userId"
+                class="w-full px-3 py-2 bg-[rgb(var(--muted))] border border-[rgb(var(--border))] rounded-lg text-sm focus:ring-2 focus:ring-[rgb(var(--primary))] focus:border-transparent outline-none"
+              >
+                <option value="">All Users</option>
+                <option v-for="user in allUsers" :key="user.id" :value="user.id">
+                  {{ user.firstName }} {{ user.lastName }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Date Range -->
+            <div>
+              <label class="block text-xs font-medium text-[rgb(var(--foreground))] mb-2">
+                Start Date
+              </label>
+              <input
+                v-model="timesheetFilters.startDate"
+                type="date"
+                class="w-full px-3 py-2 bg-[rgb(var(--muted))] border border-[rgb(var(--border))] rounded-lg text-sm focus:ring-2 focus:ring-[rgb(var(--primary))] focus:border-transparent outline-none"
+              />
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-[rgb(var(--foreground))] mb-2">
+                End Date
+              </label>
+              <input
+                v-model="timesheetFilters.endDate"
+                type="date"
+                class="w-full px-3 py-2 bg-[rgb(var(--muted))] border border-[rgb(var(--border))] rounded-lg text-sm focus:ring-2 focus:ring-[rgb(var(--primary))] focus:border-transparent outline-none"
+              />
+            </div>
+          </div>
+
+          <!-- Report Info -->
+          <div class="bg-[rgb(var(--muted))]/50 rounded-lg p-4 mb-4">
+            <h4 class="text-xs font-semibold text-[rgb(var(--foreground))] mb-2">
+              Timesheet Includes:
+            </h4>
+            <ul class="space-y-1.5 text-xs text-[rgb(var(--muted-foreground))]">
+              <li class="flex items-center gap-2">
+                <Icon name="lucide:check" class="w-3.5 h-3.5 text-green-600 shrink-0" />
+                <span>Daily work schedule breakdown per user</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <Icon name="lucide:check" class="w-3.5 h-3.5 text-green-600 shrink-0" />
+                <span>Expected hours vs actual hours (after leaves)</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <Icon name="lucide:check" class="w-3.5 h-3.5 text-green-600 shrink-0" />
+                <span>Leave deductions with type breakdown</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <Icon name="lucide:check" class="w-3.5 h-3.5 text-green-600 shrink-0" />
+                <span>Public holiday exclusions</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <Icon name="lucide:check" class="w-3.5 h-3.5 text-green-600 shrink-0" />
+                <span>Weekly and monthly summaries</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Generate Button -->
+          <div class="flex flex-wrap items-center gap-3">
+            <button
+              @click="generateTimesheetReport"
+              :disabled="generatingTimesheet"
+              class="px-5 py-2.5 bg-[rgb(var(--primary))] text-[rgb(var(--primary-foreground))] rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm font-medium"
+            >
+              <Icon v-if="generatingTimesheet" name="lucide:loader-2" class="w-4 h-4 animate-spin" />
+              <Icon v-else name="lucide:download" class="w-4 h-4" />
+              <span>{{ generatingTimesheet ? 'Generating Timesheet...' : 'Download Timesheet' }}</span>
+            </button>
+
+            <button
+              v-if="timesheetFilters.userId || timesheetFilters.startDate || timesheetFilters.endDate"
+              @click="clearTimesheetFilters"
+              class="px-4 py-2.5 bg-[rgb(var(--muted))] text-[rgb(var(--foreground))] rounded-lg hover:bg-[rgb(var(--muted))]/80 transition-colors text-sm font-medium"
+            >
+              Clear Filters
+            </button>
+          </div>
+
+          <!-- Success/Error Messages -->
+          <Transition
+            enter-active-class="transition-all duration-300"
+            enter-from-class="opacity-0 transform scale-95"
+            enter-to-class="opacity-100 transform scale-100"
+            leave-active-class="transition-all duration-200"
+            leave-from-class="opacity-100 transform scale-100"
+            leave-to-class="opacity-0 transform scale-95"
+          >
+            <div v-if="timesheetSuccess" class="mt-4 p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+              <div class="flex items-center gap-2">
+                <Icon name="lucide:check-circle" class="w-5 h-5 text-green-600 shrink-0" />
+                <p class="text-sm text-green-600 font-medium">{{ timesheetSuccess }}</p>
+              </div>
+            </div>
+          </Transition>
+
+          <Transition
+            enter-active-class="transition-all duration-300"
+            enter-from-class="opacity-0 transform scale-95"
+            enter-to-class="opacity-100 transform scale-100"
+            leave-active-class="transition-all duration-200"
+            leave-from-class="opacity-100 transform scale-100"
+            leave-to-class="opacity-0 transform scale-95"
+          >
+            <div v-if="timesheetError" class="mt-4 p-4 bg-[rgb(var(--destructive))]/10 border border-[rgb(var(--destructive))]/20 rounded-lg">
+              <div class="flex items-center gap-2">
+                <Icon name="lucide:alert-circle" class="w-5 h-5 text-[rgb(var(--destructive))] shrink-0" />
+                <p class="text-sm text-[rgb(var(--destructive))]">{{ timesheetError }}</p>
+              </div>
+            </div>
+          </Transition>
+        </div>
       </div>
     </div>
   </div>
@@ -154,6 +296,23 @@
 
 <script setup lang="ts">
 const { ensureValidToken, getToken } = useAuth()
+
+// Fetch all users for dropdown
+const allUsers = ref<any[]>([])
+
+onMounted(async () => {
+  try {
+    const token = getToken()
+    const response = await fetch('/api/users', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    if (response.ok) {
+      allUsers.value = await response.json()
+    }
+  } catch (err) {
+    console.error('Failed to fetch users:', err)
+  }
+})
 
 const reportFilters = ref({
   startDate: '',
@@ -170,6 +329,25 @@ const clearFilters = () => {
     startDate: '',
     endDate: '',
     status: ''
+  }
+}
+
+// Timesheet state
+const timesheetFilters = ref({
+  userId: '',
+  startDate: '',
+  endDate: ''
+})
+
+const generatingTimesheet = ref(false)
+const timesheetSuccess = ref('')
+const timesheetError = ref('')
+
+const clearTimesheetFilters = () => {
+  timesheetFilters.value = {
+    userId: '',
+    startDate: '',
+    endDate: ''
   }
 }
 
@@ -262,6 +440,93 @@ const generateLeaveReport = async () => {
     }, 8000)
   } finally {
     generatingReport.value = false
+  }
+}
+
+const generateTimesheetReport = async () => {
+  generatingTimesheet.value = true
+  timesheetError.value = ''
+  timesheetSuccess.value = ''
+
+  try {
+    const isValid = await ensureValidToken()
+
+    if (!isValid) {
+      throw new Error('Session expired. Please log in again.')
+    }
+
+    const token = getToken()
+
+    if (!token) {
+      throw new Error('Authentication token not found. Please log in again.')
+    }
+
+    // Build query string
+    const params = new URLSearchParams()
+    if (timesheetFilters.value.userId) params.append('userId', timesheetFilters.value.userId)
+    if (timesheetFilters.value.startDate) params.append('startDate', timesheetFilters.value.startDate)
+    if (timesheetFilters.value.endDate) params.append('endDate', timesheetFilters.value.endDate)
+
+    console.log('📊 Requesting timesheet with filters:', {
+      userId: timesheetFilters.value.userId,
+      startDate: timesheetFilters.value.startDate,
+      endDate: timesheetFilters.value.endDate
+    })
+
+    // Use native fetch for blob download with auth header
+    const response = await fetch(`/api/reports/timesheets?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      }
+    })
+
+    if (!response.ok) {
+      let errorMessage = 'Failed to generate timesheet'
+      try {
+        const errorData = await response.json()
+        errorMessage = errorData.message || errorMessage
+      } catch {
+        errorMessage = response.statusText || errorMessage
+      }
+      throw new Error(errorMessage)
+    }
+
+    const blob = await response.blob()
+
+    console.log('✅ Timesheet downloaded, size:', blob.size, 'bytes')
+
+    // Create download link
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+
+    const startDateStr = timesheetFilters.value.startDate || 'all'
+    const endDateStr = timesheetFilters.value.endDate || 'time'
+    const timestamp = new Date().toISOString().split('T')[0]
+    const userStr = timesheetFilters.value.userId ? `_${allUsers.value.find(u => u.id === timesheetFilters.value.userId)?.lastName || 'user'}` : '_all'
+    link.download = `Timesheet${userStr}_${startDateStr}_to_${endDateStr}_${timestamp}.xlsx`
+
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+
+    timesheetSuccess.value = 'Timesheet generated and downloaded successfully!'
+
+    setTimeout(() => {
+      timesheetSuccess.value = ''
+    }, 5000)
+  } catch (err: any) {
+    console.error('❌ Error generating timesheet:', err)
+    timesheetError.value = err.message || 'Failed to generate timesheet. Please try again.'
+
+    setTimeout(() => {
+      timesheetError.value = ''
+    }, 8000)
+  } finally {
+    generatingTimesheet.value = false
   }
 }
 </script>

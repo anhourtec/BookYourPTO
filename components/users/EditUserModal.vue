@@ -2,15 +2,15 @@
   <CustomModal v-model="isOpen" :max-width="'4xl'">
     <div class="flex flex-col max-h-[90vh]">
       <!-- Header -->
-      <div class="flex items-center justify-between px-6 py-4 border-b border-[rgb(var(--border))]">
-        <div>
-          <h2 class="text-2xl font-bold text-[rgb(var(--foreground))]">Edit User</h2>
-          <p class="text-sm text-[rgb(var(--muted-foreground))] mt-1">
+      <div class="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-[rgb(var(--border))]">
+        <div class="min-w-0 flex-1 pr-4">
+          <h2 class="text-xl sm:text-2xl font-bold text-[rgb(var(--foreground))] truncate">Edit User</h2>
+          <p class="text-xs sm:text-sm text-[rgb(var(--muted-foreground))] mt-1 truncate">
             {{ form.firstName }} {{ form.lastName }}
           </p>
         </div>
-        <button @click="closeModal" class="text-[rgb(var(--muted-foreground))] hover:text-[rgb(var(--foreground))]">
-          <Icon name="lucide:x" class="w-6 h-6" />
+        <button @click="closeModal" class="text-[rgb(var(--muted-foreground))] hover:text-[rgb(var(--foreground))] shrink-0">
+          <Icon name="lucide:x" class="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
       </div>
 
@@ -20,33 +20,34 @@
       </div>
 
       <!-- Scrollable Content -->
-      <div v-else class="overflow-y-auto px-6 py-4">
+      <div v-else class="overflow-y-auto overflow-x-hidden px-4 sm:px-6 py-4">
         <!-- Success Message -->
         <div v-if="successMessage" class="mb-4 bg-green-500/10 border border-green-500/20 rounded-lg p-4">
           <div class="flex items-center gap-2">
-            <Icon name="lucide:check-circle" class="w-5 h-5 text-green-600" />
+            <Icon name="lucide:check-circle" class="w-5 h-5 text-green-600 shrink-0" />
             <p class="text-sm font-semibold text-green-600">{{ successMessage }}</p>
           </div>
         </div>
 
-        <form @submit.prevent="handleSubmit" class="space-y-6">
+        <form @submit.prevent="handleSubmit" class="space-y-6 max-w-full">
           <!-- Tabs -->
-          <div class="border-b border-[rgb(var(--border))]">
-            <div class="flex gap-1 overflow-x-auto">
+          <div class="border-b border-[rgb(var(--border))] -mx-4 sm:-mx-6 px-4 sm:px-6">
+            <div class="flex gap-1 overflow-x-auto scrollbar-hide pb-px">
               <button
                 v-for="tab in tabs"
                 :key="tab.id"
                 type="button"
                 @click="activeTab = tab.id"
                 :class="[
-                  'px-4 py-2.5 text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2',
+                  'px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 sm:gap-2 shrink-0',
                   activeTab === tab.id
                     ? 'text-[rgb(var(--primary))] border-b-2 border-[rgb(var(--primary))]'
                     : 'text-[rgb(var(--muted-foreground))] hover:text-[rgb(var(--foreground))]'
                 ]"
               >
-                <Icon :name="tab.icon" class="w-4 h-4" />
-                {{ tab.label }}
+                <Icon :name="tab.icon" class="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span class="hidden sm:inline">{{ tab.label }}</span>
+                <span class="sm:hidden">{{ tab.label.split(' ')[0] }}</span>
               </button>
             </div>
           </div>
@@ -1008,6 +1009,201 @@
             </div>
           </div>
 
+          <!-- Work Schedule Tab -->
+          <div v-show="activeTab === 'schedule'" class="space-y-4">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-semibold text-[rgb(var(--foreground))]">Work Schedule</h3>
+              <div v-if="!canManageSchedule" class="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 px-3 py-1.5 rounded-lg border border-amber-200 dark:border-amber-800">
+                <Icon name="lucide:eye" class="w-3 h-3" />
+                <span>View Only</span>
+              </div>
+            </div>
+
+            <!-- Schedule Repeats Weekly Toggle -->
+            <div class="p-4 bg-[rgb(var(--muted))]/30 rounded-lg border border-[rgb(var(--border))]">
+              <div class="flex items-center justify-between">
+                <div class="flex items-start gap-3">
+                  <Icon
+                    :name="form.scheduleRepeatsWeekly ? 'lucide:repeat' : 'lucide:calendar'"
+                    class="w-5 h-5 flex-shrink-0 mt-0.5"
+                    :class="form.scheduleRepeatsWeekly ? 'text-green-600' : 'text-[rgb(var(--muted-foreground))]'"
+                  />
+                  <div>
+                    <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-1">
+                      Repeating Weekly Schedule
+                    </label>
+                    <p class="text-xs text-[rgb(var(--muted-foreground))]">
+                      {{ form.scheduleRepeatsWeekly
+                        ? 'This schedule repeats every week'
+                        : 'This is a one-time schedule for a specific date range'
+                      }}
+                    </p>
+                  </div>
+                </div>
+                <SwitchToggle
+                  v-model="form.scheduleRepeatsWeekly"
+                  :disabled="!canManageSchedule"
+                />
+              </div>
+            </div>
+
+            <!-- Schedule Date Range (shown when NOT repeating weekly) -->
+            <div v-if="!form.scheduleRepeatsWeekly" class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+              <div>
+                <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
+                  Effective From <span class="text-[rgb(var(--destructive))]">*</span>
+                </label>
+                <input
+                  v-model="form.scheduleEffectiveFrom"
+                  type="date"
+                  :disabled="!canManageSchedule"
+                  class="w-full px-3 py-2 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-sm focus:ring-2 focus:ring-[rgb(var(--primary))] disabled:opacity-50 disabled:cursor-not-allowed"
+                  required
+                />
+                <p class="text-xs text-[rgb(var(--muted-foreground))] mt-1">
+                  Start date for this schedule
+                </p>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
+                  Effective To <span class="text-[rgb(var(--destructive))]">*</span>
+                </label>
+                <input
+                  v-model="form.scheduleEffectiveTo"
+                  type="date"
+                  :disabled="!canManageSchedule"
+                  class="w-full px-3 py-2 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-sm focus:ring-2 focus:ring-[rgb(var(--primary))] disabled:opacity-50 disabled:cursor-not-allowed"
+                  required
+                />
+                <p class="text-xs text-[rgb(var(--muted-foreground))] mt-1">
+                  End date for this schedule
+                </p>
+              </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div v-if="canManageSchedule" class="flex flex-wrap gap-2">
+              <button
+                type="button"
+                @click="copyMondayToAllWorkDays"
+                class="px-3 py-2 text-xs font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-500/20 transition flex items-center gap-1.5"
+              >
+                <Icon name="lucide:copy" class="w-3.5 h-3.5" />
+                <span>Copy Monday to all work days</span>
+              </button>
+              <button
+                type="button"
+                @click="setStandardWorkWeek"
+                class="px-3 py-2 text-xs font-medium bg-green-500/10 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-500/20 transition flex items-center gap-1.5"
+              >
+                <Icon name="lucide:calendar-clock" class="w-3.5 h-3.5" />
+                <span>Set standard 9-5 (Mon-Fri)</span>
+              </button>
+            </div>
+
+            <!-- Weekly Schedule -->
+            <div class="space-y-3">
+              <div
+                v-for="dayName in orderedDays"
+                :key="dayName"
+                class="p-4 bg-[rgb(var(--card))] rounded-lg border border-[rgb(var(--border))]"
+              >
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      :id="`${dayName}-workday`"
+                      v-model="workSchedule[dayName].isWorkday"
+                      :disabled="!canManageSchedule"
+                      class="w-4 h-4 rounded border-[rgb(var(--border))] text-[rgb(var(--primary))] focus:ring-2 focus:ring-[rgb(var(--primary))] disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                    <label :for="`${dayName}-workday`" class="text-sm font-semibold text-[rgb(var(--foreground))] capitalize">
+                      {{ dayName }}
+                    </label>
+                  </div>
+                  <div v-if="workSchedule[dayName].isWorkday" class="text-xs font-medium text-[rgb(var(--primary))]">
+                    {{ workSchedule[dayName].hours }} hours
+                  </div>
+                  <div v-else class="text-xs text-[rgb(var(--muted-foreground))]">
+                    Rest day
+                  </div>
+                </div>
+
+                <div v-if="workSchedule[dayName].isWorkday" class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <!-- Start Time -->
+                  <div>
+                    <label class="block text-xs font-medium text-[rgb(var(--foreground))] mb-1.5">
+                      Start Time
+                    </label>
+                    <input
+                      v-model="workSchedule[dayName].startTime"
+                      type="time"
+                      :disabled="!canManageSchedule"
+                      @change="calculateDayHours(dayName as string)"
+                      class="w-full px-3 py-2 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-sm focus:ring-2 focus:ring-[rgb(var(--primary))] disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                  </div>
+
+                  <!-- End Time -->
+                  <div>
+                    <label class="block text-xs font-medium text-[rgb(var(--foreground))] mb-1.5">
+                      End Time
+                    </label>
+                    <input
+                      v-model="workSchedule[dayName].endTime"
+                      type="time"
+                      :disabled="!canManageSchedule"
+                      @change="calculateDayHours(dayName as string)"
+                      class="w-full px-3 py-2 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-sm focus:ring-2 focus:ring-[rgb(var(--primary))] disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                  </div>
+
+                  <!-- Break (minutes) -->
+                  <div>
+                    <label class="block text-xs font-medium text-[rgb(var(--foreground))] mb-1.5">
+                      Break (min)
+                    </label>
+                    <input
+                      v-model.number="workSchedule[dayName].breakMinutes"
+                      type="number"
+                      min="0"
+                      :disabled="!canManageSchedule"
+                      @change="calculateDayHours(dayName as string)"
+                      class="w-full px-3 py-2 bg-[rgb(var(--background))] border border-[rgb(var(--border))] rounded-lg text-sm focus:ring-2 focus:ring-[rgb(var(--primary))] disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                  </div>
+
+                  <!-- Hours (calculated) -->
+                  <div>
+                    <label class="block text-xs font-medium text-[rgb(var(--foreground))] mb-1.5">
+                      Hours
+                    </label>
+                    <input
+                      :value="workSchedule[dayName].hours"
+                      type="number"
+                      step="0.5"
+                      readonly
+                      class="w-full px-3 py-2 bg-[rgb(var(--muted))] border border-[rgb(var(--border))] rounded-lg text-sm cursor-not-allowed font-semibold"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Total Weekly Hours -->
+            <div class="p-4 bg-[rgb(var(--primary))]/10 border-2 border-[rgb(var(--primary))]/30 rounded-lg">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <Icon name="lucide:clock" class="w-5 h-5 text-[rgb(var(--primary))]" />
+                  <span class="text-sm font-semibold text-[rgb(var(--foreground))]">Total Weekly Hours</span>
+                </div>
+                <div class="text-2xl font-bold text-[rgb(var(--primary))]">
+                  {{ totalWeeklyHours }} hrs
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Error Message -->
           <div v-if="error" class="bg-[rgb(var(--destructive))]/10 border border-[rgb(var(--destructive))]/20 rounded-lg p-3">
             <div class="flex items-center gap-2">
@@ -1017,20 +1213,20 @@
           </div>
 
           <!-- Action Buttons -->
-          <div class="flex gap-3 pt-4">
+          <div class="flex flex-col sm:flex-row gap-3 pt-4">
             <button
               type="button"
               @click="closeModal"
-              class="flex-1 px-4 py-2 border border-[rgb(var(--border))] rounded-lg hover:bg-[rgb(var(--muted))] transition text-[rgb(var(--foreground))] font-medium"
+              class="flex-1 px-4 py-2.5 sm:py-2 border border-[rgb(var(--border))] rounded-lg hover:bg-[rgb(var(--muted))] transition text-[rgb(var(--foreground))] font-medium text-sm sm:text-base"
             >
               Cancel
             </button>
             <button
               type="submit"
               :disabled="loading"
-              class="flex-1 bg-[rgb(var(--primary))] text-[rgb(var(--primary-foreground))] px-4 py-2 rounded-lg hover:bg-[rgb(var(--primary))]/90 disabled:opacity-50 flex items-center justify-center gap-2 transition font-medium"
+              class="flex-1 bg-[rgb(var(--primary))] text-[rgb(var(--primary-foreground))] px-4 py-2.5 sm:py-2 rounded-lg hover:bg-[rgb(var(--primary))]/90 disabled:opacity-50 flex items-center justify-center gap-2 transition font-medium text-sm sm:text-base"
             >
-              <Icon v-if="loading" name="lucide:loader-2" class="w-4 h-4 animate-spin" />
+              <Icon v-if="loading" name="lucide:loader-2" class="w-4 h-4 animate-spin shrink-0" />
               <span>{{ loading ? 'Saving...' : 'Save Changes' }}</span>
             </button>
           </div>
@@ -1131,6 +1327,9 @@ const tabs = computed(() => {
     baseTabs.push({ id: 'employment', label: 'Employment', icon: 'lucide:briefcase' })
   }
 
+  // Add Work Schedule tab (all users can view, only ADMIN/EXECUTIVE can edit)
+  baseTabs.push({ id: 'schedule', label: 'Work Schedule', icon: 'lucide:clock' })
+
   baseTabs.push({ id: 'allowance', label: 'Leave Allowance', icon: 'lucide:calendar-days' })
 
   // Add Holiday Overrides tab only for ADMINISTRATOR and EXECUTIVE
@@ -1176,6 +1375,151 @@ const effectiveRemaining = computed(() => {
   return effectiveAllowance.value + carriedOver - usedDays
 })
 
+// ============================================
+// REFS - Must be defined before helper functions
+// ============================================
+
+// Organization settings ref (for business days)
+const organizationSettings = ref<any>(null)
+
+// Work Schedule state - Define BEFORE helper functions use it
+const workSchedule = ref({
+  monday: { isWorkday: false, startTime: '', endTime: '', hours: 0, breakMinutes: 60 },
+  tuesday: { isWorkday: false, startTime: '', endTime: '', hours: 0, breakMinutes: 60 },
+  wednesday: { isWorkday: false, startTime: '', endTime: '', hours: 0, breakMinutes: 60 },
+  thursday: { isWorkday: false, startTime: '', endTime: '', hours: 0, breakMinutes: 60 },
+  friday: { isWorkday: false, startTime: '', endTime: '', hours: 0, breakMinutes: 60 },
+  saturday: { isWorkday: false, startTime: '', endTime: '', hours: 0, breakMinutes: 0 },
+  sunday: { isWorkday: false, startTime: '', endTime: '', hours: 0, breakMinutes: 0 },
+})
+
+// Ordered days for display (Monday-Sunday)
+const orderedDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const
+
+// ============================================
+// WORK SCHEDULE HELPERS
+// ============================================
+
+// Check if current user can manage work schedules
+const canManageSchedule = computed(() => {
+  return currentUser.value && ['ADMINISTRATOR', 'EXECUTIVE'].includes(currentUser.value.role)
+})
+
+// Helper to get default schedule from org business days
+const getDefaultScheduleFromOrg = () => {
+  const dayMap: Record<string, keyof typeof workSchedule.value> = {
+    'mon': 'monday',
+    'tue': 'tuesday',
+    'wed': 'wednesday',
+    'thu': 'thursday',
+    'fri': 'friday',
+    'sat': 'saturday',
+    'sun': 'sunday'
+  }
+
+  const businessDays = organizationSettings.value?.businessDays || ['mon', 'tue', 'wed', 'thu', 'fri']
+  const defaultSchedule: any = {}
+
+  for (const [abbr, fullDay] of Object.entries(dayMap)) {
+    const isBusinessDay = businessDays.includes(abbr)
+    defaultSchedule[fullDay] = {
+      isWorkday: isBusinessDay,
+      startTime: isBusinessDay ? '09:00' : '',
+      endTime: isBusinessDay ? '17:00' : '',
+      hours: isBusinessDay ? 8 : 0,
+      breakMinutes: isBusinessDay ? 60 : 0,
+    }
+  }
+
+  return defaultSchedule
+}
+
+// Calculate total weekly hours
+const totalWeeklyHours = computed(() => {
+  return Object.values(workSchedule.value).reduce((total, day: any) => {
+    return total + (day.isWorkday ? (day.hours || 0) : 0)
+  }, 0)
+})
+
+// Calculate hours for a specific day
+const calculateDayHours = (dayName: string) => {
+  const day = workSchedule.value[dayName as keyof typeof workSchedule.value]
+
+  if (!day.isWorkday || !day.startTime || !day.endTime) {
+    day.hours = 0
+    return
+  }
+
+  // Parse times
+  const startParts = day.startTime.split(':').map(Number)
+  const endParts = day.endTime.split(':').map(Number)
+  const [startHour = 0, startMin = 0] = startParts
+  const [endHour = 0, endMin = 0] = endParts
+
+  // Calculate total minutes
+  const startMinutes = startHour * 60 + startMin
+  const endMinutes = endHour * 60 + endMin
+  const totalMinutes = endMinutes - startMinutes
+
+  // Subtract break
+  const workMinutes = totalMinutes - (day.breakMinutes || 0)
+
+  // Convert to hours (rounded to 0.5)
+  day.hours = Math.max(0, Math.round((workMinutes / 60) * 2) / 2)
+}
+
+// Copy Monday's schedule to all work days
+const copyMondayToAllWorkDays = () => {
+  const mondaySchedule = workSchedule.value.monday
+  const workDays = ['tuesday', 'wednesday', 'thursday', 'friday'] as const
+
+  workDays.forEach(day => {
+    const daySchedule = workSchedule.value[day]
+    if (daySchedule.isWorkday) {
+      daySchedule.startTime = mondaySchedule.startTime
+      daySchedule.endTime = mondaySchedule.endTime
+      daySchedule.breakMinutes = mondaySchedule.breakMinutes
+      calculateDayHours(day)
+    }
+  })
+}
+
+// Set standard 9-5 work week (Mon-Fri)
+const setStandardWorkWeek = () => {
+  const workDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'] as const
+  const weekendDays = ['saturday', 'sunday'] as const
+
+  workDays.forEach(day => {
+    const daySchedule = workSchedule.value[day]
+    daySchedule.isWorkday = true
+    daySchedule.startTime = '09:00'
+    daySchedule.endTime = '17:00'
+    daySchedule.breakMinutes = 60
+    daySchedule.hours = 8
+  })
+
+  weekendDays.forEach(day => {
+    const daySchedule = workSchedule.value[day]
+    daySchedule.isWorkday = false
+    daySchedule.startTime = ''
+    daySchedule.endTime = ''
+    daySchedule.breakMinutes = 0
+    daySchedule.hours = 0
+  })
+}
+
+// Watch for workday toggle
+watch(() => Object.values(workSchedule.value).map(d => d.isWorkday), () => {
+  Object.keys(workSchedule.value).forEach(dayName => {
+    const day = workSchedule.value[dayName as keyof typeof workSchedule.value]
+    if (!day.isWorkday) {
+      day.hours = 0
+    } else {
+      calculateDayHours(dayName)
+    }
+  })
+}, { deep: true })
+
 const form = ref<any>({
   firstName: '',
   lastName: '',
@@ -1207,6 +1551,10 @@ const form = ref<any>({
   customLeaveAllowance: null,
   allowCarryForward: true,
   maxCarryForwardDays: null,
+  // Work Schedule fields
+  scheduleRepeatsWeekly: true,
+  scheduleEffectiveFrom: null,
+  scheduleEffectiveTo: null,
 })
 
 // Organization defaults (fetched from org settings)
@@ -1249,6 +1597,13 @@ const filteredCountries = ref<any[]>([])
 const selectedCountry = ref('')
 const selectedSubdivision = ref('')
 const loadingSubdivisions = ref(false)
+
+// Auto-set schedule effective from to employment start date
+watch(() => form.value.employmentStartDate, (newDate) => {
+  if (newDate && !form.value.scheduleEffectiveFrom) {
+    form.value.scheduleEffectiveFrom = newDate
+  }
+})
 
 // Fetch balance data from API
 const fetchBalanceData = async (userId: string) => {
@@ -1547,6 +1902,7 @@ const fetchUserData = async (userId: string) => {
     organizationCarryForwardDays.value = orgSettings.carryForwardDays || 5
     organizationCarryForwardExpires.value = orgSettings.carryForwardExpires || false
     organizationCarryForwardExpiryMonths.value = orgSettings.carryForwardExpiryMonths || 12
+    organizationSettings.value = orgSettings // Store for business days
 
     form.value = {
       firstName: user.firstName || '',
@@ -1579,6 +1935,18 @@ const fetchUserData = async (userId: string) => {
       customLeaveAllowance: user.customLeaveAllowance || null,
       allowCarryForward: user.allowCarryForward !== undefined ? user.allowCarryForward : true,
       maxCarryForwardDays: user.maxCarryForwardDays || null,
+      // Work Schedule fields
+      scheduleRepeatsWeekly: user.scheduleRepeatsWeekly ?? true,
+      scheduleEffectiveFrom: user.scheduleEffectiveFrom ? new Date(user.scheduleEffectiveFrom).toISOString().split('T')[0] : null,
+      scheduleEffectiveTo: user.scheduleEffectiveTo ? new Date(user.scheduleEffectiveTo).toISOString().split('T')[0] : null,
+    }
+
+    // Load work schedule
+    if (user.workSchedule) {
+      workSchedule.value = user.workSchedule as any
+    } else {
+      // Set defaults based on organization's business days
+      workSchedule.value = getDefaultScheduleFromOrg()
     }
 
     if (user.emergencyContact) {
@@ -1662,6 +2030,15 @@ const handleSubmit = async () => {
     // ✅ Only include reportsToId if user has permission to change it
     if (canManageReportsTo()) {
       updateData.reportsToId = form.value.reportsToId || null
+    }
+
+    // ✅ Only include work schedule if user has permission to manage it
+    if (canManageSchedule.value) {
+      updateData.workSchedule = workSchedule.value
+      updateData.scheduleRepeatsWeekly = form.value.scheduleRepeatsWeekly
+      updateData.scheduleEffectiveFrom = form.value.scheduleEffectiveFrom || null
+      updateData.scheduleEffectiveTo = form.value.scheduleEffectiveTo || null
+      updateData.hoursPerWeek = totalWeeklyHours.value
     }
 
     const updatedUser = await updateUser(props.userId, updateData)
@@ -1751,3 +2128,16 @@ const resetForm = () => {
   }
 }
 </script>
+
+<style scoped>
+/* Hide scrollbar for Chrome, Safari and Opera */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+</style>

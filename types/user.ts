@@ -65,7 +65,22 @@ export interface User {
   // Carry Forward Settings
   allowCarryForward?: boolean
   maxCarryForwardDays?: number
-  
+
+  // Work Schedule
+  workSchedule?: {
+    monday?: { isWorkday: boolean; startTime: string; endTime: string; hours: number; breakMinutes: number }
+    tuesday?: { isWorkday: boolean; startTime: string; endTime: string; hours: number; breakMinutes: number }
+    wednesday?: { isWorkday: boolean; startTime: string; endTime: string; hours: number; breakMinutes: number }
+    thursday?: { isWorkday: boolean; startTime: string; endTime: string; hours: number; breakMinutes: number }
+    friday?: { isWorkday: boolean; startTime: string; endTime: string; hours: number; breakMinutes: number }
+    saturday?: { isWorkday: boolean; startTime: string; endTime: string; hours: number; breakMinutes: number }
+    sunday?: { isWorkday: boolean; startTime: string; endTime: string; hours: number; breakMinutes: number }
+  }
+  scheduleRepeatsWeekly?: boolean
+  scheduleEffectiveFrom?: string
+  scheduleEffectiveTo?: string
+  hoursPerWeek?: number
+
   // Relations (populated)
   department?: {
     id: string
@@ -146,4 +161,18 @@ export interface UpdateUserInput {
     phonePrimary?: string
     phoneSecondary?: string
   } | null
+  // Work Schedule
+  workSchedule?: {
+    monday?: { isWorkday: boolean; startTime: string; endTime: string; hours: number; breakMinutes: number }
+    tuesday?: { isWorkday: boolean; startTime: string; endTime: string; hours: number; breakMinutes: number }
+    wednesday?: { isWorkday: boolean; startTime: string; endTime: string; hours: number; breakMinutes: number }
+    thursday?: { isWorkday: boolean; startTime: string; endTime: string; hours: number; breakMinutes: number }
+    friday?: { isWorkday: boolean; startTime: string; endTime: string; hours: number; breakMinutes: number }
+    saturday?: { isWorkday: boolean; startTime: string; endTime: string; hours: number; breakMinutes: number }
+    sunday?: { isWorkday: boolean; startTime: string; endTime: string; hours: number; breakMinutes: number }
+  }
+  scheduleRepeatsWeekly?: boolean
+  scheduleEffectiveFrom?: string | null
+  scheduleEffectiveTo?: string | null
+  hoursPerWeek?: number
 }
