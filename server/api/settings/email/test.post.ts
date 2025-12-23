@@ -79,9 +79,9 @@ export default defineEventHandler(async (event) => {
     })
 
     // Verify connection
-    console.log('🧪 Testing SMTP connection...')
+    console.log('Testing SMTP connection...')
     await transporter.verify()
-    console.log('✅ SMTP connection verified')
+    console.log('SMTP connection verified')
 
     // Send test email
     const testEmail = {
@@ -107,7 +107,7 @@ export default defineEventHandler(async (event) => {
           <body>
             <div class="container">
               <div class="header">
-                <h1>Email Test Successful! ✅</h1>
+                <h1>Email Test Successful! </h1>
               </div>
               <div class="content">
                 <div class="success">
@@ -182,9 +182,9 @@ If you didn't request this test, you can safely ignore this email.
       `,
     }
 
-    console.log('📧 Sending test email to:', currentUser.email)
+    console.log('Sending test email to:', currentUser.email)
     const info = await transporter.sendMail(testEmail)
-    console.log('✅ Test email sent:', info.messageId)
+    console.log('Test email sent:', info.messageId)
 
     return {
       success: true,
@@ -204,7 +204,7 @@ If you didn't request this test, you can safely ignore this email.
       })
     }
 
-    console.error('❌ Email test failed:', error)
+    console.error('Email test failed:', error)
     
     // Provide more specific error messages
     let errorMessage = 'Email connection test failed'

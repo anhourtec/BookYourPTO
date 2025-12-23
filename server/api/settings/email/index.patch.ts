@@ -68,25 +68,6 @@ export default defineEventHandler(async (event) => {
       },
     })
 
-    // Create audit log
-    await prisma.auditLog.create({
-      data: {
-        organizationId: auth.organizationId,
-        userId: auth.userId,
-        action: 'SETTINGS_CHANGE',
-        entityType: 'ORGANIZATION',
-        entityId: auth.organizationId,
-        changes: {
-          field: 'email_settings',
-          action: 'updated',
-          smtpHost: data.smtpHost,
-          smtpPort: data.smtpPort,
-        },
-        ipAddress: getHeader(event, 'x-forwarded-for') || getHeader(event, 'x-real-ip') || 'unknown',
-        userAgent: getHeader(event, 'user-agent') || 'unknown',
-      },
-    })
-
     return organization
   } catch (error: any) {
     if (error.statusCode) {

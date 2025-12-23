@@ -190,25 +190,6 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Create audit log
-    await prisma.auditLog.create({
-      data: {
-        organizationId: decoded.organizationId,
-        userId: decoded.userId,
-        action: 'CREATE',
-        entityType: 'USER',
-        entityId: newUser.id,
-        changes: {
-          email: data.email,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          role: data.role,
-        },
-        ipAddress: getHeader(event, 'x-forwarded-for') || 'unknown',
-        userAgent: getHeader(event, 'user-agent') || 'unknown',
-      },
-    })
-
     // Remove password from response
     const { password: _, ...userWithoutPassword } = newUser
 

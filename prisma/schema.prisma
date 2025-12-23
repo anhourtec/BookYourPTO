@@ -30,13 +30,7 @@ model Organization {
   slug   String  @unique // URL-friendly name (acme-corp)
   domain String? // Custom domain for white-labeling
 
-  // White-labeling & Branding
-  brandName      String  @default("BookYourPTO") // Application name for white-labeling
-  logoLightUrl   String? // Logo for light mode
-  logoDarkUrl    String? // Logo for dark mode
-  faviconUrl     String? // Main favicon
-  faviconDarkUrl String? // Dark mode favicon
-  customCSS      Json?   // Custom styling overrides
+  // White-labeling & Branding - REMOVED FOR OPEN SOURCE EDITION
 
   // Privacy Settings
   calendarViewRestricted   Boolean @default(false)
@@ -61,12 +55,13 @@ model Organization {
   onboardingCompleted    Boolean @default(false)
 
   // Email Configuration
-  smtpHost         String?
+    smtpHost         String?
   smtpPort         Int?
   smtpUser         String?
   smtpPassword     String? // Encrypted
   emailFromName    String  @default("BookYourPTO")
   emailFromAddress String?
+  
   
   // Carry Forward Settings
   carryForwardDays      Float   @default(0)    // Max days that can be carried forward
@@ -99,10 +94,7 @@ model Organization {
   documents        Document[]
   approvalWorkflows ApprovalWorkflow[]
   notifications    Notification[]
-  auditLogs        AuditLog[]
-  signInLogs       SignInLog[]
   emailTemplates   EmailTemplate[]
-  securityViolations SecurityViolation[]
 
   @@index([slug])
 }
@@ -256,12 +248,10 @@ model User {
   documents         Document[]         @relation("DocumentOwner")
   uploadedDocuments Document[]         @relation("DocumentUploader")
   notifications     Notification[]
-  auditLogs         AuditLog[]
   signedDocuments   Document[]         @relation("DocumentSigner")
   firstLevelApprovals Leave[]          @relation("FirstLevelApprover")
   secondLevelApprovals Leave[]         @relation("SecondLevelApprover")
   holidayOverrides  UserHolidayOverride[]
-  securityViolations SecurityViolation[]
 
   @@unique([organizationId, email])
   @@unique([organizationId, employeeId])
@@ -629,64 +619,9 @@ model Notification {
   @@index([createdAt])
 }
 
-// Audit Logs (Compliance & Security)
-model AuditLog {
-  id             String @id @default(cuid())
-  organizationId String
-  userId         String? // Null for system actions
-  action         AuditAction
-  entityType     String // USER, LEAVE, DOCUMENT, etc.
-  entityId       String
-  changes        Json? // { before: {...}, after: {...} }
-  ipAddress      String?
-  userAgent      String?
-  timestamp      DateTime @default(now())
+// Audit Logs - REMOVED FOR OPEN SOURCE EDITION
 
-  // Relations
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  @@index([organizationId])
-  @@index([userId])
-  @@index([entityType, entityId])
-  @@index([timestamp])
-}
-
-// Sign-in Logs (Security & Compliance)
-model SignInLog {
-  id             String @id @default(cuid())
-  organizationId String
-  userId         String?
-  email          String
-
-  // Sign-in Details
-  success        Boolean
-  failureReason  String? // Invalid password, account locked, etc.
-
-  // Device & Location Information
-  ipAddress      String
-  userAgent      String
-  deviceType     String? // mobile, desktop, tablet
-  browser        String? // Chrome, Firefox, Safari, etc.
-  os             String? // Windows, macOS, Linux, iOS, Android
-  country        String?
-  city           String?
-
-  // Session Information
-  sessionId      String?
-
-  timestamp      DateTime @default(now())
-
-  // Relations
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@index([organizationId])
-  @@index([userId])
-  @@index([email])
-  @@index([success])
-  @@index([timestamp])
-  @@index([ipAddress])
-}
+// Sign-in Logs - REMOVED FOR OPEN SOURCE EDITION
 
 // Email Templates (Customizable)
 model EmailTemplate {
@@ -840,21 +775,7 @@ enum NotificationPriority {
   URGENT
 }
 
-enum AuditAction {
-  CREATE
-  UPDATE
-  DELETE
-  APPROVE
-  REJECT
-  CANCEL
-  SIGN
-  DOWNLOAD
-  EXPORT
-  LOGIN
-  LOGOUT
-  PASSWORD_CHANGE
-  SETTINGS_CHANGE
-}
+// AuditAction enum - REMOVED FOR OPEN SOURCE EDITION
 
 enum EmailTemplateType {
   WELCOME
@@ -877,66 +798,6 @@ enum UserHolidayOverrideType {
 }
 
 // ============================================
-// SECURITY VIOLATIONS LOG
+// SECURITY VIOLATIONS LOG - REMOVED FOR OPEN SOURCE EDITION
 // ============================================
-model SecurityViolation {
-  id             String   @id @default(cuid())
-  organizationId String
-  userId         String? // May be null if user deleted
-
-  // Violation Details
-  violationType  SecurityViolationType
-  description    String
-  severity       SecuritySeverity @default(MEDIUM)
-
-  // Tampering Evidence
-  attemptedRole  String? // Role they tried to set
-  actualRole     String? // Role from JWT
-  tamperedData   Json?   // What they modified
-
-  // Device & Location
-  ipAddress      String
-  userAgent      String
-  deviceType     String?
-  browser        String?
-  os             String?
-  country        String?
-  city           String?
-
-  // Action Taken
-  actionTaken    String  @default("FORCE_LOGOUT") // FORCE_LOGOUT, ACCOUNT_LOCKED, etc.
-
-  // Investigation
-  reviewed       Boolean @default(false)
-  reviewedBy     String? // Admin who reviewed
-  reviewedAt     DateTime?
-  notes          String? // Admin notes
-
-  createdAt      DateTime @default(now())
-
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  @@index([organizationId])
-  @@index([userId])
-  @@index([violationType])
-  @@index([createdAt])
-  @@index([reviewed])
-}
-
-enum SecurityViolationType {
-  LOCALSTORAGE_TAMPERING  // Modified user data in localStorage
-  JWT_MISMATCH            // JWT doesn't match localStorage
-  INVALID_JWT             // Corrupted or fake JWT
-  UNAUTHORIZED_ACCESS     // Tried to access forbidden route
-  API_PERMISSION_DENIED   // API rejected due to insufficient permissions
-  SESSION_HIJACK_ATTEMPT  // Suspicious session activity
-}
-
-enum SecuritySeverity {
-  LOW
-  MEDIUM
-  HIGH
-  CRITICAL
-}
 

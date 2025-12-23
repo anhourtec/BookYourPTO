@@ -12,27 +12,12 @@
 
 <script setup lang="ts">
 const colorMode = useColorMode()
-const { brandName, faviconUrl, initializeBranding } = useWhitelabel()
 
-// Set dynamic page title and favicon
+// Set page title (Community Edition - fixed branding)
 useHead({
   titleTemplate: (titleChunk) => {
-    return titleChunk ? `${titleChunk} - ${brandName.value}` : brandName.value
-  },
-  link: computed(() => {
-    const links = []
-
-    // Add favicon if custom one is available
-    if (faviconUrl.value && faviconUrl.value !== '/favicon.ico') {
-      links.push({
-        rel: 'icon',
-        type: 'image/x-icon',
-        href: faviconUrl.value
-      })
-    }
-
-    return links
-  })
+    return titleChunk ? `${titleChunk} - BookYourPTO` : 'BookYourPTO'
+  }
 })
 
 onMounted(() => {
@@ -40,8 +25,5 @@ onMounted(() => {
   if (!localStorage.getItem('nuxt-color-mode')) {
     colorMode.preference = 'light'
   }
-
-  // Initialize branding (loads from cookie if available)
-  initializeBranding()
 })
 </script>

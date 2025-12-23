@@ -1,148 +1,117 @@
-# BookYourPTO
+# BookYourPTO - Community Edition
 
-Open-source, self-hosted time-off management system for modern teams.
+**Open-source, self-hosted time-off management for small teams (up to 10 users)**
 
-**Developed by [AnHourTec](https://anhourtec.com) - BC, Canada**
+**Developed by [AnHourTec](https://anhourtec.com) - Victoria, BC, Canada**
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
+
+---
 
 ## Overview
 
-BookYourPTO is a comprehensive PTO (Paid Time Off) management platform designed to streamline leave requests, approvals, and tracking for organizations of any size. Built with performance, security, and scalability in mind, it offers multi-tenancy support, white-labeling capabilities, and seamless calendar integrations.
+BookYourPTO Community Edition is a free, open-source PTO (Paid Time Off) management platform designed for small teams. Built with modern web technologies, it provides essential leave tracking, approval workflows, and team management capabilities.
 
-## Key Features
+### Perfect for:
+- Small teams and startups (up to 10 users)
+- Self-hosted deployment
+- Organizations wanting full control of their data
+- Teams needing basic but powerful PTO management
 
-### Core Functionality
-- Multi-tenant architecture supporting multiple organizations
-- White-labeling with custom branding, colors, and domains
-- Comprehensive leave tracking and approval workflows
-- Department and user management
-- Document management with e-signature support
-- Real-time notifications and updates
-- Advanced filtering and search capabilities
-- Role-based access control (Employee, Manager, Department Head, HR, Administrator, Executive)
+---
 
-### Security & Authentication
-- JWT-based authentication with refresh token rotation
-- Automatic token refresh for seamless user experience
-- Server-side token validation on all API routes
-- Client-side route protection with role-based access
-- SSR-safe implementation for Nuxt 3
-- Configurable token expiry (15 min access / 7 days refresh)
-- Database-tracked refresh tokens for revocation support
+## Community Edition Features
 
-### User Experience
-- Modern, responsive UI with dark mode support
-- Real-time token expiry countdown (development mode)
-- Seamless auto-refresh on token expiry
-- Automatic logout on session expiry
-- No interruption during active sessions
+✅ **Core Leave Management**
+- Leave request, approval, and tracking
+- Two-level approval workflows (manager + department head)
+- Multiple leave types (Annual, Sick, Maternity, Paternity, etc.)
+- Half-day and full-day leave requests
+- Leave balance tracking and carry-forward
+
+✅ **Team Management**
+- Up to 10 active users
+- Department management
+- Role-based access control (Employee, Department Head, Administrator, Executive)
+- User hierarchy with manager relationships
+
+✅ **Calendar & Scheduling**
+- Calendar view of approved leaves
+- Public holidays management
+- User-specific holiday overrides
+- Work schedule configuration
+
+✅ **Core Features**
+- Email notifications (configure via environment variables)
+- Document uploads with basic file management
+- Real-time notifications
+- Responsive UI with dark mode
+- Multi-timezone support
+
+✅ **Security & Authentication**
+- JWT-based authentication with refresh tokens
+- Password hashing with bcrypt
+- Role-based permissions
+- Server-side token validation
+
+---
+
+## Pro & Enterprise Features 🔒
+
+Upgrade to **BookYourPTO Pro** or **Enterprise** for advanced capabilities:
+
+### Pro Edition ($29/month)
+- 🚀 **Up to 100 users**
+- 🎨 **White-label branding** - Custom logos, colors, brand name
+- 🔒 **Advanced security** - Audit logs, sign-in tracking, security violation monitoring
+- 📊 **Advanced reports** - Excel exports, custom reports, analytics
+- 🔗 **Calendar integrations** - Google Calendar, Outlook sync
+- 💬 **Slack notifications** - Real-time team updates
+- ⏰ **Time management** - Project time tracking
+- 🔌 **API access** - RESTful API for integrations
+
+### Enterprise Edition ($99/month)
+- 🏢 **Unlimited users**
+- ✍️ **Document e-signatures** - PDF/Word signing workflows
+- 🏆 **Priority support** - Dedicated support channel
+- 🛠️ **Custom features** - Tailored to your needs
+- 📞 **Onboarding assistance**
+
+**[View Pricing & Upgrade →](https://anhourtec.com/bookyourpto/pricing)**
+
+---
 
 ## Technology Stack
 
 ### Frontend
-- Nuxt 3 with Vue 3 and TypeScript
-- Tailwind CSS for styling
-- Nuxt Icon (Lucide icons)
+- **Nuxt 4** with Vue 3 and TypeScript
+- **Tailwind CSS 4** for styling
+- **Nuxt UI 4.2.1** - Modern component library
+- **Lucide Icons** - Beautiful icon set
 - SSR-safe composables
 
 ### Backend
-- Nuxt 3 Server API routes
-- Prisma ORM
-- PostgreSQL database
-- JWT for authentication (jsonwebtoken)
-- bcrypt for password hashing
+- **Nuxt Server** API routes (Node.js)
+- **Prisma ORM** - Type-safe database access
+- **PostgreSQL** - Reliable relational database
+- **JWT** authentication (jsonwebtoken)
+- **bcrypt** for password hashing
+- **Nodemailer** for email notifications
 
 ### Infrastructure
-- Docker for containerization
-- Docker Compose for orchestration
-- Local filesystem storage with Docker volumes
-- Redis (planned for caching)
+- Docker & Docker Compose ready
+- Self-hosted deployment
+- Environment-based configuration
 
-## Project Structure
+---
 
-```
-BookYourPTO/
-├── server/
-│   ├── api/                    # API endpoints
-│   │   ├── auth/              # Authentication endpoints
-│   │   │   ├── login.post.ts
-│   │   │   ├── register.post.ts
-│   │   │   └── refresh.post.ts
-│   │   ├── users/             # User management
-│   │   ├── departments/       # Department management
-│   │   └── settings/          # Organization settings
-│   ├── middleware/            # Server middleware
-│   │   └── auth.ts           # JWT validation for all /api/* routes
-│   └── utils/
-│       ├── jwt.ts            # Token generation & verification
-│       ├── db.ts             # Prisma client
-│       └── auth.ts           # Legacy auth utilities
-├── middleware/
-│   └── auth.global.ts        # Client-side route protection
-├── composables/
-│   ├── useApi.ts             # API wrapper with auto-refresh
-│   ├── usePermissions.ts     # Role-based permissions
-│   └── useUserRoleColors.ts  # UI utilities
-├── pages/                    # Application pages
-├── components/               # Vue components
-├── types/
-│   ├── user.ts              # User type definitions
-│   └── api.ts               # API response types
-├── prisma/
-│   └── schema.prisma        # Database schema
-└── scripts/                 # Automation scripts
-```
-
-## Authentication Flow
-
-### Login Flow
-1. User submits email/password to `/api/auth/login`
-2. Server validates credentials
-3. Server generates:
-   - Access token (15 min expiry)
-   - Refresh token (7 days expiry)
-4. Refresh token stored in database
-5. Both tokens returned to client
-6. Client stores tokens in localStorage
-
-### Token Refresh Flow
-1. Access token expires after 15 minutes
-2. Next API call returns 401 error
-3. `useApi` composable catches 401
-4. Automatically calls `/api/auth/refresh` with refresh token
-5. Server validates refresh token from database
-6. Server generates new access + refresh tokens (rotation)
-7. Old refresh token deleted, new one stored
-8. Client retries original request with new token
-9. User sees no interruption
-
-### Session Expiry
-1. Refresh token expires after 7 days
-2. Token refresh attempt fails
-3. User automatically logged out
-4. Redirected to login page
-
-## Getting Started
+## Quick Start
 
 ### Prerequisites
-- Node.js 18+ 
+- Node.js 18+
 - PostgreSQL 14+
-- Docker (optional, for containerized deployment)
-
-### Environment Setup
-
-Create a `.env` file in the root directory:
-
-```env
-# Database
-DATABASE_URL="postgresql://postgres:postgres123@localhost:5432/bookyourpto"
-
-# JWT Secrets (change these in production!)
-JWT_SECRET="your-super-secret-key-change-this-in-production-min-32-characters"
-REFRESH_SECRET="your-different-refresh-secret-key-change-this-in-production"
-
-# Environment
-NODE_ENV="development"
-```
+- Docker (optional, recommended)
 
 ### Installation
 
@@ -157,140 +126,105 @@ npm install
 # Start PostgreSQL (using Docker)
 npm run docker:up
 
-# Start development server (auto-initializes DB)
+# Configure environment
+cp .env.example .env
+# Edit .env with your database credentials
+
+# Initialize database
+npm run db:init
+
+# Start development server
 npm run dev
 ```
 
 The application will be available at `http://localhost:3000`
 
+---
+
+## Environment Configuration
+
+Create a `.env` file in the root directory:
+
+```env
+# Database
+DATABASE_URL="postgresql://postgres:postgres123@localhost:5432/bookyourpto"
+
+# JWT Secrets (CHANGE THESE!)
+JWT_SECRET="your-super-secret-key-change-this-in-production-min-32-characters"
+REFRESH_SECRET="your-different-refresh-secret-key-change-this-in-production"
+
+# Email Configuration (Optional)
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT="587"
+SMTP_USER="your-email@gmail.com"
+SMTP_PASSWORD="your-app-password"
+SMTP_FROM_EMAIL="noreply@yourdomain.com"
+SMTP_FROM_NAME="BookYourPTO"
+
+# Environment
+NODE_ENV="development"
+```
+
+### Email Setup (Optional)
+
+Community Edition uses environment variables for email configuration:
+
+**Gmail:**
+1. Enable 2-factor authentication
+2. Generate an [App Password](https://support.google.com/accounts/answer/185833)
+3. Use the app password in `SMTP_PASSWORD`
+
+**Other SMTP:**
+- Use your SMTP provider's settings for host, port, user, and password
+
+---
+
 ## Available Scripts
 
 ### Development
 ```bash
-npm run dev              # Start development server (auto-initializes DB)
-npm run db:studio        # Open Prisma Studio for database management
+npm run dev              # Start development server
+npm run db:studio        # Open Prisma Studio (database GUI)
 ```
 
 ### Database Management
 ```bash
-npm run db:init          # Initialize database (generate + migrate)
-npm run db:generate      # Generate Prisma Client only
-npm run db:migrate       # Run migrations (production)
-npm run db:migrate:dev   # Create and run new migration (development)
-npm run db:push          # Push schema without migrations
-npm run db:seed          # Run seed file
-npm run db:reset         # Reset database (WARNING: destructive)
+npm run db:init          # Initialize database
+npm run db:generate      # Generate Prisma Client
+npm run db:migrate       # Run migrations
+npm run db:migrate:dev   # Create new migration
+npm run db:reset         # Reset database (⚠️ destructive)
 ```
 
 ### Docker
 ```bash
-npm run docker:up        # Start Docker containers
-npm run docker:down      # Stop Docker containers
+npm run docker:up        # Start PostgreSQL container
+npm run docker:down      # Stop containers
 npm run docker:logs      # View container logs
 ```
 
 ### Production
 ```bash
-npm run build            # Build for production (auto-initializes DB)
-npm run start            # Start production server (Docker)
-npm run preview          # Preview production build locally
+npm run build            # Build for production
+npm run start            # Start production server
+npm run preview          # Preview production build
 ```
 
-## Database Schema
+---
 
-### Core Models
-- **Organization** - Multi-tenant root entity
-- **User** - Employees with roles and permissions
-- **Department** - Organizational units
-- **RefreshToken** - JWT refresh token tracking
-- **LeaveType** - Configurable leave categories
-- **Leave** - Time-off requests and approvals
-- **LeaveBalance** - Leave allowance tracking
-- **PublicHoliday** - Organization and regional holidays
-- **Document** - File management with e-signatures
-- **Notification** - In-app and email notifications
-- **AuditLog** - Compliance and security tracking
+## Production Deployment
 
-## API Endpoints
-
-### Authentication
-```
-POST   /api/auth/login          # User login
-POST   /api/auth/register       # User registration
-POST   /api/auth/refresh        # Refresh access token
-POST   /api/auth/verify-email   # Email verification
-POST   /api/auth/reset-password # Password reset
-```
-
-### Users (Protected)
-```
-GET    /api/users               # List all users
-GET    /api/users/:id           # Get user details
-PATCH  /api/users/:id           # Update user
-DELETE /api/users/:id           # Delete user
-```
-
-### Departments (Protected)
-```
-GET    /api/departments         # List all departments
-POST   /api/departments         # Create department
-PATCH  /api/departments/:id     # Update department
-DELETE /api/departments/:id     # Delete department
-```
-
-### Settings (Protected)
-```
-GET    /api/settings            # Get organization settings
-PATCH  /api/settings            # Update organization settings
-```
-
-All protected endpoints require `Authorization: Bearer {access_token}` header.
-
-## Security Best Practices
-
-### Implemented Security Features
-1. **Short-lived access tokens** (15 minutes) - Minimizes exposure window
-2. **Refresh token rotation** - New refresh token on every refresh
-3. **Database validation** - Refresh tokens stored and validated in DB
-4. **Separate secrets** - Different secrets for access and refresh tokens
-5. **Automatic logout** - On refresh token expiry
-6. **Server-side validation** - All API routes protected by middleware
-7. **Client-side protection** - Route guards with role-based access
-8. **SSR-safe** - No localStorage access on server
-9. **Password hashing** - bcrypt with salt rounds
-10. **Token revocation** - Delete refresh tokens to force logout
-
-### Production Configuration
-
-In production, update `server/utils/jwt.ts`:
-
-```typescript
-// Access Token: 15 minutes
-export function generateAccessToken(payload: JWTPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '15m' })
-}
-
-// Refresh Token: 7 days
-export function generateRefreshToken(userId: string, tokenId: string): string {
-  return jwt.sign({ userId, tokenId }, REFRESH_SECRET, { expiresIn: '7d' })
-}
-```
-
-Remove the token countdown badge from `components/Header.vue` (development feature).
-
-## Deployment
-
-### Docker Deployment
+### Using Docker Compose
 
 ```bash
-# Build the application
-npm run build
-
-# Start with Docker Compose
+# Build and start
 docker-compose up -d
 
-# Check logs
-docker-compose logs -f
+# Check status
+docker-compose ps
+
+# View logs
+docker-compose logs -f app
 ```
 
 ### Manual Deployment
@@ -299,139 +233,263 @@ docker-compose logs -f
 # Build the application
 npm run build
 
-# Set production environment
+# Set environment variables
 export NODE_ENV=production
-export DATABASE_URL="your-production-db-url"
+export DATABASE_URL="postgresql://user:pass@host:5432/db"
 export JWT_SECRET="your-production-secret"
 export REFRESH_SECRET="your-production-refresh-secret"
 
 # Run migrations
 npm run db:migrate
 
-# Start the server
+# Start server
 npm run start
 ```
 
-### Environment Variables (Production)
+---
 
-```env
-DATABASE_URL="postgresql://user:password@host:5432/dbname"
-JWT_SECRET="production-secret-min-32-chars-use-strong-random-string"
-REFRESH_SECRET="different-production-secret-min-32-chars-use-strong-random-string"
-NODE_ENV="production"
+## User Limit
+
+**Community Edition is limited to 10 active users.** This ensures the platform remains free and accessible for small teams while supporting continued development.
+
+When you reach 10 users, you'll see:
+```
+User limit reached (10 users maximum in Community Edition).
+Upgrade to Pro for up to 100 users.
 ```
 
-## Development Guidelines
+**Need more users?** [Upgrade to Pro or Enterprise →](https://anhourtec.com/bookyourpto/pricing)
 
-### Adding New API Endpoints
+---
 
-1. Create endpoint file in `server/api/`
-2. Use `event.context.auth` for authenticated routes
-3. Don't manually verify tokens (middleware handles this)
+## Security
 
-Example:
-```typescript
-// server/api/example.get.ts
-export default defineEventHandler(async (event) => {
-  // Get authenticated user info from middleware
-  const auth = event.context.auth
-  
-  if (!auth) {
-    throw createError({ statusCode: 401, message: 'Unauthorized' })
-  }
-  
-  // Use auth.userId, auth.organizationId, auth.role, auth.email
-  const data = await prisma.example.findMany({
-    where: { organizationId: auth.organizationId }
-  })
-  
-  return data
-})
+### Implemented Security Features
+✅ Short-lived access tokens (15 minutes)
+✅ Refresh token rotation
+✅ Database-tracked sessions
+✅ Password hashing with bcrypt
+✅ Server-side API validation
+✅ Role-based access control
+✅ SSR-safe authentication
+
+### Production Security Checklist
+- [ ] Change default JWT secrets
+- [ ] Use strong database passwords
+- [ ] Enable HTTPS/SSL
+- [ ] Configure firewall rules
+- [ ] Regular database backups
+- [ ] Keep dependencies updated
+
+---
+
+## Project Structure
+
+```
+BookYourPTO/
+├── server/
+│   ├── api/                    # API endpoints
+│   │   ├── auth/              # Authentication
+│   │   ├── users/             # User management
+│   │   ├── departments/       # Departments
+│   │   ├── leaves/            # Leave requests
+│   │   ├── leave-types/       # Leave type config
+│   │   └── settings/          # Organization settings
+│   ├── middleware/            # Server middleware
+│   │   └── auth.ts           # JWT validation
+│   └── utils/                 # Utilities
+│       ├── jwt.ts            # Token handling
+│       └── db.ts             # Prisma client
+├── composables/
+│   ├── useApi.ts             # API wrapper with auto-refresh
+│   ├── useAuth.ts            # Authentication state
+│   └── usePermissions.ts     # Role permissions
+├── pages/                    # Application pages
+├── components/               # Vue components
+├── prisma/
+│   └── schema.prisma        # Database schema
+└── docker-compose.yml       # Docker configuration
 ```
 
-### Adding New Types
+---
 
-1. Define types in `types/api.ts` or `types/user.ts`
-2. Export from `types/api.ts` for convenience
-3. Import in components/composables: `import type { YourType } from '~/types/api'`
+## API Endpoints
 
-### Testing Token Expiry
-
-Set short token lifetimes in `server/utils/jwt.ts`:
-```typescript
-expiresIn: '30s'  // Access token
-expiresIn: '2m'   // Refresh token
+### Authentication (Public)
+```
+POST   /api/auth/login              # User login
+POST   /api/auth/register           # Organization signup
+POST   /api/auth/refresh            # Token refresh
+POST   /api/auth/forgot-password    # Password reset request
+POST   /api/auth/reset-password     # Password reset
 ```
 
-Watch the countdown in the header and observe auto-refresh in action.
+### Users (Protected)
+```
+GET    /api/users                   # List all users (max 10)
+POST   /api/users                   # Create user
+GET    /api/users/:id               # Get user details
+PATCH  /api/users/:id               # Update user
+DELETE /api/users/:id               # Delete user
+```
+
+### Leaves (Protected)
+```
+GET    /api/leaves                  # List leaves
+POST   /api/leaves                  # Create leave request
+PATCH  /api/leaves/:id               # Update leave
+DELETE /api/leaves/:id               # Cancel leave
+```
+
+Protected endpoints require `Authorization: Bearer {access_token}` header.
+
+---
+
+## Frequently Asked Questions
+
+### Can I use this commercially?
+Yes! MIT license allows commercial use. You can deploy it for your company or clients.
+
+### How do I upgrade to Pro/Enterprise?
+Visit [anhourtec.com/bookyourpto](https://anhourtec.com/bookyourpto) or email sales@anhourtec.com
+
+### Can I contribute to the open-source version?
+Absolutely! We welcome contributions. See [Contributing](#contributing) below.
+
+### What's the difference between Community and Pro?
+Community Edition has a 10-user limit and basic features. Pro adds white-labeling, advanced security, integrations, and supports up to 100 users.
+
+### Is my data secure?
+Yes. All data stays on your server (self-hosted). Passwords are hashed with bcrypt, and we use industry-standard JWT authentication.
+
+### Can I customize the code?
+Yes! MIT license allows modification. Fork the repo and customize as needed.
+
+---
+
+## Contributing
+
+We welcome contributions from the community! 🎉
+
+### How to Contribute
+
+1. **Fork the repository**
+2. **Create a feature branch**
+   ```bash
+   git checkout -b feature/amazing-feature
+   ```
+3. **Commit your changes**
+   ```bash
+   git commit -m 'Add amazing feature'
+   ```
+4. **Push to your fork**
+   ```bash
+   git push origin feature/amazing-feature
+   ```
+5. **Open a Pull Request**
+
+### Contribution Guidelines
+- Follow existing code style and TypeScript conventions
+- Add tests for new features
+- Update documentation as needed
+- Keep PRs focused on a single feature/fix
+- Add comments for complex logic
+
+### Code of Conduct
+Be respectful, inclusive, and constructive. We're all here to build something great together.
+
+---
 
 ## Troubleshooting
 
-### "localStorage is not defined"
-- Ensure all localStorage access is wrapped in `typeof window !== 'undefined'` checks
-- Check that middleware has `if (process.server) return` at the top
-
-### "401 Unauthorized" errors
-- Check server terminal for middleware logs
-- Verify `server/middleware/auth.ts` exists and is using `verifyAccessToken()`
-- Ensure token is being sent in `Authorization: Bearer {token}` header
-
-### Token not refreshing
-- Check that `/api/auth/refresh` is in `publicRoutes` array in server middleware
-- Verify refresh token exists in localStorage
-- Check server logs for refresh errors
+### "User limit reached"
+Community Edition supports 10 users. [Upgrade to Pro](https://anhourtec.com/bookyourpto) for more.
 
 ### Database connection fails
 ```bash
 # Check PostgreSQL is running
-npm run docker:up
 docker ps
+
+# Restart PostgreSQL
+npm run docker:down && npm run docker:up
 
 # Check database logs
 npm run docker:logs
 ```
 
-### Prisma Client errors
+### "401 Unauthorized" errors
+- Verify JWT_SECRET is set in `.env`
+- Check token is being sent in Authorization header
+- Try logging out and back in
+
+### Prisma errors
 ```bash
 # Regenerate Prisma Client
 npm run db:generate
 
-# Reset database (WARNING: loses data)
+# Reset database (⚠️ loses data)
 npm run db:reset
 ```
 
-## Contributing
-
-Contributions are welcome! Please follow these guidelines:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Code Style
-- Use TypeScript for type safety
-- Follow existing code structure and naming conventions
-- Add comments for complex logic
-- Update documentation for new features
-
-## License
-
-This project is licensed under the GNU General Public License v3.0. See the LICENSE file for details.
-
-## Support
-
-- Documentation: [Wiki](https://github.com/anhourtec/BookYourPTO/wiki)
-- Issues: [GitHub Issues](https://github.com/anhourtec/BookYourPTO/issues)
-- Discussions: [GitHub Discussions](https://github.com/anhourtec/BookYourPTO/discussions)
-- Website: [anhourtec.com](https://anhourtec.com)
-- Email: support@anhourtec.com
+### Email not sending
+- Verify SMTP credentials in `.env`
+- Check SMTP_PORT (usually 587 for TLS, 465 for SSL)
+- For Gmail, use an [App Password](https://support.google.com/accounts/answer/185833)
 
 ---
 
-**Made with care by AnHourTec in Victoria, BC, Canada**
+## Roadmap
+
+### Upcoming Features
+- [ ] Mobile app (iOS/Android)
+- [ ] Advanced calendar views
+- [ ] Slack integration (Community Edition)
+- [ ] Better reporting
+- [ ] API documentation
+- [ ] Admin dashboard improvements
+
+Want to request a feature? [Open an issue](https://github.com/anhourtec/BookYourPTO/issues)
+
+---
+
+## License
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+You are free to:
+- ✅ Use commercially
+- ✅ Modify
+- ✅ Distribute
+- ✅ Sublicense
+
+---
+
+## Support
+
+### Community Support
+- **Documentation:** [GitHub Wiki](https://github.com/anhourtec/BookYourPTO/wiki)
+- **Issues:** [GitHub Issues](https://github.com/anhourtec/BookYourPTO/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/anhourtec/BookYourPTO/discussions)
+
+### Commercial Support
+- **Website:** [anhourtec.com/bookyourpto](https://anhourtec.com/bookyourpto)
+- **Email:** support@anhourtec.com
+- **Pro/Enterprise:** Dedicated support channel
+
+---
 
 ## Acknowledgments
 
-Built with modern web technologies and best practices for security, performance, and developer experience.
+Built with ❤️ by [AnHourTec](https://anhourtec.com) using modern web technologies:
+- Nuxt 4 & Vue 3
+- Prisma & PostgreSQL
+- Tailwind CSS
+- TypeScript
+
+Special thanks to all our contributors and the open-source community!
+
+---
+
+**Made in Victoria, BC, Canada 🇨🇦**
+
+**Star ⭐ this repo if you find it useful!**

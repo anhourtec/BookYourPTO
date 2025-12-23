@@ -1,7 +1,7 @@
 import { prisma } from '~/server/utils/db'
 import bcrypt from 'bcrypt'
 import { generateAccessToken, generateRefreshToken } from '~/server/utils/jwt'
-import { logSignInAttempt } from '~/server/utils/signin-logger'
+// Sign-in logging removed for Community Edition
 
 export default defineEventHandler(async (event) => {
   let attemptEmail = ''
@@ -45,15 +45,7 @@ export default defineEventHandler(async (event) => {
 
       if (userWithOrg) {
         attemptOrgId = userWithOrg.organizationId
-        // Log failed attempt - invalid email or inactive account
-        await logSignInAttempt(
-          event,
-          email,
-          userWithOrg.organizationId,
-          null,
-          false,
-          'Invalid email or inactive account'
-        )
+        // Sign-in logging removed for Community Edition
       }
 
       throw createError({
@@ -67,15 +59,7 @@ export default defineEventHandler(async (event) => {
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password)
     if (!isValidPassword) {
-      // Log failed attempt - invalid password
-      await logSignInAttempt(
-        event,
-        email,
-        user.organizationId,
-        user.id,
-        false,
-        'Invalid password'
-      )
+      // Sign-in logging removed for Community Edition
 
       throw createError({
         statusCode: 401,
@@ -117,14 +101,7 @@ export default defineEventHandler(async (event) => {
       data: { lastLoginAt: new Date() },
     })
 
-    // Log successful sign-in
-    await logSignInAttempt(
-      event,
-      email,
-      user.organizationId,
-      user.id,
-      true
-    )
+    // Sign-in logging removed for Community Edition
 
     // Return both tokens + user info
     return {

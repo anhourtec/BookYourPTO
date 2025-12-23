@@ -7,20 +7,11 @@
 
     <div class="w-full max-w-md relative z-10">
       <div class="text-center mb-8">
-        <!-- Logo -->
-        <div v-if="logoUrl" class="mb-4 flex justify-center">
-          <img
-            :src="logoUrl"
-            :alt="brandName"
-            class="h-16 w-auto object-contain"
-          />
-        </div>
-
         <h1 class="text-4xl font-bold text-foreground mb-2">
-          Welcome to {{ brandName }}
+          Welcome to BookYourPTO
         </h1>
         <p class="text-muted-foreground">
-          {{ 'Sign in to your account' }}
+          Sign in to your account
         </p>
       </div>
 
@@ -108,11 +99,9 @@
 </template>
 
 <script setup lang="ts">
-const { logoUrl, brandName, initializeBranding } = useWhitelabel()
-
 // Set page title
 useHead({
-  title: 'Sign In'
+  title: 'Sign In - BookYourPTO'
 })
 
 const form = ref({
@@ -124,15 +113,12 @@ const loading = ref(false)
 const error = ref('')
 const showPassword = ref(false)
 
-// Check for security violation and initialize branding on mount
+// Check for security violation on mount
 onMounted(() => {
   const route = useRoute()
   if (route.query.error === 'session_invalid') {
     error.value = 'Security Alert: Session data was tampered with. Please log in again.'
   }
-
-  // Initialize branding (loads from cookie if available)
-  initializeBranding()
 })
 
 // Normalize email on blur (optional UX improvement)
@@ -160,10 +146,6 @@ const handleLogin = async () => {
     localStorage.setItem('auth_token', response.accessToken)
     localStorage.setItem('refresh_token', response.refreshToken)
     localStorage.setItem('user', JSON.stringify(response.user))
-
-    // Load branding after login
-    const { reloadBranding } = useWhitelabel()
-    await reloadBranding()
 
     // Navigate to dashboard
     navigateTo('/dashboard')
