@@ -197,19 +197,6 @@
               <Icon name="lucide:users" class="w-4 h-4" />
             </span>
           </button>
-
-          <!-- Lock Dates (placeholder for future) -->
-          <button
-            v-if="canAccessGroupBooking"
-            class="flex items-center gap-2 rounded-full bg-[rgb(var(--primary))] text-[rgb(var(--primary-foreground))] px-3 py-1.5 shadow-lg hover:opacity-90 text-sm transition-all opacity-60 cursor-not-allowed"
-            disabled
-            title="Coming soon"
-          >
-            <span class="font-medium">Lock Dates</span>
-            <span class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
-              <Icon name="lucide:lock" class="w-4 h-4" />
-            </span>
-          </button>
         </div>
       </Transition>
 
