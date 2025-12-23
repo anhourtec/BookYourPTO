@@ -235,6 +235,17 @@ import GroupBookingModal from '~/components/calendar/GroupBookingModal.vue'
 useHead({
   title: 'Dashboard'
 })
+
+// This prevents the page from rendering before redirect completes
+if (process.client) {
+  const token = localStorage.getItem('auth_token')
+  const userStr = localStorage.getItem('user')
+  
+  if (!token || !userStr) {
+    navigateTo('/login', { replace: true })
+  }
+}
+
 import { useCalendar } from '~/composables/useCalendar'
 
 import type { Leave, PublicHoliday, LeaveType, Department } from '~/types/api'

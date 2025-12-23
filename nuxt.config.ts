@@ -8,15 +8,21 @@ export default defineNuxtConfig({
     '@vueuse/motion/nuxt'
   ],
 
-    routeRules: {
-    // Disable SSR for the users page
+   routeRules: {
+    // Disable SSR for authenticated pages
+    '/dashboard': { ssr: false },
     '/users': { ssr: false },
-    
-    // Or disable for multiple admin pages
     '/settings/**': { ssr: false },
     '/users/**': { ssr: false },
+    '/calendar/**': { ssr: false },
+    '/approvals': { ssr: false },
+    // Disable SSR for auth pages to prevent content flash
+    '/login': { ssr: false },
+    '/register': { ssr: false },
+    '/forgot-password': { ssr: false },
+    '/reset-password': { ssr: false },
+    '/': { ssr: false },
   },
-
     
   app: {
   head: {
