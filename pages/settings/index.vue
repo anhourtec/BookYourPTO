@@ -1,5 +1,14 @@
 <template>
-  <div class="min-h-screen bg-[rgb(var(--background))]">
+  <!-- Loading state while checking authorization -->
+  <div v-if="isChecking" class="min-h-screen bg-[rgb(var(--background))] flex items-center justify-center">
+    <div class="text-center">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[rgb(var(--primary))] mx-auto mb-4"></div>
+      <p class="text-sm text-[rgb(var(--muted-foreground))]">Loading settings...</p>
+    </div>
+  </div>
+
+  <!-- Main content - only shown when authorized -->
+  <div v-else-if="isAuthorized" class="min-h-screen bg-[rgb(var(--background))]">
     <!-- Main Content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex min-h-[calc(100vh-5rem)]">
@@ -110,7 +119,6 @@
 
 <script setup lang="ts">
 import GeneralSettings from '../../components/settings/GeneralSettings.vue'
-// Branding and Security settings removed for Community Edition
 import ChangePasswordSettings from '../../components/settings/ChangePasswordSettings.vue'
 import CarryForwardSettings from '../../components/settings/CarryForwardSettings.vue'
 import LeaveTypesSettings from '../../components/settings/LeaveTypesSettings.vue'
@@ -119,6 +127,48 @@ import PublicHolidaysSettings from '../../components/settings/PublicHolidaysSett
 import EmailSettings from '../../components/settings/EmailSettings.vue'
 import ReportsSettings from '../../components/settings/ReportsSettings.vue'
 import DeleteOrganizationSettings from '../../components/settings/DeleteOrganizationSettings.vue'
+
+// Page-level authentication check
+const router = useRouter()
+const isAuthorized = ref(false)
+const isChecking = ref(true)
+
+onBeforeMount(() => {
+  const token = localStorage.getItem('auth_token')
+  const userStr = localStorage.getItem('user')
+  
+  if (!token || !userStr) {
+    // Not logged in - redirect immediately
+    router.push('/login')
+    return
+  }
+  
+  // Check role authorization
+  try {
+    const tokenParts = token.split('.')
+    if (tokenParts.length !== 3 || !tokenParts[1]) {
+      throw new Error('Invalid token format')
+    }
+
+    const payload = JSON.parse(atob(tokenParts[1]))
+    const allowedRoles = ['ADMINISTRATOR', 'EXECUTIVE', 'EMPLOYEE', 'DEPARTMENT_HEAD']
+    
+    // Settings is accessible to all logged-in users
+    if (!allowedRoles.includes(payload.role)) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Page Not Found',
+        fatal: true,
+      })
+    }
+    
+    isAuthorized.value = true
+  } catch (error) {
+    router.push('/login')
+  } finally {
+    isChecking.value = false
+  }
+})
 
 // Set page title
 useHead({
@@ -194,7 +244,7 @@ const navigationItems = [
   { id: 'email', label: 'Email', icon: 'lucide:mail', isDanger: false, adminOnly: true },
   { id: 'reports', label: 'Reports', icon: 'lucide:file-bar-chart-2', isDanger: false, adminOnly: true },
 
-  // Executive-only sections (Branding and Security removed for Community Edition)
+  // Executive-only sections
   { id: 'dangerzone', label: 'Danger zone', icon: 'lucide:alert-triangle', isDanger: true, executiveOnly: true, adminOnly: true },
 ]
 
