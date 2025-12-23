@@ -10,7 +10,7 @@ export const useHeaderNavigation = (
   
   const navLinks = computed(() => [
     // Show Home only when NOT logged in
-    { to: '/', label: 'Home', show: !isAuthenticated.value },
+    // { to: '/', label: 'Home', show: !isAuthenticated.value },
     // Show Dashboard only when logged in
     { to: '/dashboard', label: 'Dashboard', icon: 'lucide:layout-dashboard', show: isAuthenticated.value },
     { to: '/users', label: 'Users', show: isAuthenticated.value && canAccessUsers() },
