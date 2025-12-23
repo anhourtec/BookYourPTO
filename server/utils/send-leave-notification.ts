@@ -22,8 +22,6 @@ async function createEmailTransporter(organizationId: string) {
       emailFromName: true,
       emailFromAddress: true,
       name: true,
-      brandName: true,
-      logoLightUrl: true,
     },
   })
 
@@ -44,8 +42,7 @@ async function createEmailTransporter(organizationId: string) {
     fromName: org.emailFromName || org.name,
     fromAddress: org.emailFromAddress,
     orgName: org.name,
-    brandName: org.brandName || 'BookYourPTO',
-    logoLightUrl: org.logoLightUrl,
+ 
   }
 }
 
@@ -89,13 +86,13 @@ async function getLeaveApprover(userId: string, organizationId: string) {
 
   // Priority 1: Direct manager (reportsTo)
   if (user.manager && user.manager.id !== userId && user.manager.email) {
-    console.log(`✅ Approver found: Direct manager ${user.manager.firstName} ${user.manager.lastName}`)
+    console.log(`Approver found: Direct manager ${user.manager.firstName} ${user.manager.lastName}`)
     return user.manager
   }
 
   // Priority 2: Department head (if user is not the department head themselves)
   if (user.department?.headOfDept && user.department.headOfDept.id !== userId && user.department.headOfDept.email) {
-    console.log(`✅ Approver found: Department head ${user.department.headOfDept.firstName} ${user.department.headOfDept.lastName}`)
+    console.log(`Approver found: Department head ${user.department.headOfDept.firstName} ${user.department.headOfDept.lastName}`)
     return user.department.headOfDept
   }
 
@@ -120,9 +117,9 @@ async function getLeaveApprover(userId: string, organizationId: string) {
   })
 
   if (fallbackApprover) {
-    console.log(`✅ Approver found: Fallback ${fallbackApprover.role} ${fallbackApprover.firstName} ${fallbackApprover.lastName}`)
+    console.log(`Approver found: Fallback ${fallbackApprover.role} ${fallbackApprover.firstName} ${fallbackApprover.lastName}`)
   } else {
-    console.warn(`⚠️ No approver found for user ${userId}`)
+    console.warn(`No approver found for user ${userId}`)
   }
 
   return fallbackApprover
@@ -242,14 +239,12 @@ export async function sendLeaveSubmissionNotification(
       return { sent: 0, failed: 0, errors: ['No approvers found'] }
     }
 
-    console.log(`📧 Sending leave submission notifications to ${approvers.length} approver(s):`)
+    console.log(`Sending leave submission notifications to ${approvers.length} approver(s):`)
     approvers.forEach(a => console.log(`   - ${a.firstName} ${a.lastName} (${a.role}) <${a.email}>`))
 
     // Generate email content
     const emailContent = generateLeaveSubmittedEmail(leave as any, {
       name: emailConfig.orgName,
-      brandName: emailConfig.brandName,
-      logoLightUrl: emailConfig.logoLightUrl,
     })
 
     // Send emails
@@ -267,7 +262,7 @@ export async function sendLeaveSubmissionNotification(
           text: emailContent.text,
         })
         sent++
-        console.log(`✅ Notification sent to ${approver.email}`)
+        console.log(`Notification sent to ${approver.email}`)
       } catch (error: any) {
         failed++
         const errorMsg = `Failed to send to ${approver.email}: ${error.message}`
@@ -278,7 +273,7 @@ export async function sendLeaveSubmissionNotification(
 
     return { sent, failed, errors }
   } catch (error: any) {
-    console.error('❌ Error sending leave submission notifications:', error)
+    console.error('Error sending leave submission notifications:', error)
     return { sent: 0, failed: 0, errors: [error.message || 'Unknown error'] }
   }
 }
@@ -343,7 +338,7 @@ export async function sendLeaveApprovalNotification(
       return false
     }
 
-    console.log(`📧 Sending leave approval notification to ${leave.user.email}`)
+    console.log(`Sending leave approval notification to ${leave.user.email}`)
 
     // Generate email content
     const emailContent = generateLeaveApprovedEmail(
@@ -351,8 +346,7 @@ export async function sendLeaveApprovalNotification(
       approver,
       {
         name: emailConfig.orgName,
-        brandName: emailConfig.brandName,
-        logoLightUrl: emailConfig.logoLightUrl,
+
       }
     )
 
@@ -365,10 +359,10 @@ export async function sendLeaveApprovalNotification(
       text: emailContent.text,
     })
 
-    console.log(`✅ Approval notification sent to ${leave.user.email}`)
+    console.log(`Approval notification sent to ${leave.user.email}`)
     return true
   } catch (error: any) {
-    console.error('❌ Error sending leave approval notification:', error)
+    console.error('Error sending leave approval notification:', error)
     return false
   }
 }
@@ -434,7 +428,7 @@ export async function sendLeaveRejectionNotification(
       return false
     }
 
-    console.log(`📧 Sending leave rejection notification to ${leave.user.email}`)
+    console.log(`Sending leave rejection notification to ${leave.user.email}`)
 
     // Generate email content
     const emailContent = generateLeaveRejectedEmail(
@@ -443,8 +437,6 @@ export async function sendLeaveRejectionNotification(
       rejectionReason,
       {
         name: emailConfig.orgName,
-        brandName: emailConfig.brandName,
-        logoLightUrl: emailConfig.logoLightUrl,
       }
     )
 
@@ -457,10 +449,10 @@ export async function sendLeaveRejectionNotification(
       text: emailContent.text,
     })
 
-    console.log(`✅ Rejection notification sent to ${leave.user.email}`)
+    console.log(`Rejection notification sent to ${leave.user.email}`)
     return true
   } catch (error: any) {
-    console.error('❌ Error sending leave rejection notification:', error)
+    console.error('Error sending leave rejection notification:', error)
     return false
   }
 }

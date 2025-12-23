@@ -84,26 +84,6 @@ export default defineEventHandler(async (event) => {
       },
     })
 
-    // Create audit log
-    await prisma.auditLog.create({
-      data: {
-        organizationId: auth.organizationId,
-        userId: auth.userId,
-        action: 'DELETE',
-        entityType: 'USER',
-        entityId: userId,
-        changes: {
-          deletedUser: {
-            firstName: userToDelete.firstName,
-            lastName: userToDelete.lastName,
-            role: userToDelete.role,
-          },
-        },
-        ipAddress: getHeader(event, 'x-forwarded-for') || 'unknown',
-        userAgent: getHeader(event, 'user-agent') || 'unknown',
-      },
-    })
-
     return { 
       success: true, 
       message: 'User deleted successfully' 

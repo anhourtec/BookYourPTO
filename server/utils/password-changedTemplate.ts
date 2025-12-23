@@ -44,7 +44,6 @@ export function generatePasswordChangedEmail(
             <p>Hello ${user.firstName},</p>
             
             <div class="success-box">
-              <div class="success-icon">✅</div>
               <h2>Your password has been updated!</h2>
             </div>
             
