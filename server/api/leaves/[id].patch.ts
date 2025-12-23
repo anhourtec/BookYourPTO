@@ -96,23 +96,6 @@ export default defineEventHandler(async (event) => {
         }
       })
 
-      // Create audit log
-      await prisma.auditLog.create({
-        data: {
-          organizationId: auth.organizationId,
-          userId: auth.userId,
-          action: 'UPDATE',
-          entityType: 'LEAVE',
-          entityId: leaveId,
-          changes: {
-            status: body.status,
-            comment: body.firstLevelComment || body.rejectionReason
-          },
-          ipAddress: getHeader(event, 'x-forwarded-for') || 'unknown',
-          userAgent: getHeader(event, 'user-agent') || 'unknown'
-        }
-      })
-
       // TODO: Send notification to user
 
       return updatedLeave

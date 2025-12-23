@@ -94,7 +94,7 @@ interface Props {
   users: User[]
   year: number
   currentMonth: number
-  publicHolidays: PublicHoliday[]
+  userHolidaysMap?: Record<string, PublicHoliday[]>
   weekStartDay?: number
   canAddUsers?: boolean
   isMobile?: boolean
@@ -108,6 +108,7 @@ const props = withDefaults(defineProps<Props>(), {
   isMobile: false,
   today: () => new Date(),
   mobileStartDate: () => new Date(),
+  userHolidaysMap: () => ({}),
 })
 
 defineEmits<{
@@ -217,13 +218,16 @@ const getDayHeaderClass = (day: DayInfo): string => {
   return 'text-[rgb(var(--muted-foreground))]'
 }
 
-// Check if a date is a holiday
-const isHoliday = (date: Date): PublicHoliday | undefined => {
+// Check if a date is a holiday for a specific user (uses per-user holidays from server)
+const isHolidayForUser = (user: User, date: Date): PublicHoliday | undefined => {
   try {
     const dateStr = date.toISOString().split('T')[0]
     if (!dateStr) return undefined
-    
-    return props.publicHolidays.find(h => {
+
+    // Use per-user holidays map from server (includes custom countries + overrides)
+    const userHolidays = props.userHolidaysMap[user.id] || []
+
+    return userHolidays.find(h => {
       try {
         const holidayDate = new Date(h.date)
         const holidayStr = holidayDate.toISOString().split('T')[0]
@@ -247,10 +251,10 @@ const getLeaveForDate = (user: User, date: Date): Leave | undefined => {
     return user.leaves.find(leave => {
       try {
         if (!leave.startDate || !leave.endDate) return false
-        
+
         const startDateObj = new Date(leave.startDate)
         const endDateObj = new Date(leave.endDate)
-        
+
         const leaveStart = startDateObj.toISOString().split('T')[0]
         const leaveEnd = endDateObj.toISOString().split('T')[0]
 
@@ -266,12 +270,12 @@ const getLeaveForDate = (user: User, date: Date): Leave | undefined => {
   }
 }
 
-// Generate days for a specific user (with their leaves)
+// Generate days for a specific user (with their leaves and holidays)
 const getUserDays = (user: User): DayInfo[] => {
   return headerDays.value.map(day => {
-    const holiday = isHoliday(day.date)
+    const holiday = isHolidayForUser(user, day.date) // Use user-specific holiday check
     const leave = getLeaveForDate(user, day.date)
-    
+
     return {
       ...day,
       isHoliday: !!holiday,

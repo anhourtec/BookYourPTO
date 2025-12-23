@@ -70,6 +70,7 @@ interface Props {
   open: boolean
   departments: Department[]
   currentUserDepartmentId?: string
+  currentUserRole?: string
   canViewAllDepartments?: boolean
   initialFilters?: Partial<Filters>
 }
@@ -173,8 +174,10 @@ const filterSections = computed(() => {
       options: [
         { label: 'All accounts', value: 'all' },
         { label: 'Department managers', value: 'managers' },
-        { label: 'Users I approve', value: 'approvers' },
-        { label: 'My favourites', value: 'favourites' },
+        // Only show "Users I approve" for Department Heads, Administrators, and Executives
+        ...(props.currentUserRole && ['DEPARTMENT_HEAD', 'ADMINISTRATOR', 'EXECUTIVE'].includes(props.currentUserRole)
+          ? [{ label: 'Users I approve', value: 'approvers' }]
+          : [])
       ]
     }
   ]

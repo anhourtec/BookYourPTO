@@ -685,22 +685,22 @@
                 <div v-if="form.allowCarryForward" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
-                      Organization Default Carry Forward
+                      Days Carried Forward
                     </label>
                     <input
-                      :value="organizationCarryForwardDays"
+                      :value="balanceData?.annual?.carriedOver ?? 0"
                       type="number"
                       readonly
-                      class="w-full px-3 py-2 bg-[rgb(var(--muted))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] cursor-not-allowed"
+                      class="w-full px-3 py-2 bg-[rgb(var(--muted))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] cursor-not-allowed font-semibold"
                     />
                     <p class="text-xs text-[rgb(var(--muted-foreground))] mt-1.5">
-                      Maximum days all employees can carry forward
+                      Days automatically carried from previous year
                     </p>
                   </div>
 
                   <div>
                     <label class="block text-sm font-medium text-[rgb(var(--foreground))] mb-2">
-                      Custom Carry Forward Limit (Override)
+                      Max Carry Forward (Org: {{ organizationCarryForwardDays }})
                     </label>
                     <input
                       v-model.number="form.maxCarryForwardDays"
@@ -711,18 +711,9 @@
                       placeholder="Leave empty to use default"
                     />
                     <p class="text-xs text-[rgb(var(--muted-foreground))] mt-1.5">
-                      Set custom carry forward limit (optional)
+                      Custom carry forward limit (optional override)
                     </p>
                   </div>
-                </div>
-
-                <div v-if="form.allowCarryForward" class="mt-3 p-3 bg-amber-50 dark:bg-amber-950/30 rounded border border-amber-200 dark:border-amber-800">
-                  <p class="text-xs text-amber-700 dark:text-amber-400">
-                    <strong>Max Carry Forward:</strong> {{ form.maxCarryForwardDays || organizationCarryForwardDays }} days
-                    <span v-if="organizationCarryForwardExpires"> 
-                      (expires after {{ organizationCarryForwardExpiryMonths }} months)
-                    </span>
-                  </p>
                 </div>
               </div>
 
@@ -778,13 +769,13 @@
                       Sick Leave Remaining
                     </label>
                     <input
-                      :value="getSickLeaveRemaining"
+                      :value="balanceData?.sick?.remaining ?? 0"
                       type="number"
                       readonly
                       class="w-full px-3 py-2 bg-[rgb(var(--muted))] border border-[rgb(var(--border))] rounded-lg text-[rgb(var(--foreground))] cursor-not-allowed font-semibold"
                     />
                     <p class="text-xs text-[rgb(var(--muted-foreground))] mt-1.5">
-                      Based on sick leave type configuration
+                      Calculated: {{ balanceData?.sick?.allowance ?? 0 }} allowance - {{ balanceData?.sick?.used ?? 0 }} used
                     </p>
                   </div>
                 </div>
@@ -1154,17 +1145,6 @@ const sortedDepartments = computed(() => {
 
 const potentialManagers = computed(() => {
   return props.allUsers.filter(u => u.id !== props.userId)
-})
-
-// Get sick leave remaining from balance data
-const getSickLeaveRemaining = computed(() => {
-  if (!balanceData.value?.balances) return 0
-  
-  const sickLeave = balanceData.value.balances.find(b => 
-    b.leaveType.name.toLowerCase().includes('sick')
-  )
-  
-  return sickLeave ? sickLeave.remaining : 0
 })
 
 // ✅ NEW: Calculate effective allowance (what it will be after save)

@@ -269,7 +269,6 @@ export function generateLeaveApprovedEmail(
           </div>
           <div class="content">
             <div class="success-box">
-              <div class="success-icon">✅</div>
               <h2 style="color: #065f46; margin: 10px 0;">Your leave has been approved!</h2>
             </div>
 
@@ -407,7 +406,6 @@ export function generateLeaveRejectedEmail(
           </div>
           <div class="content">
             <div class="alert-box">
-              <div class="alert-icon">❌</div>
               <h2 style="color: #991b1b; margin: 10px 0;">Your leave request was not approved</h2>
             </div>
 

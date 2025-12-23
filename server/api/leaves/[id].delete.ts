@@ -96,26 +96,6 @@ export default defineEventHandler(async (event) => {
       },
     })
 
-    // Create audit log
-    await prisma.auditLog.create({
-      data: {
-        organizationId: auth.organizationId,
-        userId: auth.userId,
-        action: 'DELETE',
-        entityType: 'LEAVE',
-        entityId: leaveId,
-        changes: {
-          status: 'CANCELLED',
-          leaveType: leave.leaveType?.name,
-          startDate: leave.startDate,
-          endDate: leave.endDate,
-          cancelledBy: isAdmin ? 'ADMIN' : 'OWNER',
-        },
-        ipAddress: getHeader(event, 'x-forwarded-for') || 'unknown',
-        userAgent: getHeader(event, 'user-agent') || 'unknown',
-      },
-    })
-
     return {
       success: true,
       message: 'Leave request cancelled successfully',

@@ -60,7 +60,7 @@
         :users="users as any"
         :year="year"
         :current-month="month"
-        :public-holidays="publicHolidays"
+        :user-holidays-map="userHolidaysMap"
         :week-start-day="weekStartDay"
         :can-add-users="false"
         :is-mobile="isMobile"
@@ -75,6 +75,7 @@
         :open="filterModalOpen"
         :departments="departments"
         :current-user-department-id="currentUser?.departmentId"
+        :current-user-role="currentUser?.role"
         :can-view-all-departments="permissions.canViewAllDepartments"
         :initial-filters="filters"
         @close="filterModalOpen = false"
@@ -301,6 +302,8 @@ const year = ref(new Date().getFullYear())
 const month = ref(new Date().getMonth())
 const users = ref<DashboardUser[]>([])
 const publicHolidays = ref<PublicHoliday[]>([])
+const userHolidayOverrides = ref<any[]>([])
+const userHolidaysMap = ref<Record<string, PublicHoliday[]>>({})
 const departments = ref<Department[]>([])
 const leaveTypes = ref<LeaveType[]>([])
 const weekStartDay = ref(0)
@@ -310,14 +313,30 @@ const permissions = ref({
   isAdmin: false,
 })
 
-// Filter state
+// Filter state with localStorage persistence
+const FILTERS_STORAGE_KEY = 'dashboard_filters'
+
+const loadFiltersFromStorage = (): Filters => {
+  if (process.client) {
+    try {
+      const stored = localStorage.getItem(FILTERS_STORAGE_KEY)
+      if (stored) {
+        return { ...JSON.parse(stored) }
+      }
+    } catch (error) {
+      console.error('Failed to load filters from localStorage:', error)
+    }
+  }
+  return {
+    userFilter: 'all',
+    sortBy: 'firstName',
+    accountType: 'all',
+    departmentIds: [],
+  }
+}
+
 const filterModalOpen = ref(false)
-const filters = ref<Filters>({
-  userFilter: 'all',
-  sortBy: 'firstName',
-  accountType: 'all',
-  departmentIds: [],
-})
+const filters = ref<Filters>(loadFiltersFromStorage())
 
 // Leave modal state
 const leaveModalOpen = ref(false)
@@ -393,23 +412,23 @@ const loadDashboard = async () => {
       params.append('departmentIds', filters.value.departmentIds.join(','))
     }
 
-    // Fetch dashboard data and public holidays in parallel
+    // Fetch dashboard data (includes per-user holidays)
     const token = localStorage.getItem('auth_token')
-    const [response, holidays] = await Promise.all([
-      $fetch<{
-        users: DashboardUser[]
-        publicHolidays: PublicHoliday[]
-        settings: { weekStartDay: number }
-        permissions: typeof permissions.value
-      }>(`/api/dashboard/users?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }),
-      // Fetch holidays using the smart endpoint that auto-fetches from API if needed
-      api.fetchPublicHolidays(year.value)
-    ])
+    const response = await $fetch<{
+      users: DashboardUser[]
+      publicHolidays: PublicHoliday[]
+      userHolidayOverrides: any[]
+      userHolidaysMap: Record<string, PublicHoliday[]>
+      settings: { weekStartDay: number }
+      permissions: typeof permissions.value
+    }>(`/api/dashboard/users?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
 
     users.value = response.users
-    publicHolidays.value = holidays // Use holidays from smart endpoint
+    publicHolidays.value = response.publicHolidays // Use org holidays from API (needed for legacy)
+    userHolidayOverrides.value = response.userHolidayOverrides || []
+    userHolidaysMap.value = response.userHolidaysMap || {} // Per-user holidays (primary source)
     weekStartDay.value = response.settings.weekStartDay
     permissions.value = response.permissions
 
@@ -481,9 +500,19 @@ const navigatePeriod = (delta: number) => {
   loadDashboard()
 }
 
-// Apply filters
+// Apply filters and persist to localStorage
 const applyFilters = (newFilters: Filters) => {
   filters.value = newFilters
+
+  // Save to localStorage for persistence across page refreshes
+  if (process.client) {
+    try {
+      localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(newFilters))
+    } catch (error) {
+      console.error('Failed to save filters to localStorage:', error)
+    }
+  }
+
   loadDashboard()
 }
 

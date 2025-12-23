@@ -1,5 +1,44 @@
 import { prisma } from '~/server/utils/db'
 
+// Nager.Date API interface
+interface NagerHoliday {
+  date: string
+  localName: string
+  name: string
+  countryCode: string
+  fixed: boolean
+  global: boolean
+  counties: string[] | null
+  launchYear: number | null
+  types: string[]
+}
+
+// Fetch holidays from Nager.Date API
+async function fetchHolidaysFromAPI(countryCode: string, year: number): Promise<NagerHoliday[]> {
+  try {
+    const response = await $fetch<NagerHoliday[]>(
+      `https://date.nager.at/api/v3/PublicHolidays/${year}/${countryCode}`,
+      {
+        headers: { 'Accept': 'application/json' },
+      }
+    )
+
+    const publicHolidays = Array.isArray(response)
+      ? response.filter(h => h.types && h.types.includes('Public'))
+      : []
+
+    return publicHolidays
+  } catch (error) {
+    console.error(`Error fetching holidays from Nager.Date API for ${countryCode}:`, error)
+    return []
+  }
+}
+
+// Parse date as UTC midnight
+function parseHolidayDate(dateString: string): Date {
+  return new Date(`${dateString}T00:00:00.000Z`)
+}
+
 export default defineEventHandler(async (event) => {
   try {
     const auth = event.context.auth
@@ -144,6 +183,8 @@ export default defineEventHandler(async (event) => {
         allowCarryForward: true,
         maxCarryForwardDays: true,
         employmentStartDate: true,
+        holidayCountry: true,
+        holidayRegion: true,
         department: {
           select: {
             id: true,
@@ -409,15 +450,184 @@ export default defineEventHandler(async (event) => {
         jobTitle: user.jobTitle,
         role: user.role,
         departmentId: user.departmentId,
+        holidayCountry: user.holidayCountry,
+        holidayRegion: user.holidayRegion,
         annualLeaveBalance: totalRemaining, // Total remaining (annual + sick)
         department: user.department,
         leaves: leavesByUser[user.id] || [],
       }
     })
 
+    // Fetch holiday overrides for all users
+    const userHolidayOverrides = await prisma.userHolidayOverride.findMany({
+      where: {
+        userId: { in: userIds },
+        organizationId: auth.organizationId,
+      },
+      select: {
+        id: true,
+        userId: true,
+        type: true,
+        publicHolidayId: true,
+        name: true,
+        date: true,
+        isRecurring: true,
+        isHalfDay: true,
+      }
+    })
+
+    // Fetch per-user holidays based on their custom countries or organization defaults
+    console.log('📅 Fetching per-user holidays for dashboard...')
+
+    const userHolidaysMap: Record<string, any[]> = {}
+
+    // Group users by their holiday country/region combination
+    const countryRegionGroups: Record<string, typeof users> = {}
+    const defaultCountryUsers: typeof users = []
+
+    for (const user of users) {
+      if (user.holidayCountry) {
+        const key = `${user.holidayCountry}|${user.holidayRegion || ''}`
+        if (!countryRegionGroups[key]) {
+          countryRegionGroups[key] = []
+        }
+        countryRegionGroups[key]!.push(user)
+      } else {
+        defaultCountryUsers.push(user)
+      }
+    }
+
+    // Fetch holidays for each unique country/region combination
+    for (const [key, groupUsers] of Object.entries(countryRegionGroups)) {
+      const [country, region] = key.split('|')
+      if (!country) continue
+
+      console.log(`📥 Fetching holidays for ${country}${region ? ` (${region})` : ''} - ${groupUsers.length} users`)
+
+      try {
+        let apiHolidays = await fetchHolidaysFromAPI(country, year)
+
+        // Filter by subdivision if specified
+        if (region) {
+          apiHolidays = apiHolidays.filter(h =>
+            h.global || (h.counties && h.counties.includes(region))
+          )
+        }
+
+        // Convert to expected format
+        const holidays = apiHolidays.map(holiday => ({
+          id: `${country}-${holiday.date}`,
+          organizationId: auth.organizationId,
+          country: country,
+          name: holiday.name,
+          date: parseHolidayDate(holiday.date),
+          isRecurring: holiday.fixed === false,
+          region: region || null,
+          recurringPattern: null,
+          affectedDepartments: [],
+          isHalfDay: false,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }))
+
+        // Apply to all users in this group
+        for (const user of groupUsers) {
+          // Apply user-specific overrides
+          const userOverrides = userHolidayOverrides.filter(o => o.userId === user.id)
+
+          // Remove excluded holidays
+          const excludedIds = userOverrides
+            .filter(o => o.type === 'EXCLUDE' && o.publicHolidayId)
+            .map(o => o.publicHolidayId)
+
+          let userHolidays = holidays.filter(h => !excludedIds.includes(h.id))
+
+          // Add custom holidays
+          const customHolidays = userOverrides
+            .filter(o => o.type === 'ADD' && o.date)
+            .map(o => ({
+              id: o.id,
+              organizationId: auth.organizationId,
+              country: country,
+              region: region || null,
+              name: o.name || 'Custom Holiday',
+              date: o.date!,
+              isRecurring: o.isRecurring,
+              recurringPattern: null,
+              affectedDepartments: [],
+              isHalfDay: o.isHalfDay,
+              createdAt: new Date(),
+              updatedAt: new Date()
+            }))
+
+          userHolidays.push(...customHolidays)
+          userHolidays.sort((a, b) => a.date.getTime() - b.date.getTime())
+
+          userHolidaysMap[user.id] = userHolidays
+        }
+      } catch (error) {
+        console.error(`❌ Failed to fetch holidays for ${country}:`, error)
+        // Fallback to empty holidays for these users
+        for (const user of groupUsers) {
+          userHolidaysMap[user.id] = []
+        }
+      }
+    }
+
+    // For users without custom country, use organization holidays with overrides
+    if (defaultCountryUsers.length > 0) {
+      console.log(`📅 Using org holidays for ${defaultCountryUsers.length} users without custom country`)
+
+      for (const user of defaultCountryUsers) {
+        const userOverrides = userHolidayOverrides.filter(o => o.userId === user.id)
+
+        // Remove excluded holidays
+        const excludedIds = userOverrides
+          .filter(o => o.type === 'EXCLUDE' && o.publicHolidayId)
+          .map(o => o.publicHolidayId)
+
+        let userHolidays = publicHolidays.filter(h => !excludedIds.includes(h.id))
+
+        // Add custom holidays
+        const customHolidays = userOverrides
+          .filter(o => o.type === 'ADD' && o.date)
+          .map(o => ({
+            id: o.id,
+            organizationId: auth.organizationId,
+            country: 'CUSTOM',
+            region: null,
+            name: o.name || 'Custom Holiday',
+            date: o.date!,
+            isRecurring: o.isRecurring,
+            recurringPattern: null,
+            affectedDepartments: [],
+            isHalfDay: o.isHalfDay,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }))
+
+        userHolidays.push(...customHolidays)
+        userHolidays.sort((a, b) => a.date.getTime() - b.date.getTime())
+
+        userHolidaysMap[user.id] = userHolidays
+      }
+    }
+
+    // Safety check: Ensure ALL users have an entry in the map (even if empty)
+    for (const user of users) {
+      if (!userHolidaysMap[user.id]) {
+        console.warn(`⚠️ User ${user.id} (${user.firstName} ${user.lastName}) missing from userHolidaysMap, adding empty holidays`)
+        userHolidaysMap[user.id] = []
+      }
+    }
+
+    console.log(`✅ Fetched per-user holidays for ${Object.keys(userHolidaysMap).length} users`)
+
     return {
       users: usersWithLeaves,
       publicHolidays,
+      userHolidayOverrides,
+      userHolidaysMap, // Per-user holidays including custom countries and overrides
       totalUsers: users.length,
       dateRange: {
         start: startDate.toISOString(),

@@ -527,27 +527,6 @@ export default defineEventHandler(async (event) => {
       }
     })
 
-    // Create audit log
-    await prisma.auditLog.create({
-      data: {
-        organizationId: auth.organizationId,
-        userId: auth.userId,
-        action: 'CREATE',
-        entityType: 'LEAVE',
-        entityId: leave.id,
-        changes: {
-          leaveType: leaveType.name,
-          startDate: data.startDate,
-          endDate: data.endDate,
-          totalDays: finalTotalDays,
-          status: initialStatus,
-          autoApproved: isExecutive
-        },
-        ipAddress: getHeader(event, 'x-forwarded-for') || 'unknown',
-        userAgent: getHeader(event, 'user-agent') || 'unknown'
-      }
-    })
-
     console.log('Leave created successfully:', {
       id: leave.id,
       leaveType: leave.leaveType?.name,
