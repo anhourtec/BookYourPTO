@@ -40,7 +40,7 @@ export default defineEventHandler(async (event) => {
       },
     })
 
-    // ✅ Create all 8 default leave types with user's selected allowance
+    // ✅ Create all 6 default leave types with user's selected allowance
     const defaultLeaveTypes = [
       {
         organizationId: organization.id,
@@ -53,6 +53,7 @@ export default defineEventHandler(async (event) => {
         allowHalfDays: true,
         paidLeave: true,
         annualAllowance: data.annualLeaveAllowance,
+        deductionBucket: 'ANNUAL' as const,
         carryOverAllowed: true,
         maxCarryOverDays: Math.floor(data.annualLeaveAllowance * 0.2),
         requiresFirstLevelApproval: true,
@@ -74,6 +75,7 @@ export default defineEventHandler(async (event) => {
         allowHalfDays: true,
         paidLeave: true,
         annualAllowance: 10,
+        deductionBucket: 'SICK' as const,
         requiresFirstLevelApproval: false,
         requiresSecondLevelApproval: false,
         minDaysNotice: 0,
@@ -122,26 +124,6 @@ export default defineEventHandler(async (event) => {
       },
       {
         organizationId: organization.id,
-        name: 'Paternity',
-        code: 'PATERNITY' as const, // ✅ Add 'as const'
-        description: 'Paternity Leave',
-        color: '#3b82f6',
-        icon: 'lucide:baby',
-        requiresApproval: true,
-        requiresDocumentation: true,
-        allowHalfDays: false,
-        paidLeave: true,
-        annualAllowance: 14,
-        requiresFirstLevelApproval: true,
-        requiresSecondLevelApproval: false,
-        minDaysNotice: 0,
-        allowQuarterDays: false,
-        allowHourly: false,
-        hasAccrual: false,
-        carryOverAllowed: false,
-      },
-      {
-        organizationId: organization.id,
         name: 'Meeting',
         code: 'MEETING' as const, // ✅ Add 'as const'
         description: 'Out for Meeting',
@@ -151,26 +133,6 @@ export default defineEventHandler(async (event) => {
         allowHalfDays: true,
         paidLeave: true,
         requiresFirstLevelApproval: false,
-        requiresSecondLevelApproval: false,
-        minDaysNotice: 0,
-        allowQuarterDays: false,
-        allowHourly: false,
-        hasAccrual: false,
-        carryOverAllowed: false,
-      },
-      {
-        organizationId: organization.id,
-        name: 'Compassionate',
-        code: 'BEREAVEMENT' as const, // ✅ Add 'as const'
-        description: 'Bereavement/Compassionate Leave',
-        color: '#9333ea',
-        icon: 'lucide:heart',
-        requiresApproval: true,
-        requiresDocumentation: true,
-        allowHalfDays: false,
-        paidLeave: true,
-        annualAllowance: 5,
-        requiresFirstLevelApproval: true,
         requiresSecondLevelApproval: false,
         minDaysNotice: 0,
         allowQuarterDays: false,
