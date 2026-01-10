@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -9,10 +7,10 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres123
       POSTGRES_DB: bookyourpto
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -21,33 +19,31 @@ services:
     networks:
       - bookyourpto-network
 
-  # Uncomment when ready to deploy the app
-  # app:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   container_name: bookyourpto-app
-  #   restart: unless-stopped
-  #   ports:
-  #     - "3000:3000"
-  #   environment:
-  #     - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/bookyourpto
-  #     - JWT_SECRET=${JWT_SECRET}
-  #     - NODE_ENV=production
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #   networks:
-  #     - bookyourpto-network
-
-
-  # We'll add Redis later
-  # redis:
-  #   image: redis:7-alpine
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Prisma build-time connection (Docker DNS)
+        DATABASE_URL: postgresql://postgres:postgres123@postgres:5432/bookyourpto
+    container_name: bookyourpto-app
+    restart: unless-stopped
+    ports:
+      - "3010:3000"
+    env_file:
+      - .env
+    environment:
+      # Runtime connection INSIDE Docker
+      DATABASE_URL: postgresql://postgres:postgres123@postgres:5432/bookyourpto
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - bookyourpto-network
 
 volumes:
   postgres_data:
-    driver: local
 
 networks:
   bookyourpto-network:

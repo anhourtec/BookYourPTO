@@ -136,6 +136,28 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // ✅ BUSINESS RULE 7: Employment fields can only be modified by ADMINISTRATOR and EXECUTIVE
+    const employmentFields = [
+      'jobTitle',
+      'employeeId',
+      'departmentId',
+      'reportsToId',
+      'employmentType',
+      'role',
+      'payrollId',
+      'isActive',
+      'employmentStartDate'
+    ]
+
+    const isModifyingEmploymentFields = employmentFields.some(field => body[field] !== undefined)
+
+    if (isModifyingEmploymentFields && !['ADMINISTRATOR', 'EXECUTIVE'].includes(currentUser.role)) {
+      throw createError({
+        statusCode: 403,
+        message: 'Only administrators and executives can modify employment details',
+      })
+    }
+
     // ============================================
     // DATE PARSING
     // ============================================
@@ -196,6 +218,19 @@ export default defineEventHandler(async (event) => {
       updateData.maxCarryForwardDays = body.maxCarryForwardDays
     }
 
+    // ✅ Add simple repeating schedule if provided
+    if (['ADMINISTRATOR', 'EXECUTIVE'].includes(currentUser.role)) {
+      if (body.scheduleRepeatsWeekly !== undefined) {
+        updateData.scheduleRepeatsWeekly = body.scheduleRepeatsWeekly
+      }
+      if (body.workSchedule !== undefined) {
+        updateData.workSchedule = body.workSchedule
+      }
+      if (body.hoursPerWeek !== undefined) {
+        updateData.hoursPerWeek = body.hoursPerWeek
+      }
+    }
+
     // Only add dates if they're valid
     const parsedDateOfBirth = parseDate(body.dateOfBirth)
     if (parsedDateOfBirth !== undefined) {
@@ -208,11 +243,39 @@ export default defineEventHandler(async (event) => {
     }
 
     // ============================================
+    // HANDLE WORK SCHEDULES (if provided and user has permission)
+    // ============================================
+
+    if (body.workSchedules !== undefined && ['ADMINISTRATOR', 'EXECUTIVE'].includes(currentUser.role)) {
+      // Delete all existing schedules for this user
+      await prisma.workSchedule.deleteMany({
+        where: { userId: userId }
+      })
+
+      // Create new schedules from the provided array
+      if (Array.isArray(body.workSchedules) && body.workSchedules.length > 0) {
+        const scheduleData = body.workSchedules.map((schedule: any) => ({
+          userId: userId,
+          schedule: schedule.schedule,
+          hoursPerWeek: schedule.hoursPerWeek || 40,
+          effectiveFrom: parseDate(schedule.effectiveFrom) || new Date(),
+          effectiveTo: schedule.effectiveTo ? parseDate(schedule.effectiveTo) : null,
+          notes: schedule.notes || null,
+          createdBy: auth.userId,
+        }))
+
+        await prisma.workSchedule.createMany({
+          data: scheduleData
+        })
+      }
+    }
+
+    // ============================================
     // UPDATE USER
     // ============================================
 
     const updatedUser = await prisma.user.update({
-      where: { 
+      where: {
         id: userId,
         organizationId: auth.organizationId
       },
@@ -226,6 +289,11 @@ export default defineEventHandler(async (event) => {
             lastName: true,
           },
         },
+        workSchedules: {
+          orderBy: {
+            effectiveFrom: 'desc'
+          }
+        }
       },
     })
 

@@ -234,11 +234,11 @@
             class="relative"
           >
             <div class="rounded-2xl overflow-hidden shadow-2xl border border-border bg-card">
-                  <img 
-                    src="/views/calendar_view.png" 
-                    alt="Interactive Calendar View - BookYourPTO dashboard showing team availability and leave requests"
-                    class="w-full h-auto object-contain scale-105 hover:scale-110 transition-transform duration-500"
-                  />
+                <img 
+                  :src="calendarImage" 
+                  alt="Interactive Calendar View"
+                  class="w-full h-auto object-contain scale-105 hover:scale-110 transition-transform duration-500"
+                />
                 </div>
             <div class="absolute -bottom-6 -right-6 w-32 h-32 bg-primary/20 rounded-full blur-3xl -z-10"></div>
           </div>
@@ -941,6 +941,7 @@
 const demoSection = ref(null)
 const activeFaq = ref<number | null>(null)
 const githubStars = ref('')
+const calendarImage = '/views/calendar_view.png'
 
 const scrollToDemo = () => {
   if (demoSection.value) {

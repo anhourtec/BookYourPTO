@@ -395,19 +395,23 @@ const loadDashboard = async () => {
       params.append('departmentIds', filters.value.departmentIds.join(','))
     }
 
-    // Fetch dashboard data with fresh token
+    // Fetch dashboard data and public holidays in parallel
     const token = localStorage.getItem('auth_token')
-    const response = await $fetch<{
-      users: DashboardUser[]
-      publicHolidays: PublicHoliday[]
-      settings: { weekStartDay: number }
-      permissions: typeof permissions.value
-    }>(`/api/dashboard/users?${params.toString()}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    const [response, holidays] = await Promise.all([
+      $fetch<{
+        users: DashboardUser[]
+        publicHolidays: PublicHoliday[]
+        settings: { weekStartDay: number }
+        permissions: typeof permissions.value
+      }>(`/api/dashboard/users?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      // Fetch holidays using the smart endpoint that auto-fetches from API if needed
+      api.fetchPublicHolidays(year.value)
+    ])
 
     users.value = response.users
-    publicHolidays.value = response.publicHolidays
+    publicHolidays.value = holidays // Use holidays from smart endpoint
     weekStartDay.value = response.settings.weekStartDay
     permissions.value = response.permissions
 

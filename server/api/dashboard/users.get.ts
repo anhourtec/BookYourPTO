@@ -46,6 +46,11 @@ export default defineEventHandler(async (event) => {
         weekStartDay: true,
         leaveYearStartMonth: true,
         defaultLeaveAllowance: true,
+        defaultSickLeaveAllowance: true,
+        carryForwardDays: true,
+        carryForwardExpires: true,
+        carryForwardExpiryMonths: true,
+        carryForwardEligibilityYears: true,
       },
     })
 
@@ -138,7 +143,7 @@ export default defineEventHandler(async (event) => {
         customLeaveAllowance: true,
         allowCarryForward: true,
         maxCarryForwardDays: true,
-        carryOverBalance: true,
+        employmentStartDate: true,
         department: {
           select: {
             id: true,
@@ -241,26 +246,155 @@ export default defineEventHandler(async (event) => {
       leavesByUserForBalance[leave.userId].push(leave)
     }
 
+    // AUTOMATED CARRY FORWARD: Fetch previous year's leaves for all users (batch query)
+    const prevFiscalPeriodStart = new Date(fiscalYear - 1, fiscalStartMonth - 1, 1)
+    const prevFiscalPeriodEnd = new Date(fiscalYear, fiscalStartMonth - 1, 0)
+
+    const prevYearLeaves = organization?.carryForwardDays && organization.carryForwardDays > 0
+      ? await prisma.leave.findMany({
+          where: {
+            userId: { in: users.map(u => u.id) },
+            organizationId: auth.organizationId,
+            startDate: {
+              gte: prevFiscalPeriodStart,
+              lte: prevFiscalPeriodEnd,
+            },
+            status: {
+              in: ['APPROVED', 'PENDING'],
+            },
+          },
+          include: {
+            leaveType: true,
+          },
+        })
+      : []
+
+    // Group previous year leaves by user
+    const prevLeavesByUser: Record<string, typeof prevYearLeaves> = {}
+    for (const leave of prevYearLeaves) {
+      if (!prevLeavesByUser[leave.userId]) {
+        prevLeavesByUser[leave.userId] = []
+      }
+      prevLeavesByUser[leave.userId].push(leave)
+    }
+
     // Build response with calculated balances
     const usersWithLeaves = users.map(user => {
-      // Calculate total used days (only deductible leaves)
+      // Get all leaves for this user in the fiscal period
       const userLeaves = leavesByUserForBalance[user.id] || []
-      const totalUsed = userLeaves
-        .filter(l => l.leaveType && l.leaveType.annualAllowance != null && l.leaveType.annualAllowance > 0)
-        .reduce((sum, l) => sum + (l.totalDays || 0), 0)
 
-      // Calculate total allowance
-      const baseAllowance = user.customLeaveAllowance ?? organization?.defaultLeaveAllowance ?? 0
-      const carriedOver = (user.allowCarryForward !== false) ? (user.carryOverBalance || 0) : 0
-      const totalAllowance = baseAllowance + carriedOver
-      const totalRemaining = totalAllowance - totalUsed
+      // Separate leaves by deduction bucket (same logic as balance.get.ts)
+      const annualBucketLeaves = userLeaves.filter(
+        (l) => l.leaveType && (l.leaveType.deductionBucket === 'ANNUAL' ||
+          // Backward compatibility: if no deductionBucket but has annualAllowance and not SICK_PAID
+          (!l.leaveType.deductionBucket && l.leaveType.annualAllowance != null && l.leaveType.annualAllowance > 0 && l.leaveType.code !== 'SICK_PAID'))
+      )
+      const sickBucketLeaves = userLeaves.filter(
+        (l) => l.leaveType && (l.leaveType.deductionBucket === 'SICK' ||
+          // Backward compatibility: SICK_PAID with annualAllowance set
+          (!l.leaveType.deductionBucket && l.leaveType.code === 'SICK_PAID' && l.leaveType.annualAllowance != null && l.leaveType.annualAllowance > 0))
+      )
 
-      if (totalUsed > 0 || totalAllowance > 0) {
+      // AUTOMATED CARRY FORWARD: Calculate from previous fiscal year
+      let annualCarriedOver = 0
+
+      if (user.allowCarryForward !== false && organization?.carryForwardDays && organization.carryForwardDays > 0) {
+        // Check if employee is eligible for carry forward based on years of employment
+        // Eligibility is configurable: 1 (immediate), 2 (2nd year), or 3 (3rd year)
+        let skipCarryForward = false
+
+        if (user.employmentStartDate) {
+          const employmentDate = new Date(user.employmentStartDate)
+          const employmentMonth = employmentDate.getMonth() + 1 // 1-12
+
+          // Determine the first fiscal year of employment
+          const firstFiscalYear = employmentMonth >= fiscalStartMonth
+            ? employmentDate.getFullYear()
+            : employmentDate.getFullYear() - 1
+
+          // Current fiscal year being viewed
+          const currentFiscalYear = fiscalYear
+
+          // Calculate which year of employment this is (1, 2, 3, etc.)
+          const yearsOfEmployment = currentFiscalYear - firstFiscalYear + 1
+
+          // Get eligibility threshold from organization settings (default to 2 if not set)
+          const eligibilityYears = organization.carryForwardEligibilityYears ?? 2
+
+          // Skip carry forward if employee hasn't reached eligibility year yet
+          skipCarryForward = yearsOfEmployment < eligibilityYears
+        }
+
+        // Only calculate carry forward if employee has reached eligibility year
+        if (!skipCarryForward) {
+          const userPrevLeaves = prevLeavesByUser[user.id] || []
+
+          // Calculate previous year's annual bucket usage
+          const prevAnnualBucketLeaves = userPrevLeaves.filter(
+            (l) => l.leaveType && (l.leaveType.deductionBucket === 'ANNUAL' ||
+              (!l.leaveType.deductionBucket && l.leaveType.annualAllowance != null && l.leaveType.annualAllowance > 0 && l.leaveType.code !== 'SICK_PAID'))
+          )
+          const prevAnnualUsed = prevAnnualBucketLeaves.reduce((sum, leave) => sum + (leave.totalDays || 0), 0)
+
+          // Previous year's base allowance
+          const prevAnnualBaseAllowance = user.customLeaveAllowance ?? organization.defaultLeaveAllowance ?? 0
+
+          // Calculate remaining from previous year
+          const prevYearRemaining = prevAnnualBaseAllowance - prevAnnualUsed
+
+          if (prevYearRemaining > 0) {
+            // Apply carry forward cap
+            let carriedAmount = Math.min(prevYearRemaining, organization.carryForwardDays)
+
+            // User-specific max carry forward override
+            if (user.maxCarryForwardDays != null && user.maxCarryForwardDays > 0) {
+              carriedAmount = Math.min(prevYearRemaining, user.maxCarryForwardDays)
+            }
+
+            // Check if carry forward has expired
+            if (organization.carryForwardExpires && organization.carryForwardExpiryMonths) {
+              const expiryDate = new Date(fiscalPeriodStart)
+              expiryDate.setMonth(expiryDate.getMonth() + organization.carryForwardExpiryMonths)
+
+              const today = new Date()
+              if (today > expiryDate) {
+                carriedAmount = 0
+              }
+            }
+
+            annualCarriedOver = carriedAmount
+          }
+        } // end if (!skipCarryForward) - employee reached eligibility year
+      }
+
+      // Calculate Annual bucket
+      const annualBaseAllowance = user.customLeaveAllowance ?? organization?.defaultLeaveAllowance ?? 0
+      const annualUsed = annualBucketLeaves.reduce((sum, leave) => sum + (leave.totalDays || 0), 0)
+      const annualTotalAllowance = annualBaseAllowance + annualCarriedOver
+      const annualRemaining = annualTotalAllowance - annualUsed
+
+      // Calculate Sick bucket
+      const sickBaseAllowance = organization?.defaultSickLeaveAllowance ?? 0
+      const sickUsed = sickBucketLeaves.reduce((sum, leave) => sum + (leave.totalDays || 0), 0)
+      const sickRemaining = sickBaseAllowance - sickUsed
+
+      // Total remaining = Annual remaining + Sick remaining
+      const totalRemaining = annualRemaining + sickRemaining
+
+      if (annualUsed > 0 || sickUsed > 0 || annualTotalAllowance > 0 || sickBaseAllowance > 0) {
         console.log(`User ${user.firstName} ${user.lastName} balance:`, {
-          baseAllowance,
-          carriedOver,
-          totalAllowance,
-          totalUsed,
+          annual: {
+            baseAllowance: annualBaseAllowance,
+            carriedOver: annualCarriedOver,
+            totalAllowance: annualTotalAllowance,
+            used: annualUsed,
+            remaining: annualRemaining,
+          },
+          sick: {
+            baseAllowance: sickBaseAllowance,
+            used: sickUsed,
+            remaining: sickRemaining,
+          },
           totalRemaining,
           leavesInPeriod: userLeaves.length,
         })
@@ -275,7 +409,7 @@ export default defineEventHandler(async (event) => {
         jobTitle: user.jobTitle,
         role: user.role,
         departmentId: user.departmentId,
-        annualLeaveBalance: totalRemaining, // Use calculated balance (can be negative)
+        annualLeaveBalance: totalRemaining, // Total remaining (annual + sick)
         department: user.department,
         leaves: leavesByUser[user.id] || [],
       }

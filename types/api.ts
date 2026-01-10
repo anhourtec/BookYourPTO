@@ -75,6 +75,7 @@ export interface OrganizationSettings {
   // Carry Forward Settings
   carryForwardDays: number
   carryForwardHours: number
+  carryForwardEligibilityYears: number
   carryForwardExpires: boolean
   carryForwardExpiryMonths?: number | null
 
@@ -94,6 +95,7 @@ export interface UpdateSettingsInput {
   departmentViewRestricted?: boolean
   carryForwardDays?: number
   carryForwardHours?: number
+  carryForwardEligibilityYears?: number
   carryForwardExpires?: boolean
   carryForwardExpiryMonths?: number | null
 }
