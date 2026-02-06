@@ -29,4 +29,3 @@ docker compose -p $PROJECT_NAME up -d
 
 echo ""
 echo "Deployment complete!"
-echo "➡ App running at http://localhost:3000"

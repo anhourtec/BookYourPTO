@@ -1,495 +1,335 @@
-# BookYourPTO - Community Edition
+<p align="center">
+  <a href="https://www.bookyourpto.com">
+    <h1 align="center">BookYourPTO - Community Edition</h1>
+  </a>
+  <p align="center">
+    Open-source, self-hosted time-off management for modern teams. Track leave requests, manage approvals, and keep your team in sync - all on your own infrastructure.
+    <br />
+    <a href="https://www.bookyourpto.com">Website</a>
+    ·
+    <a href="https://docs.bookyourpto.com">Docs</a>
+    ·
+    <a href="https://github.com/anhourtec/BookYourPTO/issues">Issues</a>
+    ·
+    <a href="https://app.bookyourpto.com">Live Demo</a>
+  </p>
+</p>
 
-**Open-source, self-hosted time-off management for small teams (up to 10 users)**
+<div align="center">
 
-**Developed by [AnHourTec](https://anhourtec.com) - Victoria, BC, Canada**
+[![License: MIT](https://img.shields.io/github/license/anhourtec/BookYourPTO?labelColor=black&style=for-the-badge&color=2563EB)](https://opensource.org/licenses/MIT)
+![Stars](https://img.shields.io/github/stars/anhourtec/BookYourPTO?labelColor=black&style=for-the-badge&color=2563EB)
+![Forks](https://img.shields.io/github/forks/anhourtec/BookYourPTO?labelColor=black&style=for-the-badge&color=2563EB)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?labelColor=black&style=for-the-badge&color=2563EB)](http://makeapullrequest.com)
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
+</div>
 
----
+## Mission
 
-## Overview
+To give every team full ownership of their leave management - no vendor lock-in, no per-seat pricing surprises, no data leaving your servers.
 
-BookYourPTO Community Edition is a free, open-source PTO (Paid Time Off) management platform designed for small teams. Built with modern web technologies, it provides essential leave tracking, approval workflows, and team management capabilities.
+## Features
 
-### Perfect for:
-- Small teams and startups (up to 10 users)
-- Self-hosted deployment
-- Organizations wanting full control of their data
-- Teams needing basic but powerful PTO management
+- **Leave Management:** Submit, approve, and track time-off requests with multi-level approval workflows. Supports 24+ leave types including annual, sick, maternity, paternity, bereavement, and more.
+- **Half-Day & Flexible Requests:** Book full days or half days. Configure carry-forward policies with expiration windows and per-user allowance overrides.
+- **Team Calendar:** Visualize who's in and who's out with a color-coded calendar. Navigate by month and year with keyboard shortcuts.
+- **Public Holidays:** Automatic holiday detection for 100+ countries via the Nager.Date API, with manual entry and per-user overrides.
+- **Work Schedules:** Configure weekly repeating schedules, custom hours per day, break times, and schedule history tracking for both full-time and part-time arrangements.
+- **Department Management:** Organize teams by department with dedicated department heads, color coding, and cost center tracking.
+- **Role-Based Access Control:** Four roles - Employee, Department Head, Administrator, and Executive - each with granular permissions across the platform.
+- **Reports & Exports:** Generate Excel reports filtered by date range, department, user, leave type, and status.
+- **Email Notifications:** Configurable SMTP-based notifications for leave submissions, approvals, rejections, reminders, and password resets.
+- **Document Uploads:** Attach files to leave requests with category organization (medical certificates, contracts, and 10+ categories).
+- **Dark Mode:** Full dark mode support with automatic system preference detection.
+- **Self-Hosted:** Deploy on your own infrastructure. Your data never leaves your servers.
 
----
+## Community vs Pro vs Enterprise
 
-## Community Edition Features
+The Community Edition is free for teams of up to 10 users. For larger teams and advanced features, BookYourPTO offers paid plans.
 
-✅ **Core Leave Management**
-- Leave request, approval, and tracking
-- Two-level approval workflows (manager + department head)
-- Multiple leave types (Annual, Sick, Maternity, Paternity, etc.)
-- Half-day and full-day leave requests
-- Leave balance tracking and carry-forward
+| Feature | Community (Free) | Pro ($29/mo) | Enterprise ($99/mo) |
+|---|:---:|:---:|:---:|
+| Users | Up to 10 | Up to 100 | Unlimited |
+| Leave management & approvals | x | x | x |
+| Team calendar & public holidays | x | x | x |
+| Email notifications | x | x | x |
+| Document uploads | x | x | x |
+| Work schedule management | x | x | x |
+| Role-based access control | x | x | x |
+| Dark mode & responsive UI | x | x | x |
+| Reports & Excel export | x | x | x |
+| White-label branding | - | x | x |
+| Audit & sign-in logs | - | x | x |
+| Google Calendar & Outlook sync | - | x | x |
+| Slack notifications | - | x | x |
+| Project time tracking | - | x | x |
+| RESTful API access | - | x | x |
+| Document e-signatures | - | - | x |
+| Priority support & SLA | - | - | x |
+| Custom feature development | - | - | x |
 
-✅ **Team Management**
-- Up to 10 active users
-- Department management
-- Role-based access control (Employee, Department Head, Administrator, Executive)
-- User hierarchy with manager relationships
+[View Pricing & Upgrade](https://www.bookyourpto.com)
 
-✅ **Calendar & Scheduling**
-- Calendar view of approved leaves
-- Public holidays management
-- User-specific holiday overrides
-- Work schedule configuration
+## Built with
 
-✅ **Core Features**
-- Email notifications (configure via environment variables)
-- Document uploads with basic file management
-- Real-time notifications
-- Responsive UI with dark mode
-- Multi-timezone support
+- [Nuxt 4](https://nuxt.com/) & [Vue 3](https://vuejs.org/)
+- [TypeScript](https://www.typescriptlang.org/)
+- [Tailwind CSS 4](https://tailwindcss.com/)
+- [Nuxt UI](https://ui.nuxt.com/)
+- [Prisma](https://www.prisma.io/)
+- [PostgreSQL](https://www.postgresql.org/)
+- [Docker](https://www.docker.com/)
 
-✅ **Security & Authentication**
-- JWT-based authentication with refresh tokens
-- Password hashing with bcrypt
-- Role-based permissions
-- Server-side token validation
+## Getting Started
 
----
+BookYourPTO is fully self-hosted. There is also a managed cloud version at [app.bookyourpto.com](https://app.bookyourpto.com).
 
-## Pro & Enterprise Features 🔒
+### Self-Hosting with Docker (Recommended)
 
-Upgrade to **BookYourPTO Pro** or **Enterprise** for advanced capabilities:
-
-### Pro Edition ($29/month)
-- 🚀 **Up to 100 users**
-- 🎨 **White-label branding** - Custom logos, colors, brand name
-- 🔒 **Advanced security** - Audit logs, sign-in tracking, security violation monitoring
-- 📊 **Advanced reports** - Excel exports, custom reports, analytics
-- 🔗 **Calendar integrations** - Google Calendar, Outlook sync
-- 💬 **Slack notifications** - Real-time team updates
-- ⏰ **Time management** - Project time tracking
-- 🔌 **API access** - RESTful API for integrations
-
-### Enterprise Edition ($99/month)
-- 🏢 **Unlimited users**
-- ✍️ **Document e-signatures** - PDF/Word signing workflows
-- 🏆 **Priority support** - Dedicated support channel
-- 🛠️ **Custom features** - Tailored to your needs
-- 📞 **Onboarding assistance**
-
-**[View Pricing & Upgrade →](https://anhourtec.com/bookyourpto/pricing)**
-
----
-
-## Technology Stack
-
-### Frontend
-- **Nuxt 4** with Vue 3 and TypeScript
-- **Tailwind CSS 4** for styling
-- **Nuxt UI 4.2.1** - Modern component library
-- **Lucide Icons** - Beautiful icon set
-- SSR-safe composables
-
-### Backend
-- **Nuxt Server** API routes (Node.js)
-- **Prisma ORM** - Type-safe database access
-- **PostgreSQL** - Reliable relational database
-- **JWT** authentication (jsonwebtoken)
-- **bcrypt** for password hashing
-- **Nodemailer** for email notifications
-
-### Infrastructure
-- Docker & Docker Compose ready
-- Self-hosted deployment
-- Environment-based configuration
-
----
-
-## Quick Start
-
-### Prerequisites
-- Node.js 18+
-- PostgreSQL 14+
-- Docker (optional, recommended)
-
-### Installation
+> **Prerequisites**: [Docker Desktop](https://www.docker.com/products/docker-desktop/), [Node.js](https://nodejs.org/) v18+, and [Git](https://git-scm.com/downloads)
 
 ```bash
-# Clone the repository
+git clone https://github.com/anhourtec/BookYourPTO.git
+cd BookYourPTO
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your secrets (see Environment Configuration below)
+
+# Build and start everything
+docker-compose up -d
+
+# Verify startup
+docker-compose logs -f app
+```
+
+Open http://localhost:3010
+
+### Local Development Setup
+
+```bash
 git clone https://github.com/anhourtec/BookYourPTO.git
 cd BookYourPTO
 
 # Install dependencies
 npm install
 
-# Start PostgreSQL (using Docker)
+# Start PostgreSQL via Docker
 npm run docker:up
 
 # Configure environment
 cp .env.example .env
-# Edit .env with your database credentials
 
-# Initialize database
+# Initialize the database
 npm run db:init
 
 # Start development server
 npm run dev
 ```
 
-The application will be available at `http://localhost:3000`
-
----
+Open http://localhost:3000
 
 ## Environment Configuration
 
-Create a `.env` file in the root directory:
+Create a `.env` file in the project root:
 
 ```env
-# Database
+# Database (required)
 DATABASE_URL="postgresql://postgres:postgres123@localhost:5432/bookyourpto"
 
-# JWT Secrets (CHANGE THESE!)
-JWT_SECRET="your-super-secret-key-change-this-in-production-min-32-characters"
-REFRESH_SECRET="your-different-refresh-secret-key-change-this-in-production"
-
-# Email Configuration (Optional)
-SMTP_HOST="smtp.gmail.com"
-SMTP_PORT="587"
-SMTP_USER="your-email@gmail.com"
-SMTP_PASSWORD="your-app-password"
-SMTP_FROM_EMAIL="noreply@yourdomain.com"
-SMTP_FROM_NAME="BookYourPTO"
+# JWT Secrets (required - change these in production)
+JWT_SECRET="your-super-secret-key-minimum-32-characters"
+REFRESH_SECRET="your-different-refresh-secret-minimum-32-characters"
 
 # Environment
 NODE_ENV="development"
+
+# Email (optional - enables notifications)
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT="587"
+SMTP_USER="your-email@gmail.com"
+SMTP_PASSWORD="your-app-specific-password"
+SMTP_FROM_EMAIL="noreply@yourdomain.com"
+SMTP_FROM_NAME="BookYourPTO"
 ```
 
-### Email Setup (Optional)
+### Email Setup
 
-Community Edition uses environment variables for email configuration:
+Community Edition uses environment variables for email configuration.
 
-**Gmail:**
-1. Enable 2-factor authentication
-2. Generate an [App Password](https://support.google.com/accounts/answer/185833)
-3. Use the app password in `SMTP_PASSWORD`
+**Gmail:** Enable 2-factor authentication, then generate an [App Password](https://support.google.com/accounts/answer/185833) and use it as `SMTP_PASSWORD`.
 
-**Other SMTP:**
-- Use your SMTP provider's settings for host, port, user, and password
-
----
+**Other providers:** Use your SMTP provider's host, port, user, and password.
 
 ## Available Scripts
 
-### Development
 ```bash
+# Development
 npm run dev              # Start development server
 npm run db:studio        # Open Prisma Studio (database GUI)
-```
 
-### Database Management
-```bash
-npm run db:init          # Initialize database
-npm run db:generate      # Generate Prisma Client
-npm run db:migrate       # Run migrations
-npm run db:migrate:dev   # Create new migration
-npm run db:reset         # Reset database (⚠️ destructive)
-```
+# Database
+npm run db:init          # Initialize database schema
+npm run db:generate      # Regenerate Prisma client
+npm run db:migrate       # Apply pending migrations
+npm run db:migrate:dev   # Create a new migration
+npm run db:push          # Push schema changes directly
+npm run db:reset         # Reset database (destructive)
 
-### Docker
-```bash
+# Docker
 npm run docker:up        # Start PostgreSQL container
 npm run docker:down      # Stop containers
 npm run docker:logs      # View container logs
-```
 
-### Production
-```bash
+# Production
 npm run build            # Build for production
 npm run start            # Start production server
-npm run preview          # Preview production build
 ```
-
----
 
 ## Production Deployment
 
-### Using Docker Compose
+### Docker Compose
 
 ```bash
-# Build and start
 docker-compose up -d
-
-# Check status
-docker-compose ps
-
-# View logs
-docker-compose logs -f app
+docker-compose ps        # Check status
+docker-compose logs -f   # View logs
 ```
+
+The app runs on port 3010 by default (mapped from container port 3000).
 
 ### Manual Deployment
 
 ```bash
-# Build the application
 npm run build
 
-# Set environment variables
 export NODE_ENV=production
-export DATABASE_URL="postgresql://user:pass@host:5432/db"
-export JWT_SECRET="your-production-secret"
-export REFRESH_SECRET="your-production-refresh-secret"
+export DATABASE_URL="postgresql://user:pass@host:5432/bookyourpto"
+export JWT_SECRET="your-production-secret-min-32-chars"
+export REFRESH_SECRET="your-production-refresh-secret-min-32-chars"
 
-# Run migrations
 npm run db:migrate
-
-# Start server
 npm run start
 ```
 
----
+### Production Checklist
 
-## User Limit
-
-**Community Edition is limited to 10 active users.** This ensures the platform remains free and accessible for small teams while supporting continued development.
-
-When you reach 10 users, you'll see:
-```
-User limit reached (10 users maximum in Community Edition).
-Upgrade to Pro for up to 100 users.
-```
-
-**Need more users?** [Upgrade to Pro or Enterprise →](https://anhourtec.com/bookyourpto/pricing)
-
----
+- [ ] Set strong, unique values for `JWT_SECRET` and `REFRESH_SECRET`
+- [ ] Set `NODE_ENV=production`
+- [ ] Configure a production PostgreSQL instance
+- [ ] Set up SMTP for email notifications
+- [ ] Enable HTTPS via a reverse proxy (nginx, Caddy, etc.)
+- [ ] Configure database backups
+- [ ] Set resource limits in Docker
 
 ## Security
 
-### Implemented Security Features
-✅ Short-lived access tokens (15 minutes)
-✅ Refresh token rotation
-✅ Database-tracked sessions
-✅ Password hashing with bcrypt
-✅ Server-side API validation
-✅ Role-based access control
-✅ SSR-safe authentication
+BookYourPTO implements industry-standard security practices:
 
-### Production Security Checklist
-- [ ] Change default JWT secrets
-- [ ] Use strong database passwords
-- [ ] Enable HTTPS/SSL
-- [ ] Configure firewall rules
-- [ ] Regular database backups
-- [ ] Keep dependencies updated
-
----
+- **JWT authentication** with short-lived access tokens and refresh token rotation
+- **bcrypt password hashing** - passwords are never stored in plaintext
+- **Server-side validation** on all API endpoints
+- **Role-based access control** enforced at both route and component level
+- **Database-tracked sessions** with revocable refresh tokens
+- **Token integrity validation** to detect client-side tampering
 
 ## Project Structure
 
 ```
 BookYourPTO/
+├── components/            # Vue components (calendar, dashboard, settings, etc.)
+├── composables/           # Vue composables (auth, API, permissions)
+├── middleware/             # Route middleware (auth guards, redirects)
+├── pages/                 # Nuxt pages (dashboard, calendar, approvals, etc.)
 ├── server/
-│   ├── api/                    # API endpoints
-│   │   ├── auth/              # Authentication
-│   │   ├── users/             # User management
-│   │   ├── departments/       # Departments
-│   │   ├── leaves/            # Leave requests
-│   │   ├── leave-types/       # Leave type config
-│   │   └── settings/          # Organization settings
-│   ├── middleware/            # Server middleware
-│   │   └── auth.ts           # JWT validation
-│   └── utils/                 # Utilities
-│       ├── jwt.ts            # Token handling
-│       └── db.ts             # Prisma client
-├── composables/
-│   ├── useApi.ts             # API wrapper with auto-refresh
-│   ├── useAuth.ts            # Authentication state
-│   └── usePermissions.ts     # Role permissions
-├── pages/                    # Application pages
-├── components/               # Vue components
+│   ├── api/               # REST API endpoints
+│   ├── middleware/         # Server middleware (JWT validation)
+│   └── utils/             # Helpers (auth, email, database)
 ├── prisma/
-│   └── schema.prisma        # Database schema
-└── docker-compose.yml       # Docker configuration
+│   └── schema.prisma      # Database schema
+├── scripts/               # Build and deployment scripts
+├── types/                 # TypeScript type definitions
+├── Dockerfile             # Container definition
+└── docker-compose.yml     # Docker Compose configuration
 ```
-
----
 
 ## API Endpoints
 
-### Authentication (Public)
+All protected endpoints require an `Authorization: Bearer {access_token}` header.
+
 ```
-POST   /api/auth/login              # User login
-POST   /api/auth/register           # Organization signup
-POST   /api/auth/refresh            # Token refresh
-POST   /api/auth/forgot-password    # Password reset request
-POST   /api/auth/reset-password     # Password reset
+# Authentication (public)
+POST   /api/auth/login
+POST   /api/auth/register
+POST   /api/auth/refresh
+POST   /api/auth/forgot-password
+POST   /api/auth/reset-password
+
+# Users
+GET    /api/users
+POST   /api/users
+GET    /api/users/:id
+PATCH  /api/users/:id
+DELETE /api/users/:id
+
+# Leaves
+GET    /api/leaves
+POST   /api/leaves
+PATCH  /api/leaves/:id
+DELETE /api/leaves/:id
+
+# Departments, Leave Types, Settings, Reports, Public Holidays, etc.
 ```
-
-### Users (Protected)
-```
-GET    /api/users                   # List all users (max 10)
-POST   /api/users                   # Create user
-GET    /api/users/:id               # Get user details
-PATCH  /api/users/:id               # Update user
-DELETE /api/users/:id               # Delete user
-```
-
-### Leaves (Protected)
-```
-GET    /api/leaves                  # List leaves
-POST   /api/leaves                  # Create leave request
-PATCH  /api/leaves/:id               # Update leave
-DELETE /api/leaves/:id               # Cancel leave
-```
-
-Protected endpoints require `Authorization: Bearer {access_token}` header.
-
----
-
-## Frequently Asked Questions
-
-### Can I use this commercially?
-Yes! MIT license allows commercial use. You can deploy it for your company or clients.
-
-### How do I upgrade to Pro/Enterprise?
-Visit [anhourtec.com/bookyourpto](https://anhourtec.com/bookyourpto) or email sales@anhourtec.com
-
-### Can I contribute to the open-source version?
-Absolutely! We welcome contributions. See [Contributing](#contributing) below.
-
-### What's the difference between Community and Pro?
-Community Edition has a 10-user limit and basic features. Pro adds white-labeling, advanced security, integrations, and supports up to 100 users.
-
-### Is my data secure?
-Yes. All data stays on your server (self-hosted). Passwords are hashed with bcrypt, and we use industry-standard JWT authentication.
-
-### Can I customize the code?
-Yes! MIT license allows modification. Fork the repo and customize as needed.
-
----
-
-## Contributing
-
-We welcome contributions from the community! 🎉
-
-### How to Contribute
-
-1. **Fork the repository**
-2. **Create a feature branch**
-   ```bash
-   git checkout -b feature/amazing-feature
-   ```
-3. **Commit your changes**
-   ```bash
-   git commit -m 'Add amazing feature'
-   ```
-4. **Push to your fork**
-   ```bash
-   git push origin feature/amazing-feature
-   ```
-5. **Open a Pull Request**
-
-### Contribution Guidelines
-- Follow existing code style and TypeScript conventions
-- Add tests for new features
-- Update documentation as needed
-- Keep PRs focused on a single feature/fix
-- Add comments for complex logic
-
-### Code of Conduct
-Be respectful, inclusive, and constructive. We're all here to build something great together.
-
----
 
 ## Troubleshooting
 
-### "User limit reached"
-Community Edition supports 10 users. [Upgrade to Pro](https://anhourtec.com/bookyourpto) for more.
-
-### Database connection fails
+**Database connection fails:**
 ```bash
-# Check PostgreSQL is running
-docker ps
-
-# Restart PostgreSQL
-npm run docker:down && npm run docker:up
-
-# Check database logs
-npm run docker:logs
+docker ps                                    # Verify PostgreSQL is running
+npm run docker:down && npm run docker:up     # Restart
+npm run docker:logs                          # Check logs
 ```
 
-### "401 Unauthorized" errors
-- Verify JWT_SECRET is set in `.env`
-- Check token is being sent in Authorization header
-- Try logging out and back in
+**"401 Unauthorized" errors:** Verify `JWT_SECRET` is set in `.env`. Try logging out and back in.
 
-### Prisma errors
+**Prisma errors:**
 ```bash
-# Regenerate Prisma Client
-npm run db:generate
-
-# Reset database (⚠️ loses data)
-npm run db:reset
+npm run db:generate    # Regenerate Prisma client
+npm run db:reset       # Reset database (destructive - loses all data)
 ```
 
-### Email not sending
-- Verify SMTP credentials in `.env`
-- Check SMTP_PORT (usually 587 for TLS, 465 for SSL)
-- For Gmail, use an [App Password](https://support.google.com/accounts/answer/185833)
+**Email not sending:** Verify SMTP credentials. For Gmail, ensure you're using an [App Password](https://support.google.com/accounts/answer/185833), not your account password.
 
----
+## Feature Requests
 
-## Roadmap
+To request a feature, open a [GitHub issue](https://github.com/anhourtec/BookYourPTO/issues).
 
-### Upcoming Features
-- [ ] Mobile app (iOS/Android)
-- [ ] Advanced calendar views
-- [ ] Slack integration (Community Edition)
-- [ ] Better reporting
-- [ ] API documentation
-- [ ] Admin dashboard improvements
+## Contributing
 
-Want to request a feature? [Open an issue](https://github.com/anhourtec/BookYourPTO/issues)
+We welcome contributions from the community.
 
----
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Commit your changes: `git commit -m 'Add your feature'`
+4. Push to your fork: `git push origin feature/your-feature`
+5. Open a Pull Request
+
+**Guidelines:** Follow existing code style and TypeScript conventions. Keep PRs focused on a single feature or fix. Update documentation as needed.
 
 ## License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
-
-You are free to:
-- ✅ Use commercially
-- ✅ Modify
-- ✅ Distribute
-- ✅ Sublicense
-
----
+This project is licensed under the [MIT License](LICENSE). You are free to use, modify, distribute, and sublicense for both personal and commercial use.
 
 ## Support
 
-### Community Support
-- **Documentation:** [GitHub Wiki](https://github.com/anhourtec/BookYourPTO/wiki)
+- **Documentation:** [docs.bookyourpto.com](https://docs.bookyourpto.com)
 - **Issues:** [GitHub Issues](https://github.com/anhourtec/BookYourPTO/issues)
 - **Discussions:** [GitHub Discussions](https://github.com/anhourtec/BookYourPTO/discussions)
-
-### Commercial Support
-- **Website:** [anhourtec.com/bookyourpto](https://anhourtec.com/bookyourpto)
 - **Email:** support@anhourtec.com
-- **Pro/Enterprise:** Dedicated support channel
+- **Status:** [status.bookyourpto.com](https://status.bookyourpto.com)
 
 ---
 
-## Acknowledgments
-
-Built with ❤️ by [AnHourTec](https://anhourtec.com) using modern web technologies:
-- Nuxt 4 & Vue 3
-- Prisma & PostgreSQL
-- Tailwind CSS
-- TypeScript
-
-Special thanks to all our contributors and the open-source community!
-
----
-
-**Made in Victoria, BC, Canada 🇨🇦**
-
-**Star ⭐ this repo if you find it useful!**
+<p align="center">
+  Built by <a href="https://anhourtec.com">AnHourTec</a> in Victoria, BC, Canada
+</p>
