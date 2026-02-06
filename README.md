@@ -43,32 +43,34 @@ To give every team full ownership of their leave management - no vendor lock-in,
 - **Dark Mode:** Full dark mode support with automatic system preference detection.
 - **Self-Hosted:** Deploy on your own infrastructure. Your data never leaves your servers.
 
-## Community vs Pro vs Enterprise
+## Pricing
 
-The Community Edition is free for teams of up to 10 users. For larger teams and advanced features, BookYourPTO offers paid plans.
+Start free with the Community Edition. Upgrade when your team grows.
 
-| Feature | Community (Free) | Pro ($29/mo) | Enterprise ($99/mo) |
-|---|:---:|:---:|:---:|
-| Users | Up to 10 | Up to 100 | Unlimited |
-| Leave management & approvals | x | x | x |
-| Team calendar & public holidays | x | x | x |
-| Email notifications | x | x | x |
-| Document uploads | x | x | x |
-| Work schedule management | x | x | x |
-| Role-based access control | x | x | x |
-| Dark mode & responsive UI | x | x | x |
-| Reports & Excel export | x | x | x |
-| White-label branding | - | x | x |
-| Audit & sign-in logs | - | x | x |
-| Google Calendar & Outlook sync | - | x | x |
-| Slack notifications | - | x | x |
-| Project time tracking | - | x | x |
-| RESTful API access | - | x | x |
-| Document e-signatures | - | - | x |
-| Priority support & SLA | - | - | x |
-| Custom feature development | - | - | x |
+| | Free | Pro ($29/mo) | Business ($49/mo) | Enterprise (Custom) |
+|---|:---:|:---:|:---:|:---:|
+| **Users** | Up to 3 | Up to 10 | Up to 30 | Unlimited |
+| Leave management | x | x | x | x |
+| Leave approvals & policies | x | x | x | x |
+| Time tracking (with timer) | x | x | x | x |
+| Billable hours | - | x | x | x |
+| Receipt scanning | 50/mo | 500/mo | Unlimited | Unlimited |
+| Document storage | 50 docs | 1,000 docs | Unlimited | Unlimited |
+| Searchable documents (OCR) | - | x | x | x |
+| E-signature | - | x | x | x |
+| Approval workflows | Basic | Basic | Advanced | Advanced |
+| Reports & exports | x | x | Custom | Custom |
+| Role-based access control | x | x | x | x |
+| Calendar integrations | - | x | x | x |
+| White-labeling | - | - | x | x |
+| Auth0 integration (OIDC) | - | - | x | x |
+| Audit logs | - | - | x | x |
+| Custom domains | - | - | x | x |
+| Support | Community | Email | Priority | Dedicated |
 
-[View Pricing & Upgrade](https://www.bookyourpto.com)
+Need more flexibility? Add-ons are available for extra receipt scans, additional users, API access, custom branding, and advanced integrations.
+
+[View Full Pricing](https://www.bookyourpto.com/pricing)
 
 ## Built with
 
