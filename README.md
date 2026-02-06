@@ -302,21 +302,36 @@ npm run db:reset       # Reset database (destructive - loses all data)
 
 **Email not sending:** Verify SMTP credentials. For Gmail, ensure you're using an [App Password](https://support.google.com/accounts/answer/185833), not your account password.
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=anhourtec/BookYourPTO&type=Date)](https://www.star-history.com/#anhourtec/BookYourPTO&Date)
+
+## Community
+
+Join the BookYourPTO community to get help, share ideas, and stay up to date.
+
+- **GitHub Discussions:** [Ask questions and share ideas](https://github.com/anhourtec/BookYourPTO/discussions)
+- **GitHub Issues:** [Report bugs and request features](https://github.com/anhourtec/BookYourPTO/issues)
+- **X (Twitter):** [@AnHourTec](https://twitter.com/AnHourTec)
+- **LinkedIn:** [AnHourTec](https://linkedin.com/company/anhourtec)
+
 ## Feature Requests
 
 To request a feature, open a [GitHub issue](https://github.com/anhourtec/BookYourPTO/issues).
 
 ## Contributing
 
-We welcome contributions from the community.
+We welcome contributions from the community. AI/vibe-coded PRs welcome!
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature`
-3. Commit your changes: `git commit -m 'Add your feature'`
-4. Push to your fork: `git push origin feature/your-feature`
-5. Open a Pull Request
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines, maintainers, and how to submit PRs.
 
-**Guidelines:** Follow existing code style and TypeScript conventions. Keep PRs focused on a single feature or fix. Update documentation as needed.
+## Contributors
+
+Thanks to all the people who contribute to BookYourPTO.
+
+<a href="https://github.com/anhourtec/BookYourPTO/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=anhourtec/BookYourPTO" />
+</a>
 
 ## License
 
